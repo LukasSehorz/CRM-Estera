@@ -10,6 +10,7 @@ import { AreaTrend } from "@/components/charts/area-trend";
 import { BarSeries } from "@/components/charts/bar-series";
 import { DonutBreakdown } from "@/components/charts/donut-breakdown";
 import { PipelineFunnel } from "@/components/charts/pipeline-funnel";
+import { MidnightPreview } from "./midnight-preview";
 
 /* -------------------------------------------------------------------------
    Estera CRM — Design-Preview
@@ -140,6 +141,14 @@ export default function DesignPreviewPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      {/* Midnight-Dashboard (Redesign) — Vorschau mit Beispieldaten */}
+      <div className="mx-auto max-w-[1600px] px-6 pt-10">
+        <h2 className="mb-3 text-xl font-bold tracking-tight">
+          Dashboard „Midnight“ — Vorschau
+        </h2>
+        <MidnightPreview />
+      </div>
+
       <div className="mx-auto max-w-5xl px-6 py-10">
         {/* Kopf + Umschalter */}
         <header className="mb-8 flex items-start justify-between gap-4">

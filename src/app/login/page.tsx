@@ -26,45 +26,42 @@ export default function LoginPage() {
       {/* Marken-Panel — immer Navy, unabhängig vom Theme (Klasse "dark"
           erzwingt die Dark-Tokens nur in diesem Teilbaum). */}
       <section
-        className="dark relative hidden overflow-hidden border-r border-border bg-background text-foreground lg:flex lg:flex-col lg:justify-between lg:p-10"
+        className="dark relative hidden overflow-hidden bg-background text-foreground lg:flex lg:flex-col lg:justify-between lg:p-10"
         aria-label="Estera"
       >
-        {/* Atmosphäre: zwei weiche Lichtquellen + feine Ringe, kein Feuerwerk */}
-        <div aria-hidden className="pointer-events-none absolute inset-0">
-          <div
-            className="absolute -right-40 -top-40 h-[30rem] w-[30rem] rounded-full"
-            style={{
-              background:
-                "radial-gradient(closest-side, color-mix(in srgb, var(--gold) 14%, transparent), transparent 72%)",
-            }}
-          />
-          <div
-            className="absolute -bottom-48 -left-32 h-[34rem] w-[34rem] rounded-full"
-            style={{
-              background:
-                "radial-gradient(closest-side, color-mix(in srgb, var(--stage-1) 12%, transparent), transparent 72%)",
-            }}
-          />
-          <div className="absolute right-10 top-16 h-72 w-72 rounded-full border border-gold/10" />
-          <div className="absolute right-24 top-32 h-40 w-40 rounded-full border border-gold/15" />
-        </div>
+        {/* Hintergrund: bewusst pur — nur die Navy-Fläche (--background),
+            identisch zur rechten Hälfte. Kein Foto, keine Ringe, kein Gold,
+            keine Trennlinie. */}
 
-        <div
-          className="relative flex items-center gap-3 animate-in fade-in slide-in-from-bottom-2"
-          style={{ animationDuration: "700ms" }}
-        >
-          <BrandMark className="h-10 w-10 rounded-lg" />
-          <div>
-            <div className="text-sm font-semibold tracking-tight">
-              Estera CRM
-            </div>
-            <div className="text-xs text-muted-foreground">Vertriebs-CRM</div>
+        {/* Marke groß und mittig: Logo, darunter Firmenname, darunter der
+            zentrierte Claim. */}
+        <div className="relative flex flex-1 flex-col items-center justify-center text-center">
+          <div
+            className="animate-in fade-in slide-in-from-bottom-2"
+            style={{ animationDuration: "700ms" }}
+          >
+            {/* Freigestelltes E — ohne Logo-Kachel, liegt direkt auf dem
+                München-Hintergrund. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/login/estera-e.png"
+              alt="Estera"
+              className="h-48 w-auto"
+              style={{ filter: "drop-shadow(0 12px 24px rgba(0, 0, 0, 0.45))" }}
+            />
           </div>
-        </div>
-
-        <div className="relative max-w-md">
+          <div
+            className="mt-6 text-3xl font-semibold tracking-tight animate-in fade-in slide-in-from-bottom-2"
+            style={{
+              animationDuration: "700ms",
+              animationDelay: "100ms",
+              animationFillMode: "backwards",
+            }}
+          >
+            Estera GmbH
+          </div>
           <h1
-            className="text-4xl font-semibold leading-tight tracking-tight animate-in fade-in slide-in-from-bottom-2"
+            className="mt-8 text-4xl font-semibold leading-tight tracking-tight animate-in fade-in slide-in-from-bottom-2"
             style={{
               animationDuration: "700ms",
               animationDelay: "150ms",
@@ -75,7 +72,7 @@ export default function LoginPage() {
             <span className="text-gold-contrast">Substanz</span>.
           </h1>
           <p
-            className="mt-4 text-sm leading-relaxed text-muted-foreground animate-in fade-in slide-in-from-bottom-2"
+            className="mt-4 max-w-md text-sm leading-relaxed text-muted-foreground animate-in fade-in slide-in-from-bottom-2"
             style={{
               animationDuration: "700ms",
               animationDelay: "300ms",
@@ -86,7 +83,7 @@ export default function LoginPage() {
             interne Vertriebs-CRM der Estera GmbH, an einem Ort.
           </p>
           <div
-            className="mt-6 flex items-center gap-4 text-xs text-muted-foreground animate-in fade-in slide-in-from-bottom-2"
+            className="mt-6 flex items-center justify-center gap-4 text-xs text-muted-foreground animate-in fade-in slide-in-from-bottom-2"
             style={{
               animationDuration: "700ms",
               animationDelay: "450ms",
@@ -118,27 +115,69 @@ export default function LoginPage() {
       </section>
 
       {/* Anmelde-Seite */}
-      <section className="flex items-center justify-center p-6">
+      <section className="flex items-center justify-center overflow-x-clip p-6">
         <div
-          className="w-full max-w-sm animate-in fade-in slide-in-from-bottom-2"
+          className="relative w-full max-w-sm animate-in fade-in slide-in-from-bottom-2"
           style={{ animationDuration: "500ms" }}
         >
-          {/* Mobile: kompakte Marke über der Karte */}
-          <div className="mb-6 flex flex-col items-center gap-3 text-center lg:hidden">
-            <BrandMark className="h-14 w-14 rounded-xl shadow-sm" />
-            <div>
-              <h1 className="text-lg font-semibold tracking-tight">
-                Estera CRM
-              </h1>
-              <p className="text-sm text-muted-foreground">Vertriebs-CRM</p>
-            </div>
+          {/* Berater-Porträts: reine Deko. Liegen hinter der Karte (z-0 vs.
+              z-10), Köpfe auf Höhe der Marke, Körper laufen seitlich hinter
+              die Karte. Auf schmalen Screens ausgeblendet. */}
+          {/* Links: generiertes Video (Person läuft ein und verschränkt die
+              Arme). Hintergrundfarbe identisch mit der Seite (#0A121E),
+              bleibt nach einmaligem Abspielen auf dem letzten Frame stehen. */}
+          <video
+            src="/login/berater-links.mp4"
+            autoPlay
+            muted
+            playsInline
+            preload="auto"
+            aria-hidden
+            className="pointer-events-none absolute -left-[228px] top-[-6px] z-0 hidden lg:top-[-158px] h-[470px] w-auto select-none md:block"
+            style={{
+              // Ränder weich auslaufen lassen, damit die Videokante
+              // unsichtbar mit dem Seiten-Hintergrund verschmilzt.
+              maskImage:
+                "linear-gradient(to bottom, transparent 0, black 28px, black 78%, transparent 100%), linear-gradient(to right, transparent 64px, black 128px, black calc(100% - 40px), transparent 100%)",
+              maskComposite: "intersect",
+              WebkitMaskImage:
+                "linear-gradient(to bottom, transparent 0, black 28px, black 78%, transparent 100%), linear-gradient(to right, transparent 64px, black 128px, black calc(100% - 40px), transparent 100%)",
+              WebkitMaskComposite: "source-in",
+            }}
+          />
+          {/* Rechts: generiertes Video, gleiche Machart wie links —
+              gespiegelte Randmasken. */}
+          <video
+            src="/login/berater-rechts.mp4"
+            autoPlay
+            muted
+            playsInline
+            preload="auto"
+            aria-hidden
+            className="pointer-events-none absolute -right-[242px] top-[-6px] z-0 hidden lg:top-[-158px] h-[470px] w-auto select-none md:block"
+            style={{
+              maskImage:
+                "linear-gradient(to bottom, transparent 0, black 28px, black 78%, transparent 100%), linear-gradient(to right, transparent 0, black 40px, black calc(100% - 128px), transparent calc(100% - 64px))",
+              maskComposite: "intersect",
+              WebkitMaskImage:
+                "linear-gradient(to bottom, transparent 0, black 28px, black 78%, transparent 100%), linear-gradient(to right, transparent 0, black 40px, black calc(100% - 128px), transparent calc(100% - 64px))",
+              WebkitMaskComposite: "source-in",
+            }}
+          />
+
+          {/* Marke mittig über dem Anmeldeformular */}
+          <div className="relative z-10 mb-6 flex items-center justify-center gap-3">
+            <BrandMark className="h-12 w-12 rounded-lg shadow-sm" />
+            <h1 className="text-xl font-semibold tracking-tight">
+              Estera GmbH
+            </h1>
           </div>
 
-          <div className="rounded-xl border border-border bg-surface p-6 shadow-sm sm:p-8">
-            <h2 className="text-xl font-semibold tracking-tight">
-              Willkommen zurück
+          <div className="relative z-10 rounded-xl border border-border bg-surface p-6 shadow-sm sm:p-8">
+            <h2 className="text-center text-xl font-semibold tracking-tight">
+              Willkommen zurück!
             </h2>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-1 text-center text-sm text-muted-foreground">
               Melde dich mit deinem Estera-Konto an.
             </p>
 
