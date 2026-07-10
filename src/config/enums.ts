@@ -1,0 +1,109 @@
+// Zentrale Enum-/Optionsdefinitionen — exakt nach docs/anforderungen.md
+// und dem DB-Schema (0001_schema.sql). `satisfies` hält sie mit den
+// generierten DB-Typen synchron.
+import type { Database } from "@/types/database";
+
+type Enums = Database["public"]["Enums"];
+
+export const KONTAKT_STATUS = [
+  "Neu",
+  "In Bearbeitung",
+  "Qualifiziert",
+  "Nicht erreicht",
+  "Kalt",
+] as const satisfies readonly Enums["kontakt_status_enum"][];
+
+export const TERMIN_STATUS = [
+  "Nicht vereinbart",
+  "Vereinbart",
+  "Durchgeführt",
+] as const satisfies readonly Enums["termin_status_enum"][];
+
+export const LEADQUELLE = [
+  "TikTok",
+  "Instagram",
+  "Facebook",
+  "Empfehlung",
+  "Kooperationen",
+  "Webseite",
+  "Sonstige",
+] as const satisfies readonly Enums["leadquelle_enum"][];
+
+export const FINANZIERUNGSRAHMEN = [
+  "Bis 250k",
+  "250-350k",
+  "350-500k",
+  "500-700k",
+  "700k+",
+] as const satisfies readonly Enums["finanzierungsrahmen_enum"][];
+
+export const EINSCHAETZUNG_STATUS = [
+  "Ausstehend",
+  "Positiv",
+  "Bedingt positiv",
+  "Abgelehnt",
+] as const satisfies readonly Enums["einschaetzung_status_enum"][];
+
+// ── Deal-Felder (Phase 4) ────────────────────────────────────────────────
+export const OBJEKT_STATUS = [
+  "Verfügbar",
+  "Reserviert",
+  "Verkauft",
+] as const satisfies readonly Enums["objekt_status_enum"][];
+
+// Finanzierungsrahmen: freier Betrag ist führend (Fachkonzept 1.1); diese
+// Presets sind nur Schnellauswahl-Buttons im Formular (50k-Logik).
+export const FINANZIERUNGSRAHMEN_PRESETS = [
+  250000, 300000, 350000, 400000, 500000, 600000, 700000,
+] as const;
+
+// Estera-Provisionssatz auf den Kaufpreis (Schleife 2, 1.5): variabel je
+// Objekt/Bauträger; diese Werte sind nur Schnellauswahl-Vorschläge.
+export const PROVISIONSSATZ_PRESETS = [12, 14, 25] as const;
+
+// Kundendokumente-Kategorien (Fachkonzept 1.2).
+export const DOKUMENT_KATEGORIEN = [
+  "Gehaltsabrechnung",
+  "Selbstauskunft",
+  "Ausweis",
+  "Eigenkapitalnachweis",
+  "Sonstige",
+] as const;
+
+// ── Kundenakte (Schleife 2, Kap. 3) ──────────────────────────────────────
+export const FINANZIERUNGSSTATUS = [
+  { value: "offen", label: "Offen" },
+  { value: "in_pruefung", label: "In Prüfung" },
+  { value: "zugesagt", label: "Zugesagt" },
+] as const satisfies readonly {
+  value: Enums["finanzierungsstatus_enum"];
+  label: string;
+}[];
+
+export function finanzierungsstatusLabel(value: string): string {
+  return FINANZIERUNGSSTATUS.find((s) => s.value === value)?.label ?? value;
+}
+
+export const ACTIVITY_TYPEN = [
+  { value: "anruf", label: "Anruf" },
+  { value: "mail", label: "E-Mail" },
+  { value: "whatsapp", label: "WhatsApp" },
+  { value: "notiz", label: "Notiz" },
+] as const satisfies readonly {
+  value: Exclude<Enums["activity_typ_enum"], "system">;
+  label: string;
+}[];
+
+// DSGVO-Schalter (OFFEN #1, Kap. 3.3): Datei-Upload der Akte zentral
+// abschaltbar, bis Speicherort/Löschkonzept/Einwilligung final geklärt sind.
+// Die Checkliste „vorhanden/fehlt" funktioniert unabhängig davon.
+export const DOKUMENT_UPLOAD_AKTIV = true;
+
+export const BEREICH = [
+  { value: "immobilien", label: "Immobilien" },
+  { value: "vv", label: "Vermögensverwaltung" },
+] as const satisfies readonly { value: Enums["bereich_enum"]; label: string }[];
+
+export function bereichLabel(value: string): string {
+  return BEREICH.find((b) => b.value === value)?.label ?? value;
+}

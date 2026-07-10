@@ -1,0 +1,16 @@
+import {
+  BoardSkeleton,
+  TopbarSkeleton,
+} from "@/components/layout/page-skeletons";
+
+/** Ladezustand des Vermögensverwaltungs-Boards. */
+export default function VermoegensverwaltungLoading() {
+  return (
+    <>
+      <TopbarSkeleton action />
+      <div className="px-6 py-6">
+        <BoardSkeleton columns={5} />
+      </div>
+    </>
+  );
+}

@@ -1,0 +1,293 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* =====================================================================
+   Estera CRM — Design-Tokens (siehe docs/design-system.md)
+   :root = Light, .dark = Dark (Hauptmodus). Keine Farb-Hardcodes in
+   Komponenten — immer diese Tokens / die gemappten shadcn-Tokens nutzen.
+   ===================================================================== */
+
+/* ---------------------------------------------------------------------
+   Estera-Markenfarben (Referenz, Herkunft)
+   Navy        #0F1B2D   tiefes Marineblau/Anthrazit (trägt die Fläche im Dark)
+   Navy Deep   #0A121E   fast schwarz, Tiefen
+   Gold        #C9A24B   warmes Bronze-Gold (EINZIGER Akzent, sparsam)
+   Gold Soft   #E3C888   heller Goldton, Hover/Highlights
+   Slate       #4A5568   gedecktes Blaugrau (Neutral)
+   Off-White   #F5F3EE   warmes Gebrochen-Weiß
+   Werte unten als vollständige hsl()-Farben (direkt in var() nutzbar, auch als
+   SVG-fill in den Charts); Ausgangs-Hex jeweils im Kommentar.
+   --------------------------------------------------------------------- */
+
+:root {
+  /* Radius: 0.625rem -> sm 6 / md 8 (Inputs, Badges, Buttons) / xl 14 (Karten) */
+  --radius: 0.625rem;
+
+  /* Flächen & Text (Light) — Weiß/neutral als Fläche, Navy als Text/Struktur */
+  --background: hsl(240 33% 98%); /* #F7F7FB  App-Hintergrund (helles neutrales Weiß) */
+  --foreground: hsl(216 50% 12%); /* #0F1B2D  Navy als Text */
+  --surface: hsl(0 0% 100%); /* #FFFFFF  Karten, Sidebar, Panels */
+  --surface-2: hsl(240 23% 95%); /* #F1F1F7  Hover-Zeilen, Inputs */
+  --border: hsl(240 23% 92%); /* #E6E6EF  Ränder, Trennlinien */
+  --text-secondary: hsl(218 17% 35%); /* #4A5568  Slate */
+  --text-muted: hsl(218 14% 45%); /* #626E82  Platzhalter, Hilfetext */
+
+  /* Gold-Akzent — im Light abgedunkelt für Kontrast (AA) */
+  --gold: hsl(41 54% 54%); /* #C9A24B  Marken-Gold (Flächen/Fokusring, große Elemente) */
+  --gold-soft: hsl(42 62% 71%); /* #E3C888  heller Goldton, Hover */
+  --gold-contrast: hsl(44 64% 33%); /* #8A6D1E  Gold als TEXT auf hellem Grund (~4.6:1) */
+
+  /* accent-* = Gold-Familie (nur diese Utilities/Verläufe, kein shadcn-"accent") */
+  --accent-400: hsl(42 62% 71%); /* #E3C888  Gold Soft */
+  --accent-500: hsl(41 54% 54%); /* #C9A24B  Gold */
+  --accent-600: hsl(40 61% 40%); /* #A67C28  Bronze (Hover/Tiefe) */
+  --accent-gradient: linear-gradient(135deg, #e3c888 0%, #a67c28 100%);
+
+  /* Semantische CRM-Status (Light: gedämpft & abgedunkelt für AA) */
+  --success: hsl(152 72% 30%); /* #157A48  Deal gewonnen / positive Rendite */
+  --warning: hsl(38 80% 38%); /* #AE7413  Deal ins Stocken geraten */
+  --danger: hsl(350 63% 53%); /* #D23A54  Deal verloren */
+  --info: hsl(208 64% 47%); /* #2B7CC4  neutral-informativ */
+
+  /* shadcn/ui-Tokens auf die Estera-Werte gemappt */
+  --card: var(--surface);
+  --card-foreground: var(--foreground);
+  --popover: var(--surface);
+  --popover-foreground: var(--foreground);
+  --primary: var(--foreground); /* #0F1B2D  Primär = Navy */
+  --primary-foreground: hsl(43 26% 95%); /* #F5F3EE  Off-White */
+  /* Ausgewählte Zustände (aktive Nav, Switcher, Icon-Chips): im Light = Navy */
+  --primary-soft: var(--foreground); /* #0F1B2D */
+  --secondary: var(--surface-2);
+  --secondary-foreground: var(--foreground);
+  --muted: var(--surface-2);
+  --muted-foreground: var(--text-secondary);
+  --accent: var(--surface-2); /* shadcn-"accent" = dezenter Hover, NICHT die Markenfarbe (Gold) */
+  --accent-foreground: var(--foreground);
+  --destructive: var(--danger);
+  --destructive-foreground: hsl(43 26% 95%); /* #F5F3EE  heller Text auf rotem Button */
+  --input: var(--border);
+  --ring: var(--gold); /* Fokusring = Gold */
+
+  /* Sidebar */
+  --sidebar: var(--surface);
+  --sidebar-foreground: var(--foreground);
+
+  /* Pipeline-/Kanban-Stage-Farben (Light: abgedunkelt, als Dot/Pill/Rand lesbar) */
+  --stage-1: hsl(215 38% 39%); /* #3E628C  Stahlblau */
+  --stage-2: hsl(174 47% 33%); /* #2C7C72  Teal */
+  --stage-3: hsl(40 61% 40%); /* #A67C28  Gold/Bronze */
+  --stage-4: hsl(39 68% 42%); /* #B57A22  Amber */
+  --stage-5: hsl(14 51% 46%); /* #B0563A  Terrakotta */
+  --stage-6: hsl(340 43% 49%); /* #B24865  Rosé */
+  --stage-7: hsl(258 25% 49%); /* #6E5C9C  gedämpftes Violett */
+  --stage-8: hsl(146 37% 39%); /* #3E8659  Salbeigrün */
+
+  /* Chart-Palette (Light: Gold-Familie + Navy/Slate, abgedunkelt) */
+  --chart-1: hsl(40 61% 40%); /* #A67C28  Gold tief */
+  --chart-2: hsl(41 54% 54%); /* #C9A24B  Gold */
+  --chart-3: hsl(215 38% 39%); /* #3E628C  Stahlblau */
+  --chart-4: hsl(174 47% 33%); /* #2C7C72  Teal */
+  --chart-5: hsl(218 14% 48%); /* #6B788C  Slate */
+  --chart-6: hsl(44 64% 33%); /* #8A6D1E  Bronze tief */
+}
+
+.dark {
+  /* Dark = Referenz-/Primäranmutung: Navy-Flächen, Gold-Akzent */
+  --background: hsl(216 50% 8%); /* #0A121E  Navy Deep (App-Hintergrund) */
+  --foreground: hsl(43 26% 95%); /* #F5F3EE  Off-White */
+  --surface: hsl(216 50% 12%); /* #0F1B2D  Navy — Karten, Sidebar, Panels */
+  --surface-2: hsl(214 47% 16%); /* #16273D  erhöhte Flächen, Hover-Zeilen, Inputs */
+  --border: hsl(215 35% 22%); /* #24344B  Kartenränder, Trennlinien (dezent) */
+  --text-secondary: hsl(216 19% 72%); /* #A9B4C4  Labels, sekundärer Text (~8:1) */
+  --text-muted: hsl(215 15% 56%); /* #7E8CA0  Platzhalter, Hilfetext (~4.8:1) */
+
+  /* Gold-Akzent (Dark: volles Marken-Gold, ~6.9:1 auf Navy) */
+  --gold: hsl(41 54% 54%); /* #C9A24B */
+  --gold-soft: hsl(42 62% 71%); /* #E3C888  Hover/Highlight */
+  --gold-contrast: hsl(42 62% 71%); /* #E3C888  Gold als Text auf Navy (heller Ton, hoher Kontrast) */
+
+  --accent-400: hsl(42 62% 71%); /* #E3C888 */
+  --accent-500: hsl(41 54% 54%); /* #C9A24B */
+  --accent-600: hsl(40 55% 47%); /* #B5843A  Bronze */
+  --accent-gradient: linear-gradient(135deg, #e3c888 0%, #b5843a 100%);
+
+  /* Semantische Status (Dark: heller für Lesbarkeit auf Navy, ≥6:1) */
+  --success: hsl(152 57% 48%); /* #35C281 */
+  --warning: hsl(38 75% 63%); /* #E7B45A */
+  --danger: hsl(351 82% 68%); /* #F06A7E */
+  --info: hsl(207 76% 63%); /* #57A8E8 */
+
+  --card: var(--surface);
+  --card-foreground: var(--foreground);
+  --popover: var(--surface);
+  --popover-foreground: var(--foreground);
+  /* Primär im Dark = helles Stahlblau: Links, Tints und Buttons bleiben
+     auf Navy überall lesbar (dunkles #3B5C86 war als Textfarbe zu schwach). */
+  --primary: hsl(212 55% 70%); /* #88AEDC  helles Stahlblau (~7:1 auf Navy) */
+  --primary-foreground: hsl(216 50% 8%); /* #0A121E  dunkler Text auf hellblauem Button (~7.9:1) */
+  /* Ausgewählte Zustände: identisch zum hellen Primär */
+  --primary-soft: hsl(212 55% 70%); /* #88AEDC */
+  --secondary: var(--surface-2);
+  --secondary-foreground: var(--foreground);
+  --muted: var(--surface-2);
+  --muted-foreground: var(--text-secondary);
+  --accent: var(--surface-2); /* shadcn-"accent" = dezenter Hover, NICHT Gold */
+  --accent-foreground: var(--foreground);
+  --destructive: var(--danger);
+  --destructive-foreground: hsl(216 50% 8%); /* #0A121E  dunkler Text auf hellem Rot (AA) */
+  --input: var(--border);
+  --ring: var(--gold); /* Fokusring = Gold */
+
+  --sidebar: var(--surface);
+  --sidebar-foreground: var(--foreground);
+
+  /* Pipeline-/Kanban-Stage-Farben (Dark: heller, auf Navy lesbar) */
+  --stage-1: hsl(212 40% 54%); /* #5E86B5  Stahlblau */
+  --stage-2: hsl(174 48% 44%); /* #3CA79A  Teal */
+  --stage-3: hsl(41 54% 54%); /* #C9A24B  Gold/Bronze */
+  --stage-4: hsl(37 72% 55%); /* #E0A23C  Amber */
+  --stage-5: hsl(15 58% 60%); /* #D57B5D  Terrakotta */
+  --stage-6: hsl(343 55% 63%); /* #D56A85  Rosé */
+  --stage-7: hsl(255 35% 64%); /* #9584C0  gedämpftes Violett */
+  --stage-8: hsl(140 33% 53%); /* #5FAE77  Salbeigrün */
+
+  /* Chart-Palette (Dark: Gold-Familie + Navy/Slate, aufgehellt) */
+  --chart-1: hsl(41 54% 54%); /* #C9A24B  Gold */
+  --chart-2: hsl(42 62% 71%); /* #E3C888  Gold Soft */
+  --chart-3: hsl(212 40% 54%); /* #5E86B5  Stahlblau */
+  --chart-4: hsl(174 48% 44%); /* #3CA79A  Teal */
+  --chart-5: hsl(217 20% 67%); /* #9CA6B8  Slate hell */
+  --chart-6: hsl(40 51% 47%); /* #B5843A  Bronze */
+}
+
+/* =====================================================================
+   Tailwind-Theme: Tokens als Utilities verfügbar machen
+   (bg-background, text-foreground, bg-surface-2, text-success, ...)
+   ===================================================================== */
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-soft: var(--primary-soft);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+
+  --color-accent-400: var(--accent-400);
+  --color-accent-500: var(--accent-500);
+  --color-accent-600: var(--accent-600);
+
+  --color-gold: var(--gold);
+  --color-gold-soft: var(--gold-soft);
+  --color-gold-contrast: var(--gold-contrast);
+
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-info: var(--info);
+
+  --color-stage-1: var(--stage-1);
+  --color-stage-2: var(--stage-2);
+  --color-stage-3: var(--stage-3);
+  --color-stage-4: var(--stage-4);
+  --color-stage-5: var(--stage-5);
+  --color-stage-6: var(--stage-6);
+  --color-stage-7: var(--stage-7);
+  --color-stage-8: var(--stage-8);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-chart-6: var(--chart-6);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  /* Beträge & Tabellen mit tabellarischen Ziffern (Spalten stehen sauber) */
+  table,
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Akzent-Verlauf als Utility (Charts, Hero-Zahlen) */
+.bg-accent-gradient {
+  background-image: var(--accent-gradient);
+}
+
+/* Dezente, hochwertige Scrollleiste (z. B. Kanban-Boards horizontal) */
+.scrollbar-elegant {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+.scrollbar-elegant::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+.scrollbar-elegant::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-elegant::-webkit-scrollbar-thumb {
+  background-color: var(--border);
+  border-radius: 9999px;
+}
+.scrollbar-elegant:hover::-webkit-scrollbar-thumb {
+  background-color: var(--text-muted);
+}
+
+/* Segmente der Summen-Skala wachsen beim Laden einmal dezent auf (§10) */
+@keyframes grow-x {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+.animate-grow-x {
+  transform-origin: left;
+  animation: grow-x 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+/* Reduzierte Bewegung respektieren */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

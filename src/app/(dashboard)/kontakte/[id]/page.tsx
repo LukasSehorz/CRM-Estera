@@ -1,0 +1,277 @@
+import Link from "next/link";
+import { notFound, redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { Topbar } from "@/components/layout/topbar";
+import { Pill } from "@/components/ui/pill";
+import { bereichLabel, finanzierungsstatusLabel } from "@/config/enums";
+import { formatEUR } from "@/lib/format";
+import { dealVolumen } from "@/lib/provision";
+import { ContactForm, type FormState } from "../contact-form";
+import { ContactDocuments, type DocRow } from "../contact-documents";
+import {
+  DocumentChecklist,
+  type DocStatus,
+  type DocType,
+} from "../document-checklist";
+import { ContactTimeline, type ActivityRow } from "../contact-timeline";
+import { ContactTasks, type TaskRow } from "../contact-tasks";
+
+export default async function KontaktDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const { data: me } = await supabase
+    .from("profiles")
+    .select("rolle")
+    .eq("id", user.id)
+    .single();
+  const isGf = me?.rolle === "geschaeftsfuehrung";
+
+  // RLS sorgt dafür, dass ein Berater fremde Kontakte gar nicht erhält -> 404.
+  const { data: c } = await supabase
+    .from("contacts")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  if (!c) notFound();
+
+  const istImmoKontakt = (c.interesse ?? []).includes("immobilien");
+
+  const [
+    { data: docs },
+    { data: docTypes },
+    { data: docStatus },
+    { data: activities },
+    { data: contactTasks },
+    { data: contactDeals },
+    { data: stages },
+    { data: profiles },
+  ] = await Promise.all([
+    supabase
+      .from("contact_documents")
+      .select("id, dateiname, storage_path, kategorie, groesse, created_at")
+      .eq("contact_id", id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("document_types")
+      .select("id, gruppe, name, position")
+      .eq("aktiv", true)
+      .order("position"),
+    supabase
+      .from("contact_document_status")
+      .select("document_type_id, vorhanden, document_id")
+      .eq("contact_id", id),
+    supabase
+      .from("contact_activities")
+      .select("id, typ, text, created_by, created_at")
+      .eq("contact_id", id)
+      .order("created_at", { ascending: false })
+      .limit(50),
+    supabase
+      .from("tasks")
+      .select("id, titel, faellig_am, erledigt")
+      .eq("contact_id", id),
+    supabase
+      .from("deals")
+      .select("id, dealname, bereich, stage_id, kaufpreis, bws, factoring, provisionssatz, berater_anteil")
+      .eq("contact_id", id)
+      .order("created_at", { ascending: false }),
+    supabase.from("pipeline_stages").select("id, name, is_won, is_lost"),
+    supabase.from("profiles").select("id, vorname, nachname"),
+  ]);
+
+  let beraterOptions: { id: string; name: string }[] = [];
+  if (isGf) {
+    beraterOptions = (profiles ?? []).map((p) => ({
+      id: p.id,
+      name: `${p.vorname} ${p.nachname}`,
+    }));
+  }
+
+  const initial: FormState = {
+    vorname: c.vorname,
+    nachname: c.nachname,
+    email: c.email ?? "",
+    telefon: c.telefon ?? "",
+    berater_id: c.berater_id,
+    status: c.status,
+    termin_status: c.termin_status,
+    leadquelle: c.leadquelle ?? "",
+    interesse: c.interesse ?? [],
+    nettoverdienst_monatlich: c.nettoverdienst_monatlich?.toString() ?? "",
+    eigenkapital: c.eigenkapital?.toString() ?? "",
+    finanzierungsrahmen_betrag: c.finanzierungsrahmen_betrag?.toString() ?? "",
+    einschaetzung_erhalten: c.einschaetzung_erhalten,
+    datum_einschaetzung: c.datum_einschaetzung ?? "",
+    eingeschaetzter_betrag: c.eingeschaetzter_betrag?.toString() ?? "",
+    einschaetzung_durch: c.einschaetzung_durch ?? "",
+    einschaetzung_status: c.einschaetzung_status ?? "",
+    unterlagen_vollstaendig: c.unterlagen_vollstaendig,
+    fehlende_unterlagen: c.fehlende_unterlagen ?? "",
+    finanzierungsstatus: c.finanzierungsstatus ?? "offen",
+    ist_selbststaendig: c.ist_selbststaendig ?? false,
+    ist_immobilienbesitzer: c.ist_immobilienbesitzer ?? false,
+  };
+
+  // Checklisten-Status inkl. Dateinamen der verknüpften Uploads
+  const docMap = new Map((docs ?? []).map((d) => [d.id, d]));
+  const statusMap: Record<string, DocStatus> = {};
+  for (const s of docStatus ?? []) {
+    const doc = s.document_id ? docMap.get(s.document_id) : null;
+    statusMap[s.document_type_id] = {
+      vorhanden: s.vorhanden,
+      document_id: s.document_id,
+      dateiname: doc?.dateiname ?? null,
+      storage_path: doc?.storage_path ?? null,
+    };
+  }
+  const sichtbareTypes = (docTypes ?? []) as DocType[];
+  const anwendbar = sichtbareTypes.filter(
+    (t) =>
+      t.gruppe === "allgemein" ||
+      (t.gruppe === "selbststaendig" && c.ist_selbststaendig) ||
+      (t.gruppe === "immobilienbesitzer" && c.ist_immobilienbesitzer),
+  );
+  const vorhandenCount = anwendbar.filter(
+    (t) => statusMap[t.id]?.vorhanden,
+  ).length;
+
+  // Uploads ohne Checklisten-Verknüpfung (Altbestand) weiterhin zeigen
+  const verknuepft = new Set(
+    Object.values(statusMap)
+      .map((s) => s.document_id)
+      .filter(Boolean),
+  );
+  const freieDocs = (docs ?? []).filter((d) => !verknuepft.has(d.id));
+
+  const profMap = new Map(
+    (profiles ?? []).map((p) => [p.id, `${p.vorname} ${p.nachname}`]),
+  );
+  const activityRows: ActivityRow[] = (activities ?? []).map((a) => ({
+    id: a.id,
+    typ: a.typ,
+    text: a.text,
+    created_at: a.created_at,
+    created_by_name: a.created_by ? (profMap.get(a.created_by) ?? null) : null,
+  }));
+
+  const sMap = new Map((stages ?? []).map((s) => [s.id, s]));
+  const finStatusTone =
+    c.finanzierungsstatus === "zugesagt"
+      ? "success"
+      : c.finanzierungsstatus === "in_pruefung"
+        ? "warning"
+        : "muted";
+
+  return (
+    <>
+      <Topbar
+        title={`${c.vorname} ${c.nachname}`}
+        subtitle="Kundenakte — alles zu diesem Kunden an einem Ort"
+        backHref="/kontakte"
+      >
+        <Pill tone={finStatusTone}>
+          Finanzierung: {finanzierungsstatusLabel(c.finanzierungsstatus)}
+        </Pill>
+        {istImmoKontakt && (
+          <Pill tone={vorhandenCount === anwendbar.length ? "success" : "accent"}>
+            Dokumente {vorhandenCount}/{anwendbar.length}
+          </Pill>
+        )}
+      </Topbar>
+      <div className="px-6 py-6 pb-28">
+        <div className="grid items-start gap-6 xl:grid-cols-3">
+          {/* Linke Spalte: Stammdaten + Dokumente */}
+          <div className="space-y-6 xl:col-span-2">
+            <ContactForm
+              mode="edit"
+              contactId={c.id}
+              initial={initial}
+              canAssignBerater={isGf}
+              beraterOptions={beraterOptions}
+            />
+            {/* Dokumente nur für Immobilien-Kontakte (3.1) */}
+            {istImmoKontakt && (
+              <DocumentChecklist
+                contactId={c.id}
+                istSelbststaendig={c.ist_selbststaendig}
+                istImmobilienbesitzer={c.ist_immobilienbesitzer}
+                types={sichtbareTypes}
+                status={statusMap}
+              />
+            )}
+            {istImmoKontakt && freieDocs.length > 0 && (
+              <ContactDocuments
+                contactId={c.id}
+                documents={freieDocs as DocRow[]}
+              />
+            )}
+          </div>
+
+          {/* Rechte Spalte: Deals, Aufgaben, Timeline */}
+          <div className="space-y-6">
+            <div className="rounded-xl border border-border bg-surface p-5">
+              <h2 className="text-base font-semibold">Deals des Kunden</h2>
+              {(contactDeals ?? []).length === 0 ? (
+                <p className="py-4 text-sm text-muted-foreground">
+                  Noch kein Deal verknüpft.
+                </p>
+              ) : (
+                <ul className="mt-2 divide-y divide-border">
+                  {(contactDeals ?? []).map((d) => {
+                    const st = sMap.get(d.stage_id);
+                    return (
+                      <li key={d.id}>
+                        <Link
+                          href={`/deals/${d.id}`}
+                          className="-mx-2 flex items-center justify-between gap-3 rounded-md px-2 py-2.5 transition-colors hover:bg-surface-2"
+                        >
+                          <div className="min-w-0">
+                            <div className="truncate text-sm font-medium">
+                              {d.dealname}
+                            </div>
+                            <div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+                              <Pill
+                                tone={
+                                  st?.is_won
+                                    ? "success"
+                                    : st?.is_lost
+                                      ? "danger"
+                                      : "accent"
+                                }
+                              >
+                                {st?.name ?? "—"}
+                              </Pill>
+                              <span>{bereichLabel(d.bereich)}</span>
+                            </div>
+                          </div>
+                          <span className="shrink-0 text-sm font-semibold tabular-nums">
+                            {formatEUR(dealVolumen(d))}
+                          </span>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+
+            <ContactTasks
+              contactId={c.id}
+              tasks={(contactTasks ?? []) as TaskRow[]}
+            />
+            <ContactTimeline contactId={c.id} activities={activityRows} />
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}

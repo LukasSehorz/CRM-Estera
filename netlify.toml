@@ -1,0 +1,17 @@
+# Netlify-Konfiguration für Estera CRM (Next.js 15, App Router).
+# Das offizielle Next-Runtime-Plugin übernimmt SSR, Server Actions und
+# Middleware. Deploy per CLI: netlify deploy --prod
+#
+# WICHTIG: Deploys bauen in ein EIGENES distDir (.next-deploy, Junction nach
+# C:\dev\estera-crm\deploy-dist), damit ein parallel laufender Dev-Server
+# (.next) den Prod-Build nicht korrumpiert. publish muss dem distDir
+# entsprechen — beides zusammen ändern.
+[build]
+  command = "npm run build"
+  publish = ".next-deploy"
+
+[build.environment]
+  NEXT_DIST_DIR = ".next-deploy"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
