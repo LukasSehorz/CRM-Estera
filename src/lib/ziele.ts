@@ -26,6 +26,8 @@ export type ZielDaten = {
   /** Werktage in Folge mit mindestens einer Aktivität (Wochenende neutral). */
   aktivTage: number;
   monatsName: string;
+  /** 15.2: Ziel von der GF gesperrt -> Berater kann es nicht selbst ändern. */
+  gesperrt: boolean;
 };
 
 const MONAT = [
@@ -145,7 +147,7 @@ export async function loadZielDaten(): Promise<ZielDaten | null> {
         .single(),
       supabase
         .from("berater_monatsziele")
-        .select("monatsziel_immobilien, monatsziel_vv")
+        .select("monatsziel_immobilien, monatsziel_vv, gesperrt")
         .eq("berater_id", user.id)
         .maybeSingle(),
       supabase
@@ -230,5 +232,6 @@ export async function loadZielDaten(): Promise<ZielDaten | null> {
     monatsAnteil: now.getDate() / tageImMonat,
     aktivTage: aktivStreak(aktiveTage, now),
     monatsName: MONAT[now.getMonth()],
+    gesperrt: zielQ.data?.gesperrt ?? false,
   };
 }
