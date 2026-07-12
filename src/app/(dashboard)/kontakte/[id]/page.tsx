@@ -10,7 +10,7 @@ import { ContactForm, type FormState } from "../contact-form";
 import { ContactDocuments, type DocRow } from "../contact-documents";
 import {
   DocumentChecklist,
-  type DocStatus,
+  type DocFile,
   type DocType,
 } from "../document-checklist";
 import { ContactTimeline, type ActivityRow } from "../contact-timeline";
@@ -57,7 +57,9 @@ export default async function KontaktDetailPage({
   ] = await Promise.all([
     supabase
       .from("contact_documents")
-      .select("id, dateiname, storage_path, kategorie, groesse, created_at")
+      .select(
+        "id, dateiname, storage_path, kategorie, document_type_id, groesse, created_at",
+      )
       .eq("contact_id", id)
       .order("created_at", { ascending: false }),
     supabase
@@ -123,18 +125,22 @@ export default async function KontaktDetailPage({
     ist_immobilienbesitzer: c.ist_immobilienbesitzer ?? false,
   };
 
-  // Checklisten-Status inkl. Dateinamen der verknüpften Uploads
-  const docMap = new Map((docs ?? []).map((d) => [d.id, d]));
-  const statusMap: Record<string, DocStatus> = {};
-  for (const s of docStatus ?? []) {
-    const doc = s.document_id ? docMap.get(s.document_id) : null;
-    statusMap[s.document_type_id] = {
-      vorhanden: s.vorhanden,
-      document_id: s.document_id,
-      dateiname: doc?.dateiname ?? null,
-      storage_path: doc?.storage_path ?? null,
-    };
+  // Manueller „vorhanden"-Haken je Typ (auch ohne Datei setzbar).
+  const vorhandenMap: Record<string, boolean> = {};
+  for (const s of docStatus ?? []) vorhandenMap[s.document_type_id] = s.vorhanden;
+
+  // Dateien je Dokumenttyp (14.2: mehrere je Typ).
+  const filesByType: Record<string, DocFile[]> = {};
+  for (const d of docs ?? []) {
+    if (!d.document_type_id) continue;
+    (filesByType[d.document_type_id] ??= []).push({
+      id: d.id,
+      dateiname: d.dateiname,
+      storage_path: d.storage_path,
+      groesse: d.groesse,
+    });
   }
+
   const sichtbareTypes = (docTypes ?? []) as DocType[];
   const anwendbar = sichtbareTypes.filter(
     (t) =>
@@ -143,16 +149,11 @@ export default async function KontaktDetailPage({
       (t.gruppe === "immobilienbesitzer" && c.ist_immobilienbesitzer),
   );
   const vorhandenCount = anwendbar.filter(
-    (t) => statusMap[t.id]?.vorhanden,
+    (t) => vorhandenMap[t.id] || (filesByType[t.id]?.length ?? 0) > 0,
   ).length;
 
-  // Uploads ohne Checklisten-Verknüpfung (Altbestand) weiterhin zeigen
-  const verknuepft = new Set(
-    Object.values(statusMap)
-      .map((s) => s.document_id)
-      .filter(Boolean),
-  );
-  const freieDocs = (docs ?? []).filter((d) => !verknuepft.has(d.id));
+  // Uploads ohne Typ-Zuordnung (Altbestand/„Sonstige") separat zeigen.
+  const freieDocs = (docs ?? []).filter((d) => !d.document_type_id);
 
   const profMap = new Map(
     (profiles ?? []).map((p) => [p.id, `${p.vorname} ${p.nachname}`]),
@@ -208,7 +209,8 @@ export default async function KontaktDetailPage({
                 istSelbststaendig={c.ist_selbststaendig}
                 istImmobilienbesitzer={c.ist_immobilienbesitzer}
                 types={sichtbareTypes}
-                status={statusMap}
+                vorhanden={vorhandenMap}
+                filesByType={filesByType}
               />
             )}
             {istImmoKontakt && freieDocs.length > 0 && (

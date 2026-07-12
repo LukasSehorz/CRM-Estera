@@ -370,6 +370,7 @@ export type Database = {
           dateiname: string;
           storage_path: string;
           kategorie: string;
+          document_type_id: string | null;
           groesse: number | null;
           uploaded_by: string | null;
           created_at: string;
@@ -380,6 +381,7 @@ export type Database = {
           dateiname: string;
           storage_path: string;
           kategorie?: string;
+          document_type_id?: string | null;
           groesse?: number | null;
           uploaded_by?: string | null;
           created_at?: string;
@@ -390,6 +392,7 @@ export type Database = {
           dateiname?: string;
           storage_path?: string;
           kategorie?: string;
+          document_type_id?: string | null;
           groesse?: number | null;
           uploaded_by?: string | null;
           created_at?: string;
@@ -403,6 +406,42 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
+      };
+      portal_documents: {
+        Row: {
+          id: string;
+          titel: string;
+          dateiname: string;
+          storage_path: string;
+          sichtbarkeit: "vorlage" | "intern";
+          bereich: Database["public"]["Enums"]["bereich_enum"] | null;
+          groesse: number | null;
+          uploaded_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          titel: string;
+          dateiname: string;
+          storage_path: string;
+          sichtbarkeit?: "vorlage" | "intern";
+          bereich?: Database["public"]["Enums"]["bereich_enum"] | null;
+          groesse?: number | null;
+          uploaded_by?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          titel?: string;
+          dateiname?: string;
+          storage_path?: string;
+          sichtbarkeit?: "vorlage" | "intern";
+          bereich?: Database["public"]["Enums"]["bereich_enum"] | null;
+          groesse?: number | null;
+          uploaded_by?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
       };
       document_types: {
         Row: {

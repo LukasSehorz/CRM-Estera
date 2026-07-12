@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   Building2,
   CheckSquare,
+  FolderOpen,
   LayoutDashboard,
   ListChecks,
   LogOut,
@@ -36,6 +37,7 @@ const NAV: NavSection[] = [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
       { href: "/aufgaben", label: "Aufgaben", icon: CheckSquare },
       { href: "/kontakte", label: "Kontakte", icon: Users },
+      { href: "/dokumente", label: "Dokumente", icon: FolderOpen },
       { href: "/listen", label: "Listen", icon: ListChecks },
     ],
   },

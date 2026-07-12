@@ -35,6 +35,15 @@ export function formatKompakt(value: number | null | undefined): string {
   return `${Math.round(value)}`;
 }
 
+/** Dateigröße: 1536 -> "1,5 KB", 2_500_000 -> "2,4 MB". */
+export function formatBytes(value: number | null | undefined): string {
+  if (value == null || Number.isNaN(value)) return "—";
+  if (value < 1024) return `${value} B`;
+  if (value < 1024 * 1024)
+    return `${(value / 1024).toFixed(1).replace(".", ",")} KB`;
+  return `${(value / (1024 * 1024)).toFixed(1).replace(".", ",")} MB`;
+}
+
 /** Prozent, de-DE: 0.405 -> "40,5 %". */
 export function formatProzent(
   value: number | null | undefined,

@@ -3,10 +3,19 @@
 import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Download, Paperclip, Trash2 } from "lucide-react";
+import {
+  Download,
+  FileArchive,
+  Loader2,
+  Paperclip,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { DOKUMENT_UPLOAD_AKTIV } from "@/config/enums";
+import { formatBytes } from "@/lib/format";
+import { buildZip, uniqueName } from "@/lib/zip";
 import { setDocumentStatus } from "./actions";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CollapsibleSection } from "@/components/collapsible-section";
@@ -25,6 +34,15 @@ export type DocType = {
   position: number;
 };
 
+/** Eine hochgeladene Datei (14.2: mehrere je Typ). */
+export type DocFile = {
+  id: string;
+  dateiname: string;
+  storage_path: string;
+  groesse: number | null;
+};
+
+/** Manueller „vorhanden"-Haken je Typ (auch ohne Datei setzbar). */
 export type DocStatus = {
   vorhanden: boolean;
   document_id: string | null;
@@ -39,28 +57,33 @@ const GRUPPEN_LABEL: Record<DocType["gruppe"], string> = {
 };
 
 /**
- * Feste Dokumenten-Checkliste (Schleife 2, 3.1/3.2) — nur Immobilien.
- * Status je Punkt: vorhanden/fehlt. Optionaler Datei-Upload je Punkt
- * (hinter dem DSGVO-Schalter). Fehlende Dokumente blockieren nichts.
+ * Feste Dokumenten-Checkliste (3.1/3.2/14.2) — nur Immobilien.
+ * Je Punkt: Status vorhanden/fehlt + BELIEBIG VIELE Dateien (Gehaltsnachweis
+ * 1/3, 2/3 …), jederzeit nachreichbar (kein Sperren), per Klick oder
+ * Drag & Drop. „Alle als ZIP" lädt sämtliche Dateien des Kunden gebündelt.
  */
 export function DocumentChecklist({
   contactId,
   istSelbststaendig,
   istImmobilienbesitzer,
   types,
-  status,
+  vorhanden,
+  filesByType,
 }: {
   contactId: string;
   istSelbststaendig: boolean;
   istImmobilienbesitzer: boolean;
   types: DocType[];
-  status: Record<string, DocStatus>;
+  vorhanden: Record<string, boolean>;
+  filesByType: Record<string, DocFile[]>;
 }) {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploadTypeId, setUploadTypeId] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [busyType, setBusyType] = useState<string | null>(null);
+  const [dragType, setDragType] = useState<string | null>(null);
+  const [zipping, setZipping] = useState(false);
   const [pending, start] = useTransition();
 
   const sichtbar = types.filter(
@@ -69,10 +92,14 @@ export function DocumentChecklist({
       (t.gruppe === "selbststaendig" && istSelbststaendig) ||
       (t.gruppe === "immobilienbesitzer" && istImmobilienbesitzer),
   );
-  const vorhandenCount = sichtbar.filter((t) => status[t.id]?.vorhanden).length;
+  // „vorhanden" = manuell abgehakt ODER mindestens eine Datei vorhanden.
+  const istVorhanden = (id: string) =>
+    (vorhanden[id] ?? false) || (filesByType[id]?.length ?? 0) > 0;
+  const vorhandenCount = sichtbar.filter((t) => istVorhanden(t.id)).length;
   const pct = sichtbar.length
     ? Math.round((vorhandenCount / sichtbar.length) * 100)
     : 0;
+  const alleDateien = sichtbar.flatMap((t) => filesByType[t.id] ?? []);
 
   const gruppen = (
     ["allgemein", "selbststaendig", "immobilienbesitzer"] as const
@@ -80,12 +107,7 @@ export function DocumentChecklist({
 
   function toggle(t: DocType, checked: boolean) {
     start(async () => {
-      const res = await setDocumentStatus(
-        contactId,
-        t.id,
-        checked,
-        status[t.id]?.document_id ?? null,
-      );
+      const res = await setDocumentStatus(contactId, t.id, checked, null);
       if ("error" in res) toast.error(res.error);
       else router.refresh();
     });
@@ -96,60 +118,69 @@ export function DocumentChecklist({
     fileRef.current?.click();
   }
 
-  async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    const typeId = uploadTypeId;
-    setUploadTypeId(null);
-    if (!file || !typeId) return;
-    if (file.size > MAX_BYTES) {
-      toast.error("Datei zu groß (max. 15 MB).");
-      return;
-    }
+  async function uploadFiles(typeId: string, files: FileList | File[]) {
     const typ = types.find((t) => t.id === typeId);
-    setBusy(true);
+    setBusyType(typeId);
+    let ok = 0;
     try {
-      const path = `${contactId}/${crypto.randomUUID()}_${safeName(file.name)}`;
-      const { error: upErr } = await supabase.storage
-        .from(BUCKET)
-        .upload(path, file, { upsert: false, contentType: file.type || undefined });
-      if (upErr) throw upErr;
-
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      const { data: doc, error: insErr } = await supabase
-        .from("contact_documents")
-        .insert({
+      for (const file of Array.from(files)) {
+        if (file.size > MAX_BYTES) {
+          toast.error(`„${file.name}" ist zu groß (max. 15 MB).`);
+          continue;
+        }
+        const path = `${contactId}/${crypto.randomUUID()}_${safeName(file.name)}`;
+        const { error: upErr } = await supabase.storage
+          .from(BUCKET)
+          .upload(path, file, {
+            upsert: false,
+            contentType: file.type || undefined,
+          });
+        if (upErr) {
+          toast.error(`Upload von „${file.name}" fehlgeschlagen.`);
+          continue;
+        }
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        const { error: insErr } = await supabase.from("contact_documents").insert({
           contact_id: contactId,
           dateiname: file.name,
           storage_path: path,
           kategorie: typ?.name ?? "Sonstige",
+          document_type_id: typeId,
           groesse: file.size,
           uploaded_by: user?.id ?? null,
-        })
-        .select("id")
-        .single();
-      if (insErr || !doc) {
-        await supabase.storage.from(BUCKET).remove([path]);
-        throw insErr ?? new Error("insert fehlgeschlagen");
+        });
+        if (insErr) {
+          await supabase.storage.from(BUCKET).remove([path]);
+          toast.error(`„${file.name}" konnte nicht gespeichert werden.`);
+          continue;
+        }
+        ok++;
       }
-      const res = await setDocumentStatus(contactId, typeId, true, doc.id);
-      if ("error" in res) throw new Error(res.error);
-      toast.success("Dokument hochgeladen und abgehakt");
-      router.refresh();
-    } catch {
-      toast.error("Upload fehlgeschlagen. Bitte erneut versuchen.");
+      if (ok > 0) {
+        await setDocumentStatus(contactId, typeId, true, null);
+        toast.success(ok === 1 ? "Datei hochgeladen" : `${ok} Dateien hochgeladen`);
+        router.refresh();
+      }
     } finally {
-      setBusy(false);
+      setBusyType(null);
     }
   }
 
-  async function download(s: DocStatus) {
-    if (!s.storage_path) return;
+  async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
+    e.target.value = "";
+    const typeId = uploadTypeId;
+    setUploadTypeId(null);
+    if (!files?.length || !typeId) return;
+    await uploadFiles(typeId, files);
+  }
+
+  async function download(f: DocFile) {
     const { data, error } = await supabase.storage
       .from(BUCKET)
-      .createSignedUrl(s.storage_path, 60);
+      .createSignedUrl(f.storage_path, 60);
     if (error || !data) {
       toast.error("Download nicht möglich.");
       return;
@@ -157,21 +188,53 @@ export function DocumentChecklist({
     window.open(data.signedUrl, "_blank");
   }
 
-  async function removeFile(t: DocType, s: DocStatus) {
-    if (!s.document_id || !s.storage_path) return;
-    if (!confirm(`Datei zu „${t.name}" wirklich löschen?`)) return;
+  async function removeFile(f: DocFile) {
+    if (!confirm(`Datei „${f.dateiname}" wirklich löschen?`)) return;
     const { error } = await supabase
       .from("contact_documents")
       .delete()
-      .eq("id", s.document_id);
+      .eq("id", f.id);
     if (error) {
       toast.error("Löschen fehlgeschlagen.");
       return;
     }
-    await supabase.storage.from(BUCKET).remove([s.storage_path]);
-    await setDocumentStatus(contactId, t.id, false, null);
+    await supabase.storage.from(BUCKET).remove([f.storage_path]);
     toast.success("Datei gelöscht");
     router.refresh();
+  }
+
+  /** Alle Dateien des Kunden als ein ZIP (14.2). */
+  async function downloadZip() {
+    if (!alleDateien.length) return;
+    setZipping(true);
+    try {
+      const used = new Set<string>();
+      const entries: { name: string; data: Uint8Array }[] = [];
+      for (const f of alleDateien) {
+        const { data, error } = await supabase.storage
+          .from(BUCKET)
+          .createSignedUrl(f.storage_path, 120);
+        if (error || !data) continue;
+        const resp = await fetch(data.signedUrl);
+        const buf = new Uint8Array(await resp.arrayBuffer());
+        entries.push({ name: uniqueName(f.dateiname, used), data: buf });
+      }
+      if (!entries.length) {
+        toast.error("Keine Dateien zum Herunterladen.");
+        return;
+      }
+      const blob = buildZip(entries);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "Kundenunterlagen.zip";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error("ZIP-Download fehlgeschlagen.");
+    } finally {
+      setZipping(false);
+    }
   }
 
   return (
@@ -179,7 +242,7 @@ export function DocumentChecklist({
       title="Dokumenten-Checkliste"
       description={`${vorhandenCount} von ${sichtbar.length} Dokumenten vorhanden`}
     >
-      {/* Fortschritt (3.1) */}
+      {/* Fortschritt (3.1) + ZIP-Download (14.2) */}
       <div className="mb-4 flex items-center gap-3">
         <div className="h-2 flex-1 overflow-hidden rounded-full bg-secondary">
           <div
@@ -193,9 +256,30 @@ export function DocumentChecklist({
         <span className="shrink-0 text-sm font-medium tabular-nums">
           {vorhandenCount} / {sichtbar.length}
         </span>
+        {alleDateien.length > 0 && (
+          <button
+            type="button"
+            onClick={downloadZip}
+            disabled={zipping}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground disabled:opacity-50"
+          >
+            {zipping ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <FileArchive className="h-3.5 w-3.5" />
+            )}
+            Alle als ZIP
+          </button>
+        )}
       </div>
 
-      <input ref={fileRef} type="file" className="hidden" onChange={onFile} />
+      <input
+        ref={fileRef}
+        type="file"
+        multiple
+        className="hidden"
+        onChange={onFile}
+      />
 
       <div className="space-y-5">
         {gruppen.map((g) => (
@@ -203,61 +287,109 @@ export function DocumentChecklist({
             <p className="mb-1.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
               {GRUPPEN_LABEL[g]}
             </p>
-            <ul className="divide-y divide-border">
+            <ul className="space-y-1">
               {sichtbar
                 .filter((t) => t.gruppe === g)
                 .map((t) => {
-                  const s = status[t.id];
+                  const dateien = filesByType[t.id] ?? [];
+                  const busy = busyType === t.id;
+                  const dragging = dragType === t.id;
                   return (
                     <li
                       key={t.id}
-                      className="flex items-center gap-3 py-2 text-sm"
+                      onDragOver={(e) => {
+                        if (!DOKUMENT_UPLOAD_AKTIV) return;
+                        e.preventDefault();
+                        setDragType(t.id);
+                      }}
+                      onDragLeave={() => setDragType(null)}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        setDragType(null);
+                        if (DOKUMENT_UPLOAD_AKTIV && e.dataTransfer.files.length)
+                          void uploadFiles(t.id, e.dataTransfer.files);
+                      }}
+                      className={cn(
+                        "rounded-md border px-2.5 py-2 transition-colors",
+                        dragging
+                          ? "border-primary bg-primary/5"
+                          : "border-transparent",
+                      )}
                     >
-                      <Checkbox
-                        checked={s?.vorhanden ?? false}
-                        disabled={pending || busy}
-                        onCheckedChange={(c) => toggle(t, c === true)}
-                      />
-                      <span
-                        className={cn(
-                          "min-w-0 flex-1",
-                          s?.vorhanden
-                            ? "text-muted-foreground line-through decoration-border"
-                            : "text-foreground",
-                        )}
-                      >
-                        {t.name}
-                      </span>
-                      {s?.document_id ? (
-                        <span className="flex shrink-0 items-center gap-1">
-                          <button
-                            type="button"
-                            onClick={() => download(s)}
-                            title={`„${s.dateiname}" herunterladen`}
-                            className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-                          >
-                            <Download className="h-4 w-4" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => removeFile(t, s)}
-                            title="Datei löschen"
-                            className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-danger"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </span>
-                      ) : DOKUMENT_UPLOAD_AKTIV ? (
-                        <button
-                          type="button"
-                          disabled={busy}
-                          onClick={() => pickFile(t.id)}
-                          title="Datei anhängen"
-                          className="shrink-0 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-50"
+                      <div className="flex items-center gap-3 text-sm">
+                        <Checkbox
+                          checked={istVorhanden(t.id)}
+                          disabled={pending || busy || dateien.length > 0}
+                          onCheckedChange={(c) => toggle(t, c === true)}
+                        />
+                        <span
+                          className={cn(
+                            "min-w-0 flex-1",
+                            istVorhanden(t.id)
+                              ? "text-muted-foreground"
+                              : "text-foreground",
+                          )}
                         >
-                          <Paperclip className="h-4 w-4" />
-                        </button>
-                      ) : null}
+                          {t.name}
+                          {dateien.length > 0 && (
+                            <span className="ml-1.5 text-xs text-muted-foreground">
+                              ({dateien.length})
+                            </span>
+                          )}
+                        </span>
+                        {DOKUMENT_UPLOAD_AKTIV && (
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => pickFile(t.id)}
+                            title="Datei(en) anhängen"
+                            className="inline-flex shrink-0 items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-50"
+                          >
+                            {busy ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : dateien.length > 0 ? (
+                              <Plus className="h-3.5 w-3.5" />
+                            ) : (
+                              <Paperclip className="h-3.5 w-3.5" />
+                            )}
+                            {dateien.length > 0 ? "Weitere" : "Anhängen"}
+                          </button>
+                        )}
+                      </div>
+                      {/* Datei-Liste je Typ (nachreichbar, mehrere) */}
+                      {dateien.length > 0 && (
+                        <ul className="ml-7 mt-1 space-y-0.5">
+                          {dateien.map((f) => (
+                            <li
+                              key={f.id}
+                              className="flex items-center gap-2 rounded px-1.5 py-1 text-xs hover:bg-secondary/60"
+                            >
+                              <span className="min-w-0 flex-1 truncate text-foreground">
+                                {f.dateiname}
+                              </span>
+                              <span className="shrink-0 tabular-nums text-muted-foreground">
+                                {formatBytes(f.groesse)}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => download(f)}
+                                title="Herunterladen / Vorschau"
+                                className="rounded p-1 text-muted-foreground transition-colors hover:text-foreground"
+                              >
+                                <Download className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => removeFile(f)}
+                                title="Löschen"
+                                className="rounded p-1 text-muted-foreground transition-colors hover:text-danger"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                     </li>
                   );
                 })}
@@ -266,8 +398,8 @@ export function DocumentChecklist({
         ))}
       </div>
       <p className="mt-3 text-xs text-muted-foreground">
-        Fehlende Dokumente blockieren keinen Deal — die Liste dient der
-        Übersicht (und der Ampel im Berater-Cockpit).
+        Mehrere Dateien je Punkt möglich · jederzeit nachreichbar · per Klick
+        oder Drag &amp; Drop. Fehlende Dokumente blockieren keinen Deal.
       </p>
     </CollapsibleSection>
   );
