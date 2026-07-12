@@ -24,7 +24,9 @@ export default async function TeamPage() {
   const [{ data: profiles }, { data: ziele }] = await Promise.all([
     supabase
       .from("profiles")
-      .select("id, vorname, nachname, rolle, aktiv, vertriebler_stufe, bereich")
+      .select(
+        "id, vorname, nachname, rolle, aktiv, vertriebler_stufe, bereich, immo_anteil_default, parent_berater_id",
+      )
       .order("rolle")
       .order("vorname"),
     supabase
@@ -35,6 +37,13 @@ export default async function TeamPage() {
   const zielMap = new Map(
     (ziele ?? []).map((z) => [z.berater_id, z]),
   );
+
+  // Mögliche Upline-Partner: alle Berater, die selbst keinen übergeordneten
+  // Partner haben (eine Ebene, 8.2). Der Berater selbst wird pro Zeile
+  // zusätzlich ausgenommen.
+  const partnerKandidaten = (profiles ?? [])
+    .filter((p) => p.rolle !== "geschaeftsfuehrung" && p.parent_berater_id == null)
+    .map((p) => ({ id: p.id, name: `${p.vorname} ${p.nachname}` }));
 
   const rows: BeraterRow[] = (profiles ?? []).map((p) => {
     const z = zielMap.get(p.id);
@@ -48,6 +57,9 @@ export default async function TeamPage() {
         | "immobilien"
         | "vv"
       )[],
+      immoDefault:
+        p.immo_anteil_default == null ? "" : String(Number(p.immo_anteil_default)),
+      parentId: p.parent_berater_id ?? "",
       zielImmo:
         z?.monatsziel_immobilien == null ? "" : String(Number(z.monatsziel_immobilien)),
       zielVv: z?.monatsziel_vv == null ? "" : String(Number(z.monatsziel_vv)),
@@ -70,7 +82,7 @@ export default async function TeamPage() {
             Monatsziele (eigene Provision, gemeinsam mit dem Berater vereinbart)
             treiben die Ziel-Box im Berater-Dashboard.
           </p>
-          <StufeTable rows={rows} />
+          <StufeTable rows={rows} partnerKandidaten={partnerKandidaten} />
         </div>
       </div>
     </>

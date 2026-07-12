@@ -106,6 +106,42 @@ export async function setMonatsziele(
   return { ok: true };
 }
 
+/**
+ * Setzt die Anbindung eines Beraters (Kap. 1.5/8): Immobilien-Anteil-Default
+ * (vorbefüllt in neue Immo-Deals) + übergeordneter Partner (Upline, eine
+ * Ebene). Berechtigung + Ebenen-/Zyklusprüfung erzwingt die SECURITY-DEFINER-
+ * Funktion set_berater_anbindung in der DB.
+ */
+export async function setBeraterAnbindung(
+  beraterId: string,
+  immoDefault: number | null,
+  parentId: string | null,
+): Promise<StufeResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Nicht angemeldet." };
+  if (immoDefault != null && (Number.isNaN(immoDefault) || immoDefault < 0 || immoDefault > 100))
+    return { error: "Immo-Anteil muss zwischen 0 und 100 liegen." };
+
+  const { error } = await supabase.rpc("set_berater_anbindung", {
+    target: beraterId,
+    p_immo_default: immoDefault,
+    p_parent: parentId,
+  });
+  if (error)
+    return {
+      error:
+        error.message?.includes("Ebene") || error.message?.includes("Partner")
+          ? error.message
+          : "Speichern fehlgeschlagen — nur die Geschäftsführung darf die Anbindung ändern.",
+    };
+  revalidatePath("/team");
+  revalidatePath("/dashboard");
+  return { ok: true };
+}
+
 export type NeuerBeraterInput = {
   vorname: string;
   nachname: string;

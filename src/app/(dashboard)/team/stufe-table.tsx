@@ -7,6 +7,7 @@ import { UserPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   createBerater,
+  setBeraterAnbindung,
   setBeraterBereiche,
   setMonatsziele,
   setVertrieblerStufe,
@@ -16,6 +17,13 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Pill } from "@/components/ui/pill";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type Bereich = "immobilien" | "vv";
 
@@ -26,34 +34,52 @@ export type BeraterRow = {
   aktiv: boolean;
   stufe: string;
   bereiche: Bereich[];
+  /** Anbindung (1.5/8): Immo-Anteil-Default (%) + übergeordneter Partner. */
+  immoDefault: string;
+  parentId: string;
   /** Monatsziele (eigene Provision) als Eingabe-Strings, "" = kein Ziel. */
   zielImmo: string;
   zielVv: string;
 };
+
+type PartnerOption = { id: string; name: string };
+const KEIN_PARTNER = "__none";
 
 const BEREICH_LABEL: Record<Bereich, string> = {
   immobilien: "Immobilien",
   vv: "VV",
 };
 
-export function StufeTable({ rows }: { rows: BeraterRow[] }) {
+export function StufeTable({
+  rows,
+  partnerKandidaten,
+}: {
+  rows: BeraterRow[];
+  partnerKandidaten: PartnerOption[];
+}) {
   return (
     <div className="overflow-x-auto rounded-xl border border-border bg-surface">
-      <table className="w-full min-w-[1000px] text-sm">
+      <table className="w-full min-w-[1280px] text-sm">
         <thead>
           <tr className="border-b border-border text-left text-xs text-muted-foreground">
             <th className="px-4 py-3 font-medium">Name</th>
             <th className="px-4 py-3 font-medium">Rolle</th>
             <th className="px-4 py-3 font-medium">Sichtbare Sparten</th>
-            <th className="px-4 py-3 font-medium">Vertriebler-Stufe (%)</th>
-            <th className="px-4 py-3 font-medium">Monatsziel Immo (€)</th>
-            <th className="px-4 py-3 font-medium">Monatsziel VV (€)</th>
+            <th className="px-4 py-3 font-medium">Stufe VV (%)</th>
+            <th className="px-4 py-3 font-medium">Immo-Anteil (%)</th>
+            <th className="px-4 py-3 font-medium">Übergeordneter Partner</th>
+            <th className="px-4 py-3 font-medium">Ziel Immo (€)</th>
+            <th className="px-4 py-3 font-medium">Ziel VV (€)</th>
             <th className="px-4 py-3" />
           </tr>
         </thead>
         <tbody>
           {rows.map((r) => (
-            <StufeRow key={r.id} row={r} />
+            <StufeRow
+              key={r.id}
+              row={r}
+              partnerKandidaten={partnerKandidaten.filter((p) => p.id !== r.id)}
+            />
           ))}
         </tbody>
       </table>
@@ -70,15 +96,25 @@ function parseZiel(s: string): number | null | undefined {
   return n;
 }
 
-function StufeRow({ row }: { row: BeraterRow }) {
+function StufeRow({
+  row,
+  partnerKandidaten,
+}: {
+  row: BeraterRow;
+  partnerKandidaten: PartnerOption[];
+}) {
   const [stufe, setStufe] = useState(row.stufe);
   const [bereiche, setBereiche] = useState<Bereich[]>(row.bereiche);
+  const [immoDefault, setImmoDefault] = useState(row.immoDefault);
+  const [parentId, setParentId] = useState(row.parentId);
   const [zielImmo, setZielImmo] = useState(row.zielImmo);
   const [zielVv, setZielVv] = useState(row.zielVv);
   const [pending, start] = useTransition();
   const stufeDirty = stufe !== row.stufe;
+  const anbindungDirty =
+    immoDefault !== row.immoDefault || parentId !== row.parentId;
   const zieleDirty = zielImmo !== row.zielImmo || zielVv !== row.zielVv;
-  const dirty = stufeDirty || zieleDirty;
+  const dirty = stufeDirty || anbindungDirty || zieleDirty;
   const istGf = row.rolle === "geschaeftsfuehrung";
 
   function saveStufe() {
@@ -90,6 +126,22 @@ function StufeRow({ row }: { row: BeraterRow }) {
           return;
         }
         const res = await setVertrieblerStufe(row.id, n);
+        if ("error" in res) {
+          toast.error(res.error);
+          return;
+        }
+      }
+      if (anbindungDirty) {
+        const immo = immoDefault.trim() === "" ? null : Number(immoDefault.replace(",", "."));
+        if (immo != null && (Number.isNaN(immo) || immo < 0 || immo > 100)) {
+          toast.error("Immo-Anteil muss zwischen 0 und 100 liegen (oder leer).");
+          return;
+        }
+        const res = await setBeraterAnbindung(
+          row.id,
+          immo,
+          parentId === "" ? null : parentId,
+        );
         if ("error" in res) {
           toast.error(res.error);
           return;
@@ -184,8 +236,52 @@ function StufeRow({ row }: { row: BeraterRow }) {
           inputMode="decimal"
           value={stufe}
           onChange={(e) => setStufe(e.target.value)}
-          className="w-28"
+          className="w-24"
         />
+      </td>
+      {/* Immo-Anteil-Default (1.5): vorbefüllt in neue Immo-Deals */}
+      <td className="px-4 py-3">
+        {istGf ? (
+          <span className="text-xs text-muted-foreground">—</span>
+        ) : bereiche.includes("immobilien") ? (
+          <Input
+            type="number"
+            min={0}
+            max={100}
+            inputMode="decimal"
+            placeholder="z. B. 5"
+            value={immoDefault}
+            onChange={(e) => setImmoDefault(e.target.value)}
+            className="w-24"
+          />
+        ) : (
+          <span className="text-xs text-muted-foreground">—</span>
+        )}
+      </td>
+      {/* Übergeordneter Partner (8): Upline für Overhead */}
+      <td className="px-4 py-3">
+        {istGf ? (
+          <span className="text-xs text-muted-foreground">—</span>
+        ) : (
+          <Select
+            value={parentId === "" ? KEIN_PARTNER : parentId}
+            onValueChange={(val) =>
+              setParentId(val === KEIN_PARTNER ? "" : val)
+            }
+          >
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Kein Partner" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={KEIN_PARTNER}>Kein Partner</SelectItem>
+              {partnerKandidaten.map((p) => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
       </td>
       <td className="px-4 py-3">
         {bereiche.includes("immobilien") ? (

@@ -15,6 +15,8 @@ import { BereichSwitcher } from "./bereich-switcher";
 import { HeuteBlock } from "./heute-block";
 import { ProvisionBlock } from "./provision-block";
 import { ZielBlock } from "./ziel-block";
+import { MeinEinkommenBlock } from "./mein-einkommen-block";
+import { PartnerBlock } from "./partner-block";
 import { loadZielDaten } from "@/lib/ziele";
 import {
   loadAnalytics,
@@ -161,6 +163,20 @@ export default async function DashboardPage({
 
         {/* Erwartete Provision (4.2) — prominenter als das reine Volumen */}
         <ProvisionBlock a={aFull} scope={scope} />
+
+        {/* Mein Einkommen (7.3/7.4) — nur Berater; Karriere nur bei VV-Sparte */}
+        {user && !aFull.isGf && (
+          <MeinEinkommenBlock
+            a={aFull}
+            beraterId={user.id}
+            zeigeKarriere={aFull.meineBereiche.includes("vv")}
+          />
+        )}
+
+        {/* Meine Partner & Tippgeber (8.1/8.3) — nur Berater, nur bei Downline */}
+        {user && !aFull.isGf && (
+          <PartnerBlock a={aFull} beraterId={user.id} />
+        )}
 
         {/* Links (2/3): Umsatzentwicklung + Aktuelle Deals · Rechts (1/3):
             Funnel(s) + Quelle. Zusammengelegt, damit „Aktuelle Deals" den

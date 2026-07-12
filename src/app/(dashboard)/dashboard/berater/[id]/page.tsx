@@ -19,8 +19,10 @@ import { AreaTrend } from "@/components/charts/area-trend";
 import { PipelineFunnel } from "@/components/charts/pipeline-funnel";
 import { bereichLabel } from "@/config/enums";
 import { formatDate, formatEUR, formatProzent } from "@/lib/format";
-import { einbehaltFaelligAm } from "@/lib/provision";
+import { einbehaltFaelligAm, zahlartOf } from "@/lib/provision";
 import { BereichSwitcher } from "../../bereich-switcher";
+import { MeinEinkommenBlock } from "../../mein-einkommen-block";
+import { PartnerBlock } from "../../partner-block";
 import {
   loadAnalytics,
   scopeToBerater,
@@ -131,12 +133,15 @@ export default async function BeraterDrilldownPage({
     })
     .sort((x, y) => (y.tage ?? 0) - (x.tage ?? 0));
 
-  // Offene Einbehalte des Beraters (GF-Sicht: gesamter Einbehalt)
+  // Offene Einbehalte des Beraters — Einbehalt gibt es NUR mit Factoring (7.1).
   const jetzt = now.toISOString();
   let einbehalt = 0;
   let naechsteFaelligkeit: string | null = null;
   for (const d of aBerater.deals.filter(
-    (x) => x.bereich === "vv" && isWon(x, aBerater.sMap) && !x.factoring,
+    (x) =>
+      x.bereich === "vv" &&
+      isWon(x, aBerater.sMap) &&
+      zahlartOf(x) === "factoring",
   )) {
     const f = einbehaltFaelligAm(d.closed_at ?? d.created_at);
     if (!f || f <= jetzt) continue;
@@ -246,6 +251,16 @@ export default async function BeraterDrilldownPage({
             </div>
           </div>
         </div>
+
+        {/* Mein Einkommen (7.3/7.4) aus GF-Sicht — Karriere nur bei VV-Sparte */}
+        <MeinEinkommenBlock
+          a={aAll}
+          beraterId={id}
+          zeigeKarriere={(berater.bereich ?? []).includes("vv")}
+        />
+
+        {/* Partner & Tippgeber dieses Beraters (8.1/8.3) */}
+        <PartnerBlock a={aAll} beraterId={id} />
 
         <div className="grid items-start gap-4 lg:grid-cols-2">
           {funnelScopes.map((b) => {

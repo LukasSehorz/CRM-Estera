@@ -81,6 +81,16 @@ export type AnalyticsData = {
   meineBereiche: ("immobilien" | "vv")[];
   /** Vertriebler-Stufe eines Beraters (Prozent, z. B. 30). */
   stufeOf: (beraterId: string) => number;
+  /** Immobilien-Anteil-Default eines Beraters (Prozent, Anbindung 1.5/8.4). */
+  immoDefaultOf: (beraterId: string) => number;
+  /** Übergeordneter Partner (Upline) eines Beraters — null, wenn keiner. */
+  parentOf: (beraterId: string) => string | null;
+  /** Direkte Partner (Downline) eines Beraters (Kap. 8). */
+  downlineOf: (beraterId: string) => string[];
+  /** Start des aktuellen Karriere-Fensters (7.3). */
+  fensterStartOf: (beraterId: string) => string;
+  /** Anzeigename eines Beraters. */
+  nameOf: (beraterId: string) => string;
   /** Umsatz eines Deals gemäß Rolle: GF = Estera-Umsatz, Berater = eigene Provision. */
   umsatzOf: (d: Deal) => number;
   /**
@@ -254,7 +264,9 @@ export async function loadAnalytics(): Promise<AnalyticsData> {
       ),
     supabase
       .from("profiles")
-      .select("id, vorname, nachname, aktiv, rolle, vertriebler_stufe, bereich"),
+      .select(
+        "id, vorname, nachname, aktiv, rolle, vertriebler_stufe, bereich, immo_anteil_default, parent_berater_id, karriere_fenster_start",
+      ),
   ]);
 
   const stages = (stagesQ.data ?? []) as Stage[];
@@ -266,6 +278,23 @@ export async function loadAnalytics(): Promise<AnalyticsData> {
   const stufeMap = new Map(
     profiles.map((p) => [p.id, Number(p.vertriebler_stufe ?? 0)]),
   );
+  const immoDefaultMap = new Map(
+    profiles.map((p) => [p.id, Number(p.immo_anteil_default ?? 0)]),
+  );
+  const parentMap = new Map(
+    profiles.map((p) => [p.id, p.parent_berater_id ?? null]),
+  );
+  const fensterMap = new Map(
+    profiles.map((p) => [p.id, p.karriere_fenster_start ?? new Date(0).toISOString()]),
+  );
+  const downlineMap = new Map<string, string[]>();
+  for (const p of profiles) {
+    if (p.parent_berater_id) {
+      const arr = downlineMap.get(p.parent_berater_id) ?? [];
+      arr.push(p.id);
+      downlineMap.set(p.parent_berater_id, arr);
+    }
+  }
   const me = profiles.find((p) => p.id === user?.id);
   const isGf = me?.rolle === "geschaeftsfuehrung";
   const meineBereiche: ("immobilien" | "vv")[] = isGf
@@ -332,6 +361,12 @@ export async function loadAnalytics(): Promise<AnalyticsData> {
     isGf,
     meineBereiche,
     stufeOf: (id: string) => stufeMap.get(id) ?? 0,
+    immoDefaultOf: (id: string) => immoDefaultMap.get(id) ?? 0,
+    parentOf: (id: string) => parentMap.get(id) ?? null,
+    downlineOf: (id: string) => downlineMap.get(id) ?? [],
+    fensterStartOf: (id: string) =>
+      fensterMap.get(id) ?? new Date(0).toISOString(),
+    nameOf: (id: string) => beraterMap.get(id) ?? "—",
     umsatzOf,
     einbehaltOf,
     istRealisiert,
