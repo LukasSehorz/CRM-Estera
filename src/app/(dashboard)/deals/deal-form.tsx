@@ -12,7 +12,14 @@ import {
   type DealInput,
 } from "./actions";
 import { OBJEKT_STATUS, PROVISIONSSATZ_PRESETS, bereichLabel } from "@/config/enums";
-import { computeBWS, computeImmoProvision, computeProvision } from "@/lib/provision";
+import {
+  computeBWS,
+  computeImmoProvision,
+  computeProvision,
+  MAX_ANZAHL_JAHRE,
+  VV_ZAHLARTEN,
+  type VvZahlart,
+} from "@/lib/provision";
 import { formatEURCents } from "@/lib/format";
 import { CollapsibleSection } from "@/components/collapsible-section";
 import { Button } from "@/components/ui/button";
@@ -21,7 +28,6 @@ import { CurrencyInput } from "@/components/ui/currency-input";
 import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -39,6 +45,9 @@ export type DealFormState = {
   stage_id: string;
   naechster_termin: string;
   bemerkungen: string;
+  // Nächster Schritt (3.4): ein konkreter Text + Fälligkeit statt loser Notizen
+  next_step: string;
+  next_step_faellig: string;
   // Immobilien
   kaufpreis: string;
   objekt_adresse: string;
@@ -50,9 +59,7 @@ export type DealFormState = {
   bws: string;
   sparbeitrag: string;
   anzahl_jahre: string;
-  factoring: boolean;
-  deal_typ: string;
-  ratierlich: boolean;
+  vv_zahlart: string; // factoring | ohne_factoring | ratierlich (7.1)
   tippgeber: string;
   tippgeber_satz: string;
 };
@@ -191,6 +198,8 @@ export function DealForm({
       stage_id: v.stage_id,
       naechster_termin: txt(v.naechster_termin),
       bemerkungen: txt(v.bemerkungen),
+      next_step: txt(v.next_step),
+      next_step_faellig: txt(v.next_step_faellig),
       kaufpreis: num(v.kaufpreis),
       objekt_adresse: txt(v.objekt_adresse),
       objekt_status: (v.objekt_status || null) as DealInput["objekt_status"],
@@ -200,9 +209,7 @@ export function DealForm({
       bws: num(v.bws),
       sparbeitrag: num(v.sparbeitrag),
       anzahl_jahre: intNum(v.anzahl_jahre),
-      factoring: v.factoring,
-      deal_typ: txt(v.deal_typ),
-      ratierlich: v.ratierlich,
+      vv_zahlart: (v.vv_zahlart || "factoring") as DealInput["vv_zahlart"],
       tippgeber: txt(v.tippgeber),
       tippgeber_satz: num(v.tippgeber_satz),
     };
@@ -217,6 +224,12 @@ export function DealForm({
     }
     if (!v.dealname.trim()) {
       setError("Bitte einen Dealnamen vergeben.");
+      return;
+    }
+    // 7.5: Die BWS-Laufzeit ist auf 40 Jahre begrenzt.
+    const jahre = intNum(v.anzahl_jahre);
+    if (bereich === "vv" && jahre != null && (jahre < 1 || jahre > MAX_ANZAHL_JAHRE)) {
+      setError(`Anzahl Jahre muss zwischen 1 und ${MAX_ANZAHL_JAHRE} liegen.`);
       return;
     }
     startTransition(async () => {
@@ -245,10 +258,9 @@ export function DealForm({
           bws: num(v.bws),
           sparbeitrag: num(v.sparbeitrag),
           anzahlJahre: intNum(v.anzahl_jahre),
-          factoring: v.factoring,
+          zahlart: (v.vv_zahlart || "factoring") as VvZahlart,
           tippgeberSatz: num(v.tippgeber_satz),
           vertrieblerStufe,
-          ratierlich: v.ratierlich,
         })
       : null;
 
@@ -318,6 +330,28 @@ export function DealForm({
               id="naechster"
               value={v.naechster_termin}
               onChange={(e) => set("naechster_termin", e.target.value)}
+            />
+          </Field>
+
+          {/* Nächster Schritt (3.4): ein konkreter To-do-Text + Fälligkeit
+              statt loser Notizen — Grundlage für die Deal-Health-Ampel. */}
+          <Field
+            label="Nächster Schritt"
+            htmlFor="nextstep"
+            className="sm:col-span-2"
+          >
+            <Input
+              id="nextstep"
+              value={v.next_step}
+              onChange={(e) => set("next_step", e.target.value)}
+              placeholder="z. B. Kunde zurückrufen, Unterlagen anfordern …"
+            />
+          </Field>
+          <Field label="Fällig am" htmlFor="nextstepfaellig">
+            <DateInput
+              id="nextstepfaellig"
+              value={v.next_step_faellig}
+              onChange={(e) => set("next_step_faellig", e.target.value)}
             />
           </Field>
         </div>
@@ -486,7 +520,7 @@ export function DealForm({
       {bereich === "vv" && (
         <CollapsibleSection
           title="Vermögensverwaltung"
-          description="Nettopolice · BWS & Provision"
+          description="BWS · Zahlart & Provision"
         >
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Sparbeitrag mtl. (€)" htmlFor="sparbeitrag">
@@ -496,12 +530,12 @@ export function DealForm({
                 onValueChange={onSparbeitragChange}
               />
             </Field>
-            <Field label="Anzahl Jahre" htmlFor="jahre">
+            <Field label="Anzahl Jahre (max. 40)" htmlFor="jahre">
               <Input
                 id="jahre"
                 type="number"
-                min={0}
-                max={99}
+                min={1}
+                max={MAX_ANZAHL_JAHRE}
                 inputMode="numeric"
                 value={v.anzahl_jahre}
                 onChange={(e) => onJahreChange(e.target.value)}
@@ -518,19 +552,31 @@ export function DealForm({
                 überschreibbar.
               </p>
             </Field>
-            <Field label="Factoring" className="sm:col-span-2">
-              <label className="flex cursor-pointer items-center gap-2 text-sm">
-                <Checkbox
-                  checked={v.factoring}
-                  onCheckedChange={(c) => set("factoring", c === true)}
-                />
-                Mit Factoring
-              </label>
+
+            {/* Zahlart (7.1): ein Feld für die drei Fälle — der Einbehalt
+                hängt am Factoring, nicht an einem separaten Häkchen. */}
+            <Field label="Zahlart" htmlFor="zahlart" className="sm:col-span-2">
+              <Select
+                value={v.vv_zahlart || "factoring"}
+                onValueChange={(val) => set("vv_zahlart", val)}
+              >
+                <SelectTrigger id="zahlart" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {VV_ZAHLARTEN.map((z) => (
+                    <SelectItem key={z.value} value={z.value}>
+                      {z.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <p className="text-xs text-muted-foreground">
-                Ohne Factoring gilt der Einbehalt: 85 % sofort, 15 % nach 12
-                Monaten.
+                {VV_ZAHLARTEN.find((z) => z.value === (v.vv_zahlart || "factoring"))
+                  ?.hinweis}
               </p>
             </Field>
+
             <Field label="Tippgeber" htmlFor="tippgeber">
               <Input
                 id="tippgeber"
@@ -550,84 +596,93 @@ export function DealForm({
                 onChange={(e) => set("tippgeber_satz", e.target.value)}
                 placeholder="z. B. 10"
               />
-            </Field>
-            <Field label="Deal-Typ" htmlFor="dealtyp">
-              <Input
-                id="dealtyp"
-                value={v.deal_typ}
-                onChange={(e) => set("deal_typ", e.target.value)}
-                placeholder="Nettopolice"
-              />
-            </Field>
-            <Field label="Ratierlich?" htmlFor="ratierlich">
-              <label className="flex h-9 cursor-pointer items-center gap-2 text-sm">
-                <Checkbox
-                  checked={v.ratierlich}
-                  onCheckedChange={(c) => set("ratierlich", c === true)}
-                />
-                Auf 60 Monate verteilt
-              </label>
+              <p className="text-xs text-muted-foreground">
+                Geht von deinem Anteil ab, nicht vom Hausanteil.
+              </p>
             </Field>
           </div>
 
-          {/* Live-Provisionsvorschau (rechnet mit der admin-gesetzten Stufe) */}
+          {/* Berater-Vorschau (7.5): nur die Ergebnisse — BWS → Vorschau →
+              Sofort → Einbehalt → Ratierlich. Die volle Kette (7,8 % →
+              Factoring → Stufe) sieht nur die GF. */}
           {prov && (
             <div className="mt-4 rounded-lg border border-border bg-surface-2 p-4">
               <div className="mb-2 flex items-center justify-between">
                 <span className="text-sm font-medium">Provisionsvorschau</span>
-                <span className="text-xs text-muted-foreground">
-                  Vertriebler-Stufe {vertrieblerStufe}%
-                </span>
+                {isGf && (
+                  <span className="text-xs text-muted-foreground">
+                    Vertriebler-Stufe {vertrieblerStufe}%
+                  </span>
+                )}
               </div>
               <dl className="space-y-1.5 text-sm">
                 <ProvRow label="BWS" value={formatEURCents(prov.bws)} />
+
+                {/* Volle Kette nur für die GF (2.2 / 7.5) */}
+                {isGf && (
+                  <>
+                    <ProvRow
+                      label="Grundprovision (7,8 %)"
+                      value={formatEURCents(prov.grundprovision)}
+                    />
+                    <ProvRow
+                      label={
+                        prov.einbehalt
+                          ? "nach Factoring (×90 %)"
+                          : "Provision (ohne Factoring)"
+                      }
+                      value={formatEURCents(prov.nettoProvision)}
+                    />
+                    <ProvRow
+                      label="Hausanteil (Estera)"
+                      value={formatEURCents(prov.hausAnteil)}
+                    />
+                  </>
+                )}
+
                 <ProvRow
-                  label="Grundprovision (7,8 %)"
-                  value={formatEURCents(prov.grundprovision)}
-                />
-                <ProvRow
-                  label={
-                    v.factoring
-                      ? "nach Factoring (×90 %)"
-                      : "Provision (ohne Factoring)"
-                  }
-                  value={formatEURCents(prov.nettoProvision)}
-                />
-                {num(v.tippgeber_satz) ? (
-                  <ProvRow
-                    label={`Tippgeber (${num(v.tippgeber_satz)} %)`}
-                    value={formatEURCents(prov.tippgeberAnteil)}
-                  />
-                ) : null}
-                <ProvRow
-                  label={`Vertriebler-Anteil (${vertrieblerStufe} %)`}
-                  value={formatEURCents(prov.vertrieblerAnteil)}
+                  label={`Deine Provision (${vertrieblerStufe} %)`}
+                  value={formatEURCents(prov.vertrieblerGesamt)}
                   accent
                 />
-                {/* Hausanteil = was Estera verdient — nur für die GF (2.2). */}
-                {isGf && (
-                  <ProvRow
-                    label="Hausanteil"
-                    value={formatEURCents(prov.hausAnteil)}
-                  />
-                )}
-                {prov.einbehalt && (
+                {num(v.tippgeber_satz) ? (
                   <>
-                    <div className="my-1 border-t border-border" />
+                    <ProvRow
+                      label={`− Tippgeber (${num(v.tippgeber_satz)} %)`}
+                      value={formatEURCents(prov.tippgeberAnteil)}
+                    />
+                    <ProvRow
+                      label="= Dein Gewinn"
+                      value={formatEURCents(prov.vertrieblerGewinn)}
+                      accent
+                    />
+                  </>
+                ) : null}
+
+                <div className="my-1 border-t border-border" />
+                {prov.ratierlich ? (
+                  <ProvRow
+                    label="Monatsrate (÷ 60, über 5 Jahre)"
+                    value={formatEURCents(prov.monatsrate)}
+                    accent
+                  />
+                ) : prov.einbehalt ? (
+                  <>
                     <ProvRow
                       label="Sofort (85 %)"
                       value={formatEURCents(prov.sofortAuszahlung)}
+                      accent
                     />
                     <ProvRow
                       label="Einbehalt (15 %, nach 12 Mon.)"
                       value={formatEURCents(prov.einbehaltBetrag)}
                     />
                   </>
-                )}
-                {prov.ratierlich && (
+                ) : (
                   <ProvRow
-                    label="Monatsrate (÷ 60)"
-                    value={formatEURCents(prov.monatsrate)}
+                    label="Voll sofort"
+                    value={formatEURCents(prov.sofortAuszahlung)}
+                    accent
                   />
                 )}
               </dl>

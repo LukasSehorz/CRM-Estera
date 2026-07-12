@@ -1,7 +1,7 @@
 import { FileCheck2, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatEUR, formatEURCents } from "@/lib/format";
-import { computeProvision } from "@/lib/provision";
+import { computeProvision, zahlartOf } from "@/lib/provision";
 import type { HealthResult } from "@/lib/health";
 import { Pill, objektStatusTone } from "@/components/ui/pill";
 
@@ -19,7 +19,9 @@ export type BoardDeal = {
   objekt_status: string | null;
   bws: number | null;
   factoring: boolean;
+  vv_zahlart: string | null;
   ratierlich: boolean | null;
+  tippgeber_satz: number | null;
   tippgeber: string | null;
   naechster_termin: string | null;
   updated_at: string;
@@ -113,16 +115,28 @@ export function DealCardContent({
             <div className="text-xs tabular-nums text-muted-foreground">
               Provision{" "}
               {formatEURCents(
-                computeProvision({ bws: deal.bws, factoring: deal.factoring })
-                  .nettoProvision,
+                computeProvision({
+                  bws: deal.bws,
+                  zahlart: zahlartOf(deal),
+                }).nettoProvision,
               )}
             </div>
           )}
+          {/* Zahlart-Tags (7.1): bei Factoring greifen BEIDE — Factoring
+              (90 %) UND Einbehalt (15 %). Ohne Factoring: voll sofort. */}
           <div className="flex flex-wrap gap-1">
-            <Pill tone={deal.factoring ? "success" : "warning"}>
-              {deal.factoring ? "Factoring" : "Einbehalt"}
-            </Pill>
-            {deal.ratierlich && <Pill tone="info">ratierlich</Pill>}
+            {(() => {
+              const z = zahlartOf(deal);
+              if (z === "ratierlich") return <Pill tone="info">ratierlich</Pill>;
+              if (z === "factoring")
+                return (
+                  <>
+                    <Pill tone="success">Factoring</Pill>
+                    <Pill tone="warning">Einbehalt 15 %</Pill>
+                  </>
+                );
+              return <Pill tone="muted">voll sofort</Pill>;
+            })()}
             {deal.tippgeber && <Pill tone="muted">Tipp: {deal.tippgeber}</Pill>}
           </div>
         </>

@@ -75,6 +75,8 @@ export type DealInput = {
   stage_id: string;
   naechster_termin: string | null;
   bemerkungen: string | null;
+  next_step: string | null;
+  next_step_faellig: string | null;
   // Immobilien
   kaufpreis: number | null;
   objekt_adresse: string | null;
@@ -86,9 +88,7 @@ export type DealInput = {
   bws: number | null;
   sparbeitrag: number | null;
   anzahl_jahre: number | null;
-  factoring: boolean;
-  deal_typ: string | null;
-  ratierlich: boolean | null;
+  vv_zahlart: "factoring" | "ohne_factoring" | "ratierlich";
   tippgeber: string | null;
   tippgeber_satz: number | null;
 };
@@ -111,8 +111,14 @@ function boardPath(bereich: Enums["bereich_enum"]): string {
  * normale Speichern eines Beraters am Trigger scheitern.
  */
 function bereichFields(v: DealInput) {
+  // next_step gilt für beide Bereiche (3.4).
+  const gemeinsam = {
+    next_step: v.next_step,
+    next_step_faellig: v.next_step_faellig,
+  };
   if (v.bereich === "immobilien") {
     return {
+      ...gemeinsam,
       kaufpreis: v.kaufpreis,
       objekt_adresse: v.objekt_adresse,
       objekt_status: v.objekt_status,
@@ -121,6 +127,7 @@ function bereichFields(v: DealInput) {
       bws: null,
       sparbeitrag: null,
       anzahl_jahre: null,
+      vv_zahlart: null,
       factoring: false,
       deal_typ: null,
       ratierlich: null,
@@ -128,7 +135,10 @@ function bereichFields(v: DealInput) {
       tippgeber_satz: null,
     };
   }
+  // factoring/ratierlich werden vom DB-Trigger sync_vv_zahlart aus der
+  // Zahlart abgeleitet — hier nur vv_zahlart schreiben (7.1, single source).
   return {
+    ...gemeinsam,
     kaufpreis: null,
     objekt_adresse: null,
     objekt_status: null,
@@ -137,9 +147,8 @@ function bereichFields(v: DealInput) {
     bws: v.bws,
     sparbeitrag: v.sparbeitrag,
     anzahl_jahre: v.anzahl_jahre,
-    factoring: v.factoring,
-    deal_typ: v.deal_typ,
-    ratierlich: v.ratierlich,
+    vv_zahlart: v.vv_zahlart,
+    deal_typ: null,
     tippgeber: v.tippgeber,
     tippgeber_satz: v.tippgeber_satz,
   };

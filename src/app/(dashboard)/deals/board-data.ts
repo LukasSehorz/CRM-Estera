@@ -26,7 +26,7 @@ export async function loadBoard(bereich: Bereich): Promise<{
   const { data: deals, error: dealsErr } = await supabase
     .from("deals")
     .select(
-      "id, dealname, berater_id, contact_id, stage_id, bereich, kaufpreis, objekt_adresse, objekt_status, bws, factoring, ratierlich, tippgeber, naechster_termin, updated_at",
+      "id, dealname, berater_id, contact_id, stage_id, bereich, kaufpreis, objekt_adresse, objekt_status, bws, factoring, vv_zahlart, ratierlich, tippgeber_satz, tippgeber, naechster_termin, updated_at",
     )
     .eq("bereich", bereich)
     .order("created_at", { ascending: false });

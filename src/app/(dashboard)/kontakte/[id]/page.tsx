@@ -96,6 +96,11 @@ export default async function KontaktDetailPage({
     }));
   }
 
+  // „Auf Objekt belegt" (15.2): nur Immobilien-Deals dieses Kontakts.
+  const dealOptions = (contactDeals ?? [])
+    .filter((d) => d.bereich === "immobilien")
+    .map((d) => ({ id: d.id, name: d.dealname }));
+
   const initial: FormState = {
     vorname: c.vorname,
     nachname: c.nachname,
@@ -108,12 +113,9 @@ export default async function KontaktDetailPage({
     interesse: c.interesse ?? [],
     nettoverdienst_monatlich: c.nettoverdienst_monatlich?.toString() ?? "",
     eigenkapital: c.eigenkapital?.toString() ?? "",
-    finanzierungsrahmen_betrag: c.finanzierungsrahmen_betrag?.toString() ?? "",
-    einschaetzung_erhalten: c.einschaetzung_erhalten,
-    datum_einschaetzung: c.datum_einschaetzung ?? "",
+    einschaetzung: c.einschaetzung ?? "ausstehend",
     eingeschaetzter_betrag: c.eingeschaetzter_betrag?.toString() ?? "",
-    einschaetzung_durch: c.einschaetzung_durch ?? "",
-    einschaetzung_status: c.einschaetzung_status ?? "",
+    belegt_deal_id: c.belegt_deal_id ?? "",
     unterlagen_vollstaendig: c.unterlagen_vollstaendig,
     fehlende_unterlagen: c.fehlende_unterlagen ?? "",
     finanzierungsstatus: c.finanzierungsstatus ?? "offen",
@@ -197,6 +199,7 @@ export default async function KontaktDetailPage({
               initial={initial}
               canAssignBerater={isGf}
               beraterOptions={beraterOptions}
+              dealOptions={dealOptions}
             />
             {/* Dokumente nur für Immobilien-Kontakte (3.1) */}
             {istImmoKontakt && (

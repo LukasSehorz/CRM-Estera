@@ -37,9 +37,10 @@ export async function GfSignale({ a }: { a: AnalyticsData }) {
     .sort((x, y) => y.pipeline - x.pipeline)
     .slice(0, 4);
 
-  // (b) Einbehalte, die in den nächsten 30 Tagen fällig werden
+  // (b) Einbehalte, die in den nächsten 30 Tagen fällig werden —
+  // Einbehalt gibt es nur mit Factoring (7.1); einbehaltOf liefert sonst 0.
   const faellige = a.deals
-    .filter((d) => d.bereich === "vv" && isWon(d, a.sMap) && !d.factoring)
+    .filter((d) => d.bereich === "vv" && isWon(d, a.sMap))
     .map((d) => ({
       deal: d,
       faellig: einbehaltFaelligAm(d.closed_at ?? d.created_at),

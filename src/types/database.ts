@@ -26,6 +26,9 @@ export type Database = {
           bereich: Database["public"]["Enums"]["bereich_enum"][];
           aktiv: boolean;
           vertriebler_stufe: number | null;
+          immo_anteil_default: number | null;
+          parent_berater_id: string | null;
+          karriere_fenster_start: string;
           created_at: string;
           updated_at: string;
         };
@@ -37,6 +40,9 @@ export type Database = {
           bereich?: Database["public"]["Enums"]["bereich_enum"][];
           aktiv?: boolean;
           vertriebler_stufe?: number | null;
+          immo_anteil_default?: number | null;
+          parent_berater_id?: string | null;
+          karriere_fenster_start?: string;
           created_at?: string;
           updated_at?: string;
         };
@@ -48,6 +54,9 @@ export type Database = {
           bereich?: Database["public"]["Enums"]["bereich_enum"][];
           aktiv?: boolean;
           vertriebler_stufe?: number | null;
+          immo_anteil_default?: number | null;
+          parent_berater_id?: string | null;
+          karriere_fenster_start?: string;
           created_at?: string;
           updated_at?: string;
         };
@@ -115,6 +124,8 @@ export type Database = {
           finanzierungsstatus: Database["public"]["Enums"]["finanzierungsstatus_enum"];
           ist_selbststaendig: boolean;
           ist_immobilienbesitzer: boolean;
+          einschaetzung: string;
+          belegt_deal_id: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -143,6 +154,8 @@ export type Database = {
           finanzierungsstatus?: Database["public"]["Enums"]["finanzierungsstatus_enum"];
           ist_selbststaendig?: boolean;
           ist_immobilienbesitzer?: boolean;
+          einschaetzung?: string;
+          belegt_deal_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -171,6 +184,8 @@ export type Database = {
           finanzierungsstatus?: Database["public"]["Enums"]["finanzierungsstatus_enum"];
           ist_selbststaendig?: boolean;
           ist_immobilienbesitzer?: boolean;
+          einschaetzung?: string;
+          belegt_deal_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -202,12 +217,15 @@ export type Database = {
           sparbeitrag: number | null;
           anzahl_jahre: number | null;
           factoring: boolean;
+          vv_zahlart: string | null;
           deal_typ: string | null;
           ratierlich: boolean | null;
           tippgeber: string | null;
           tippgeber_satz: number | null;
           provisionssatz: number | null;
           berater_anteil: number | null;
+          next_step: string | null;
+          next_step_faellig: string | null;
           created_at: string;
           updated_at: string;
           closed_at: string | null;
@@ -229,12 +247,15 @@ export type Database = {
           sparbeitrag?: number | null;
           anzahl_jahre?: number | null;
           factoring?: boolean;
+          vv_zahlart?: string | null;
           deal_typ?: string | null;
           ratierlich?: boolean | null;
           tippgeber?: string | null;
           tippgeber_satz?: number | null;
           provisionssatz?: number | null;
           berater_anteil?: number | null;
+          next_step?: string | null;
+          next_step_faellig?: string | null;
           created_at?: string;
           updated_at?: string;
           closed_at?: string | null;
@@ -256,12 +277,15 @@ export type Database = {
           sparbeitrag?: number | null;
           anzahl_jahre?: number | null;
           factoring?: boolean;
+          vv_zahlart?: string | null;
           deal_typ?: string | null;
           ratierlich?: boolean | null;
           tippgeber?: string | null;
           tippgeber_satz?: number | null;
           provisionssatz?: number | null;
           berater_anteil?: number | null;
+          next_step?: string | null;
+          next_step_faellig?: string | null;
           created_at?: string;
           updated_at?: string;
           closed_at?: string | null;
@@ -493,18 +517,21 @@ export type Database = {
           berater_id: string;
           monatsziel_immobilien: number | null;
           monatsziel_vv: number | null;
+          gesperrt: boolean;
           updated_at: string;
         };
         Insert: {
           berater_id: string;
           monatsziel_immobilien?: number | null;
           monatsziel_vv?: number | null;
+          gesperrt?: boolean;
           updated_at?: string;
         };
         Update: {
           berater_id?: string;
           monatsziel_immobilien?: number | null;
           monatsziel_vv?: number | null;
+          gesperrt?: boolean;
           updated_at?: string;
         };
         Relationships: [];
@@ -525,9 +552,29 @@ export type Database = {
         };
         Returns: undefined;
       };
+      set_berater_anbindung: {
+        Args: {
+          target: string;
+          p_immo_default: number | null;
+          p_parent: string | null;
+        };
+        Returns: undefined;
+      };
+      set_eigenes_monatsziel: {
+        Args: { p_immo: number | null; p_vv: number | null };
+        Returns: undefined;
+      };
+      set_monatsziel_sperre: {
+        Args: { target: string; p_gesperrt: boolean };
+        Returns: undefined;
+      };
+      is_backoffice: {
+        Args: Record<string, never>;
+        Returns: boolean;
+      };
     };
     Enums: {
-      rolle_enum: "berater" | "geschaeftsfuehrung";
+      rolle_enum: "berater" | "geschaeftsfuehrung" | "backoffice";
       bereich_enum: "immobilien" | "vv";
       finanzierungsstatus_enum: "offen" | "in_pruefung" | "zugesagt";
       dokument_gruppe_enum: "allgemein" | "selbststaendig" | "immobilienbesitzer";
@@ -582,7 +629,7 @@ export type Enums<T extends keyof PublicSchema["Enums"]> =
 export const Constants = {
   public: {
     Enums: {
-      rolle_enum: ["berater", "geschaeftsfuehrung"],
+      rolle_enum: ["berater", "geschaeftsfuehrung", "backoffice"],
       bereich_enum: ["immobilien", "vv"],
       kontakt_status_enum: [
         "Neu",

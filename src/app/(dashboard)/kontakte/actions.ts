@@ -20,12 +20,9 @@ export type ContactInput = {
   interesse: Enums["bereich_enum"][];
   nettoverdienst_monatlich: number | null;
   eigenkapital: number | null;
-  finanzierungsrahmen_betrag: number | null;
-  einschaetzung_erhalten: boolean;
-  datum_einschaetzung: string | null;
+  einschaetzung: "ausstehend" | "eingeschaetzt" | "nicht_finanzierbar";
   eingeschaetzter_betrag: number | null;
-  einschaetzung_durch: string | null;
-  einschaetzung_status: Enums["einschaetzung_status_enum"] | null;
+  belegt_deal_id: string | null;
   unterlagen_vollstaendig: boolean;
   fehlende_unterlagen: string | null;
   finanzierungsstatus: Enums["finanzierungsstatus_enum"];
@@ -68,12 +65,19 @@ function toRow(v: ContactInput) {
     interesse: v.interesse,
     nettoverdienst_monatlich: v.nettoverdienst_monatlich,
     eigenkapital: v.eigenkapital,
-    finanzierungsrahmen_betrag: v.finanzierungsrahmen_betrag,
-    einschaetzung_erhalten: v.einschaetzung_erhalten,
-    datum_einschaetzung: v.datum_einschaetzung,
-    eingeschaetzter_betrag: v.eingeschaetzter_betrag,
-    einschaetzung_durch: v.einschaetzung_durch,
-    einschaetzung_status: v.einschaetzung_status,
+    einschaetzung: v.einschaetzung,
+    // „finanzierbar bis" nur bei eingeschätzt; sonst leeren (15.2).
+    eingeschaetzter_betrag:
+      v.einschaetzung === "eingeschaetzt" ? v.eingeschaetzter_betrag : null,
+    // Belegung nur, wenn eingeschätzt UND ein echter Deal gewählt wurde.
+    belegt_deal_id:
+      v.einschaetzung === "eingeschaetzt" &&
+      v.belegt_deal_id &&
+      v.belegt_deal_id !== "__belegt"
+        ? v.belegt_deal_id
+        : null,
+    // Qualifiziert wird automatisch abgeleitet (istQualifiziert) — der
+    // Kontakt-Status wird bei „Neu" auf „Qualifiziert" gehoben (15.2).
     unterlagen_vollstaendig: v.unterlagen_vollstaendig,
     fehlende_unterlagen: v.fehlende_unterlagen,
     finanzierungsstatus: v.finanzierungsstatus,

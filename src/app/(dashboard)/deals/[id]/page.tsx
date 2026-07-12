@@ -80,6 +80,8 @@ export default async function DealDetailPage({
     stage_id: d.stage_id,
     naechster_termin: d.naechster_termin ?? "",
     bemerkungen: d.bemerkungen ?? "",
+    next_step: d.next_step ?? "",
+    next_step_faellig: d.next_step_faellig ?? "",
     kaufpreis: d.kaufpreis?.toString() ?? "",
     objekt_adresse: d.objekt_adresse ?? "",
     objekt_status: d.objekt_status ?? "",
@@ -89,9 +91,8 @@ export default async function DealDetailPage({
     bws: d.bws?.toString() ?? "",
     sparbeitrag: d.sparbeitrag?.toString() ?? "",
     anzahl_jahre: d.anzahl_jahre?.toString() ?? "",
-    factoring: d.factoring ?? false,
-    deal_typ: d.deal_typ ?? "",
-    ratierlich: d.ratierlich ?? false,
+    vv_zahlart:
+      d.vv_zahlart ?? (d.ratierlich ? "ratierlich" : d.factoring ? "factoring" : "ohne_factoring"),
     tippgeber: d.tippgeber ?? "",
     tippgeber_satz: d.tippgeber_satz?.toString() ?? "",
   };

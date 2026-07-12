@@ -2,16 +2,10 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Topbar } from "@/components/layout/topbar";
 import { DashboardTabs } from "../dashboard-tabs";
-import { BereichSwitcher } from "../bereich-switcher";
 import { EingeschaetztView, type EingRow } from "./eingeschaetzt-view";
-import { loadAnalytics, resolveScope, erlaubteScopes } from "@/lib/analytics";
+import { loadAnalytics } from "@/lib/analytics";
 
-export default async function EingeschaetztDashboardPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ bereich?: string }>;
-}) {
-  const { bereich: rawBereich } = await searchParams;
+export default async function EingeschaetztDashboardPage() {
   const supabase = await createClient();
   const {
     data: { user },
@@ -25,14 +19,12 @@ export default async function EingeschaetztDashboardPage({
   const isGf = me?.rolle === "geschaeftsfuehrung";
 
   const a = await loadAnalytics();
-  const scope = resolveScope(a, rawBereich);
-  // „Finanzierungs-OK": Einschätzung positiv oder bedingt positiv;
-  // der Bereichs-Umschalter filtert zusätzlich nach Interesse des Kontakts.
+  // 15.2: „Eingeschätzte Kunden" ausschließlich für Immobilien — in der VV
+  // gibt es keine Finanzierungseinschätzung. Nur Kontakte, die bereits
+  // bewertet wurden (nicht „ausstehend").
   const eligible = a.contacts.filter(
     (c) =>
-      (c.einschaetzung_status === "Positiv" ||
-        c.einschaetzung_status === "Bedingt positiv") &&
-      (scope === "gesamt" || c.interesse.includes(scope)),
+      c.interesse.includes("immobilien") && c.einschaetzung !== "ausstehend",
   );
 
   const rows: EingRow[] = eligible.map((c) => ({
@@ -40,9 +32,9 @@ export default async function EingeschaetztDashboardPage({
     name: `${c.vorname} ${c.nachname}`,
     beraterId: c.berater_id,
     berater: a.beraterMap.get(c.berater_id) ?? "—",
-    status: c.einschaetzung_status,
+    einschaetzung: c.einschaetzung,
     betrag: c.eingeschaetzter_betrag ?? 0,
-    rahmen: c.finanzierungsrahmen_betrag ?? 0,
+    belegt: c.belegt_deal_id != null,
   }));
 
   const beraterOptions = isGf
@@ -53,13 +45,10 @@ export default async function EingeschaetztDashboardPage({
     <>
       <Topbar
         title="Eingeschätzte Kunden"
-        subtitle="Qualifizierte Leads mit Finanzierungs-OK · filterbar"
+        subtitle="Immobilien-Leads mit Finanzierungseinschätzung · filterbar"
       />
       <div className="space-y-6 px-6 py-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <DashboardTabs />
-          <BereichSwitcher aktiv={scope} erlaubt={erlaubteScopes(a)} />
-        </div>
+        <DashboardTabs />
         <EingeschaetztView rows={rows} beraterOptions={beraterOptions} isGf={isGf} />
       </div>
     </>

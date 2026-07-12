@@ -1,14 +1,16 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Topbar } from "@/components/layout/topbar";
+import { istQualifiziert } from "@/config/enums";
 import { ContactsTable, type ContactRow } from "../../kontakte/contacts-table";
 
 const META: Record<string, { title: string; subtitle: string }> = {
   alle: { title: "Alle Kontakte", subtitle: "Immobilien + Vermögensverwaltung" },
   immobilien: { title: "Immobilien-Kontakte", subtitle: "Interesse = Immobilien" },
   vv: { title: "Vermögensverwaltung-Kontakte", subtitle: "Interesse = Vermögensverwaltung" },
-  eingeschaetzt: { title: "Eingeschätzte Kunden", subtitle: "Mit Finanzierungseinschätzung, nach Volumen sortiert" },
-  heiss: { title: "Heiße Leads", subtitle: "Termin durchgeführt, aber noch kein Deal in fortgeschrittener Phase" },
+  eingeschaetzt: { title: "Eingeschätzte Kunden", subtitle: "Immobilien mit Einschätzung „eingeschätzt“, nach Volumen sortiert" },
+  qualifiziert: { title: "Qualifizierte Leads", subtitle: "Automatisch: Nettoeinkommen & Eigenkapital über der Schwelle" },
+  heiss: { title: "Heiße Leads", subtitle: "Qualifiziert + eingeschätzt + Termin durchgeführt" },
   offen: { title: "Offene Leads", subtitle: "Noch kein Termin vereinbart" },
 };
 
@@ -43,7 +45,7 @@ export default async function KontaktListenPage({
   const { data: contacts } = await supabase
     .from("contacts")
     .select(
-      "id, vorname, nachname, email, telefon, status, termin_status, leadquelle, interesse, finanzierungsrahmen_betrag, eingeschaetzter_betrag, einschaetzung_erhalten, berater_id, created_at",
+      "id, vorname, nachname, email, telefon, status, termin_status, leadquelle, interesse, nettoverdienst_monatlich, eigenkapital, einschaetzung, eingeschaetzter_betrag, berater_id, created_at",
     )
     .order("created_at", { ascending: false });
 
@@ -61,11 +63,20 @@ export default async function KontaktListenPage({
   } else if (preset === "vv") {
     list = list.filter((c) => c.interesse?.includes("vv"));
   } else if (preset === "eingeschaetzt") {
+    // 15.2: nur Immobilien, Status „eingeschätzt", nach Volumen absteigend.
     list = list
-      .filter((c) => c.einschaetzung_erhalten)
+      .filter(
+        (c) =>
+          c.interesse?.includes("immobilien") &&
+          c.einschaetzung === "eingeschaetzt",
+      )
       .sort(
         (a, b) => (b.eingeschaetzter_betrag ?? 0) - (a.eingeschaetzter_betrag ?? 0),
       );
+  } else if (preset === "qualifiziert") {
+    list = list.filter((c) =>
+      istQualifiziert(c.nettoverdienst_monatlich, c.eigenkapital),
+    );
   } else if (preset === "offen") {
     list = list.filter((c) => c.termin_status === "Nicht vereinbart");
   } else if (preset === "heiss") {
@@ -84,7 +95,11 @@ export default async function KontaktListenPage({
         fortgeschritten.add(d.contact_id);
     }
     list = list.filter(
-      (c) => c.termin_status === "Durchgeführt" && !fortgeschritten.has(c.id),
+      (c) =>
+        istQualifiziert(c.nettoverdienst_monatlich, c.eigenkapital) &&
+        c.einschaetzung === "eingeschaetzt" &&
+        c.termin_status === "Durchgeführt" &&
+        !fortgeschritten.has(c.id),
     );
   }
 

@@ -1,7 +1,11 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Topbar } from "@/components/layout/topbar";
-import { computeProvision, einbehaltFaelligAm } from "@/lib/provision";
+import {
+  computeProvision,
+  einbehaltFaelligAm,
+  zahlartOf,
+} from "@/lib/provision";
 import { formatDate } from "@/lib/format";
 import { loadDealRows, type DealRow } from "../lists-data";
 import { DealsTable, type DealDisplay } from "../deals-table";
@@ -12,9 +16,9 @@ const META: Record<string, { title: string; subtitle: string; datumLabel: string
   finanzierung: { title: "Deals in Finanzierung", subtitle: "Immobilien-Deals in der Phase „Finanzierung in Prüfung“", datumLabel: "Nächster Termin" },
   verkauft: { title: "Verkaufte Deals", subtitle: "Gewonnene Abschlüsse (Reporting)", datumLabel: "Abgeschlossen" },
   offen: { title: "Offene Deals", subtitle: "Alle Deals, die weder gewonnen noch verloren sind", datumLabel: "Nächster Termin" },
-  "mit-einbehalt": { title: "Deals mit Einbehalt", subtitle: "VV-Deals ohne Factoring (85 % sofort, 15 % Einbehalt)", datumLabel: "Nächster Termin" },
-  "ohne-einbehalt": { title: "Deals ohne Einbehalt", subtitle: "VV-Deals mit Factoring", datumLabel: "Nächster Termin" },
-  "einbehalt-offen": { title: "Offener Einbehalt je Kunde", subtitle: "Einbehaltene 15 % und deren Fälligkeit", datumLabel: "" },
+  "mit-einbehalt": { title: "Deals mit Einbehalt", subtitle: "VV-Deals mit Factoring (85 % sofort, 15 % Einbehalt nach 12 Mon.)", datumLabel: "Nächster Termin" },
+  "ohne-einbehalt": { title: "Deals ohne Einbehalt", subtitle: "VV-Deals ohne Factoring bzw. ratierlich (voll sofort)", datumLabel: "Nächster Termin" },
+  "einbehalt-offen": { title: "Offener Einbehalt je Kunde", subtitle: "Einbehaltene 15 % (Factoring-Deals) und deren Fälligkeit", datumLabel: "" },
 };
 
 function startOfDay(d: Date) {
@@ -115,18 +119,24 @@ export default async function DealListenPage({
       .sort((a, b) => a.stagePos - b.stagePos)
       .map((d) => std(d, d.naechsterTermin));
   } else if (preset === "mit-einbehalt") {
+    // Einbehalt gibt es NUR mit Factoring (7.1).
     list = rows
-      .filter((d) => d.bereich === "vv" && !d.factoring)
+      .filter((d) => d.bereich === "vv" && zahlartOf(d) === "factoring")
       .map((d) => std(d, d.naechsterTermin));
   } else if (preset === "ohne-einbehalt") {
     list = rows
-      .filter((d) => d.bereich === "vv" && d.factoring)
+      .filter((d) => d.bereich === "vv" && zahlartOf(d) !== "factoring")
       .map((d) => std(d, d.naechsterTermin));
   } else if (preset === "einbehalt-offen") {
     list = rows
-      .filter((d) => d.bereich === "vv" && !d.factoring)
+      .filter((d) => d.bereich === "vv" && zahlartOf(d) === "factoring")
       .map((d) => {
-        const prov = computeProvision({ bws: d.bws, factoring: false });
+        const prov = computeProvision({
+          bws: d.bws,
+          zahlart: "factoring",
+          vertrieblerStufe: d.vertrieblerStufe,
+          tippgeberSatz: d.tippgeber_satz,
+        });
         const basis = d.closedAt ?? d.createdAt;
         const faelligISO = einbehaltFaelligAm(basis);
         const faellig = faelligISO ? new Date(faelligISO) : null;

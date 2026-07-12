@@ -42,18 +42,20 @@ export default async function PerformanceDashboardPage({
   const now = new Date();
   const perf = beraterPerformance(a);
 
-  // Umsatz je Periode (nach closed_at) je Berater.
+  // Umsatz je Periode je Berater — nach Buchungsdatum (1.1: Immobilien
+  // realisieren zum Notartermin, VV bei Policierung).
   const mk = () => ({ monat: 0, quartal: 0, jahr: 0, gesamt: 0 });
   const byPeriod = new Map<string, ReturnType<typeof mk>>();
   for (const p of perf) byPeriod.set(p.id, mk());
   for (const d of a.deals) {
-    if (!isWon(d, a.sMap) || !d.closed_at) continue;
+    const am = a.realisiertAm(d);
+    if (!am) continue;
     let b = byPeriod.get(d.berater_id);
     if (!b) {
       b = mk();
       byPeriod.set(d.berater_id, b);
     }
-    const c = new Date(d.closed_at);
+    const c = new Date(am);
     const amt = a.umsatzOf(d);
     b.gesamt += amt;
     if (c.getFullYear() === now.getFullYear()) {

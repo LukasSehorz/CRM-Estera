@@ -1,50 +1,89 @@
 // =====================================================================
-// VV-Provisionslogik (Fachkonzept Teil 2) — zentrale Single Source of Truth.
-// Wird von Deal-Formular (Live-Vorschau), Deal-Detail (Aufschlüsselung) und
-// den Listen (Einbehalt) genutzt. Keine Werte werden gespeichert; alles wird
-// aus den Eingabefeldern + der (admin-gesetzten) Vertriebler-Stufe berechnet.
+// VV-Provisionslogik — Single Source of Truth (V4.1, Kap. 7.1).
+// Drei Fälle, GEKLÄRT-Box: DER EINBEHALT HÄNGT AM FACTORING.
+//   1 · factoring       Grundprov × 90 % × Stufe → 85 % sofort, 15 % nach 12 Mon.
+//   2 · ohne_factoring  Grundprov × 100 % × Stufe → voll sofort, KEIN Einbehalt
+//   3 · ratierlich      Grundprov × 100 % × Stufe → ÷ 60, monatlich über 5 Jahre
 //
-// Selbsttest (Fachkonzept 2.3, Beispiel A):
-//   BWS = 100 × 12 × 40                = 48.000,00 €
-//   Grundprovision = 48.000 × 7,8 %    =  3.744,00 €
-//   nach Factoring = 3.744 × 90 %      =  3.369,60 €
-//   Tippgeber 10 % = 3.369,60 × 10 %   =    336,96 €
-//   Vertriebler 30 % = 3.369,60 × 30 % =  1.010,88 €
-//   Hausanteil (Rest)                  =  2.021,76 €
+// Tippgeber (Vorgabe Lukas, 12.07.2026): der Tippgeber-Satz geht vom
+// BERATER-Anteil ab, nicht vom Hausanteil. Berater 40 %, Tippgeber 10 %
+// → Umsatz des Beraters = 40 % × Basis, „Gewinn" = 30 % × Basis.
+// Der Estera-/Hausanteil = Basis × (100 % − Stufe) bleibt unberührt.
+//
+// Selbsttest (Beispiel aus dem Dokument: BWS 48.000 €, Consultant 40 %):
+//   Grundprovision 7,8 %             = 3.744,00 €
+//   Fall 1: × 90 % = 3.369,60 → × 40 % = 1.347,84 → sofort 1.145,66 / Einbehalt 202,18
+//   Fall 2: × 100 % = 3.744,00 → × 40 % = 1.497,60 → voll sofort
+//   Fall 3: wie Fall 2, ÷ 60 = 24,96 €/Monat über 60 Monate
 // =====================================================================
 
-export const PROVISIONSSATZ = 0.078; // 7,8 % (global fix, Fachkonzept 2.2)
+export const PROVISIONSSATZ = 0.078; // 7,8 % (global fix)
 export const FACTORING_ANTEIL = 0.9; // 90 % (10 % Factoringgebühr)
-export const EINBEHALT_SOFORT = 0.85; // 85 % sofort (Option ohne Factoring)
-export const EINBEHALT_REST = 0.15; // 15 % einbehalten
-export const EINBEHALT_MONATE = 12; // Auszahlung nach 12 Monaten
-export const RATIERLICH_MONATE = 60; // ratierlich: auf 60 Monate verteilt
+export const EINBEHALT_SOFORT = 0.85; // 85 % sofort (nur bei Factoring)
+export const EINBEHALT_REST = 0.15; // 15 % einbehalten (nur bei Factoring)
+export const EINBEHALT_MONATE = 12; // Auszahlung 12 Monate nach Abschluss
+export const RATIERLICH_MONATE = 60; // ratierlich: 60 Monatsraten (5 Jahre)
+export const MAX_ANZAHL_JAHRE = 40; // 7.5: BWS-Laufzeit ist auf 40 Jahre begrenzt
+
+/** Zahlart eines VV-Deals (deals.vv_zahlart). */
+export type VvZahlart = "factoring" | "ohne_factoring" | "ratierlich";
+
+export const VV_ZAHLARTEN: { value: VvZahlart; label: string; hinweis: string }[] = [
+  {
+    value: "factoring",
+    label: "Mit Factoring (Normalfall)",
+    hinweis: "90 % Basis · 85 % sofort · 15 % Einbehalt (nach 12 Monaten)",
+  },
+  {
+    value: "ohne_factoring",
+    label: "Ohne Factoring",
+    hinweis: "100 % Basis · voll sofort · kein Einbehalt",
+  },
+  {
+    value: "ratierlich",
+    label: "Ratierlich (negative Bonität)",
+    hinweis: "100 % Basis · kein Einbehalt · Auszahlung ÷ 60 Monate",
+  },
+];
+
+/** Alt-Flags (factoring/ratierlich) → Zahlart, solange Altdaten existieren. */
+export function zahlartOf(d: {
+  vv_zahlart?: string | null;
+  factoring?: boolean | null;
+  ratierlich?: boolean | null;
+}): VvZahlart {
+  if (d.vv_zahlart === "factoring" || d.vv_zahlart === "ohne_factoring" || d.vv_zahlart === "ratierlich") {
+    return d.vv_zahlart;
+  }
+  if (d.ratierlich) return "ratierlich";
+  return d.factoring ? "factoring" : "ohne_factoring";
+}
 
 export type ProvisionInput = {
   bws: number | null;
   sparbeitrag?: number | null;
   anzahlJahre?: number | null;
-  factoring: boolean;
+  zahlart: VvZahlart;
   tippgeberSatz?: number | null; // Prozent, z. B. 10
-  vertrieblerStufe?: number | null; // Prozent, z. B. 30
-  ratierlich?: boolean | null;
+  vertrieblerStufe?: number | null; // Prozent, z. B. 40
 };
 
 export type ProvisionResult = {
   bws: number;
-  grundprovision: number;
-  nettoProvision: number; // Bemessungsgrundlage der Aufteilung
-  tippgeberAnteil: number;
-  vertrieblerAnteil: number;
-  hausAnteil: number;
-  einbehalt: boolean; // true = Option ohne Factoring (85/15)
-  sofortAuszahlung: number | null;
-  einbehaltBetrag: number | null;
+  grundprovision: number; // BWS × 7,8 %
+  nettoProvision: number; // Basis nach Factoring (× 90 % nur bei Factoring)
+  vertrieblerGesamt: number; // Basis × Stufe — der „Umsatz" des Beraters
+  tippgeberAnteil: number; // Basis × Tippgeber-Satz — geht vom Berater-Anteil ab
+  vertrieblerGewinn: number; // Gesamt − Tippgeber — Bemessung der Auszahlung
+  hausAnteil: number; // Basis × (100 % − Stufe) — Estera-Anteil des Deals
+  einbehalt: boolean; // true NUR bei Zahlart „factoring"
+  sofortAuszahlung: number | null; // Fall 1: 85 % des Gewinns · Fall 2: voll
+  einbehaltBetrag: number | null; // Fall 1: 15 % des Gewinns · sonst null
   ratierlich: boolean;
-  monatsrate: number | null;
+  monatsrate: number | null; // Fall 3: Gewinn ÷ 60
 };
 
-/** BWS = Sparbeitrag × 12 × Anzahl Jahre. */
+/** BWS = Sparbeitrag × 12 × Anzahl Jahre (Jahre ≤ 40, s. MAX_ANZAHL_JAHRE). */
 export function computeBWS(
   sparbeitrag: number | null | undefined,
   jahre: number | null | undefined,
@@ -56,33 +95,35 @@ export function computeBWS(
 export function computeProvision(input: ProvisionInput): ProvisionResult {
   const bws = input.bws ?? computeBWS(input.sparbeitrag, input.anzahlJahre) ?? 0;
   const grundprovision = bws * PROVISIONSSATZ;
-
-  // Netto-Provision = Bemessungsgrundlage der Aufteilung:
-  //   mit Factoring  -> 90 % der Grundprovision (10 % Gebühr)
-  //   ohne Factoring -> volle Grundprovision (davon werden 15 % einbehalten)
-  const nettoProvision = input.factoring
+  const mitFactoring = input.zahlart === "factoring";
+  const nettoProvision = mitFactoring
     ? grundprovision * FACTORING_ANTEIL
     : grundprovision;
 
-  const tSatz = (input.tippgeberSatz ?? 0) / 100;
   const vStufe = (input.vertrieblerStufe ?? 0) / 100;
+  const tSatz = (input.tippgeberSatz ?? 0) / 100;
+  const vertrieblerGesamt = nettoProvision * vStufe;
   const tippgeberAnteil = nettoProvision * tSatz;
-  const vertrieblerAnteil = nettoProvision * vStufe;
-  const hausAnteil = nettoProvision - vertrieblerAnteil - tippgeberAnteil;
+  const vertrieblerGewinn = vertrieblerGesamt - tippgeberAnteil;
+  const hausAnteil = nettoProvision - vertrieblerGesamt;
 
-  const einbehalt = !input.factoring;
-  const sofortAuszahlung = einbehalt ? nettoProvision * EINBEHALT_SOFORT : null;
-  const einbehaltBetrag = einbehalt ? nettoProvision * EINBEHALT_REST : null;
-
-  const ratierlich = !!input.ratierlich;
-  const monatsrate = ratierlich ? nettoProvision / RATIERLICH_MONATE : null;
+  const einbehalt = mitFactoring;
+  const ratierlich = input.zahlart === "ratierlich";
+  const sofortAuszahlung = ratierlich
+    ? null
+    : einbehalt
+      ? vertrieblerGewinn * EINBEHALT_SOFORT
+      : vertrieblerGewinn;
+  const einbehaltBetrag = einbehalt ? vertrieblerGewinn * EINBEHALT_REST : null;
+  const monatsrate = ratierlich ? vertrieblerGewinn / RATIERLICH_MONATE : null;
 
   return {
     bws,
     grundprovision,
     nettoProvision,
+    vertrieblerGesamt,
     tippgeberAnteil,
-    vertrieblerAnteil,
+    vertrieblerGewinn,
     hausAnteil,
     einbehalt,
     sofortAuszahlung,
@@ -93,11 +134,11 @@ export function computeProvision(input: ProvisionInput): ProvisionResult {
 }
 
 // =====================================================================
-// Immobilien-Provision (Schleife 2, Kap. 1.5) — Satz variabel je Deal.
-// OFFEN #2 (Sebastian): Ist der Berater-Anteil ein Prozentsatz vom
-// Kaufpreis oder von der Estera-Provision? Bis zur Antwort gilt der
-// Default "anteil_von_provision" (analog VV) — nur diese Konstante
-// umstellen, alle Anzeigen rechnen dann automatisch richtig.
+// Immobilien-Provision (Kap. 1.5) — Satz variabel je Deal.
+// OFFEN (Sebastian): Berater-Anteil vom Kaufpreis-Topf oder von der
+// Estera-Provision? Default „anteil_von_provision" — nur diese Konstante
+// umstellen, alle Anzeigen (und der Overhead) rechnen automatisch richtig.
+// Retainer-Modell (8.4, ZUKUNFT) dockt später am per-Deal-Anteil an.
 // =====================================================================
 export type ImmoProvisionModus = "anteil_von_provision" | "anteil_von_kaufpreis";
 export const IMMO_PROVISION_MODUS: ImmoProvisionModus = "anteil_von_provision";
@@ -126,22 +167,28 @@ export function computeImmoProvision(
 }
 
 // =====================================================================
-// Zentrale Deal-Größen (Schleife 2, Kap. 1.1: Volumen ≠ Umsatz).
-// Single Source of Truth für ALLE Dashboards, Listen und KPIs:
+// Zentrale Deal-Größen (Kap. 1.1/1.2: Volumen ≠ Umsatz).
 //   dealVolumen          Transaktionsvolumen (Kaufpreis bzw. BWS)
 //   dealEsteraUmsatz     was Estera verdient (GF-Sicht)
-//   dealBeraterProvision was der Berater verdient (Berater-Sicht)
-// VV-Estera-Umsatz nach Kette 6.2: Netto-Provision × (100 % − Stufe);
-// der Tippgeber wird bewusst NICHT verrechnet (OFFEN #4, separater Abzug).
+//   dealBeraterProvision was der Berater UMSETZT (Basis × Stufe)
+//   dealBeraterGewinn    Umsatz − Tippgeber-Anteil (Vorgabe Lukas)
 // =====================================================================
 export type DealFinanz = {
   bereich: "immobilien" | "vv";
   kaufpreis: number | null;
   bws: number | null;
   factoring: boolean | null;
+  vv_zahlart?: string | null;
+  ratierlich?: boolean | null;
+  tippgeber_satz?: number | null;
   provisionssatz: number | null;
   berater_anteil: number | null;
 };
+
+function vvBasis(d: DealFinanz): number {
+  const mitFactoring = zahlartOf(d) === "factoring";
+  return (d.bws ?? 0) * PROVISIONSSATZ * (mitFactoring ? FACTORING_ANTEIL : 1);
+}
 
 export function dealVolumen(d: DealFinanz): number {
   return d.bereich === "immobilien" ? (d.kaufpreis ?? 0) : (d.bws ?? 0);
@@ -155,8 +202,7 @@ export function dealEsteraUmsatz(
     return computeImmoProvision(d.kaufpreis, d.provisionssatz, d.berater_anteil)
       .esteraProvision;
   }
-  const netto = (d.bws ?? 0) * PROVISIONSSATZ * (d.factoring ? FACTORING_ANTEIL : 1);
-  return netto * (1 - (vertrieblerStufe ?? 0) / 100);
+  return vvBasis(d) * (1 - (vertrieblerStufe ?? 0) / 100);
 }
 
 export function dealBeraterProvision(
@@ -167,8 +213,51 @@ export function dealBeraterProvision(
     return computeImmoProvision(d.kaufpreis, d.provisionssatz, d.berater_anteil)
       .beraterProvision;
   }
-  const netto = (d.bws ?? 0) * PROVISIONSSATZ * (d.factoring ? FACTORING_ANTEIL : 1);
-  return netto * ((vertrieblerStufe ?? 0) / 100);
+  return vvBasis(d) * ((vertrieblerStufe ?? 0) / 100);
+}
+
+/** Berater-„Gewinn" = eigener Umsatz − Tippgeber-Abgabe (nur VV-Tippgeber). */
+export function dealBeraterGewinn(
+  d: DealFinanz,
+  vertrieblerStufe: number | null | undefined,
+): number {
+  const umsatz = dealBeraterProvision(d, vertrieblerStufe);
+  if (d.bereich !== "vv") return umsatz;
+  return umsatz - vvBasis(d) * ((d.tippgeber_satz ?? 0) / 100);
+}
+
+/** Tippgeber-Anteil eines Deals (geht vom Berater-Anteil ab). */
+export function dealTippgeberAnteil(d: DealFinanz): number {
+  if (d.bereich !== "vv") return 0;
+  return vvBasis(d) * ((d.tippgeber_satz ?? 0) / 100);
+}
+
+// =====================================================================
+// Overhead (Kap. 8, Modell Lukas 12.07.2026): Overhead = DIFFERENZ der
+// Anbindungen, auf derselben Basis wie der Anteil des Partners.
+//   VV:   (Upline-Stufe − Partner-Stufe) % × VV-Basis des Partner-Deals
+//   Immo: (Upline-Immo-Default − Partner-Anteil des Deals) % × Immo-Basis
+// Beispiel Fred: Immo 7 %/VV 50 %, Partner 5 %/40 % → 2 % bzw. 10 %.
+// Der Overhead kommt aus dem Hausanteil, dem Partner wird nichts abgezogen
+// (ANNAHME 8.2 — von Sebastian gegenzuprüfen).
+// =====================================================================
+export function dealOverheadFuerUpline(
+  d: DealFinanz,
+  uplineVvStufe: number | null | undefined,
+  uplineImmoDefault: number | null | undefined,
+  partnerVvStufe: number | null | undefined,
+): number {
+  if (d.bereich === "vv") {
+    const diff = Math.max(0, (uplineVvStufe ?? 0) - (partnerVvStufe ?? 0));
+    return vvBasis(d) * (diff / 100);
+  }
+  const esteraProvision = (d.kaufpreis ?? 0) * ((d.provisionssatz ?? 0) / 100);
+  const basis =
+    IMMO_PROVISION_MODUS === "anteil_von_kaufpreis"
+      ? (d.kaufpreis ?? 0)
+      : esteraProvision;
+  const diff = Math.max(0, (uplineImmoDefault ?? 0) - (d.berater_anteil ?? 0));
+  return basis * (diff / 100);
 }
 
 /** Fälligkeit des Einbehalts = Basisdatum (Abschluss, sonst Anlage) + 12 Monate. */

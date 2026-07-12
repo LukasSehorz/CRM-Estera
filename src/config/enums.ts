@@ -37,12 +37,52 @@ export const FINANZIERUNGSRAHMEN = [
   "700k+",
 ] as const satisfies readonly Enums["finanzierungsrahmen_enum"][];
 
+// Alt-Enum (0001) — bleibt für DB-Typ-Kompatibilität, wird im UI nicht mehr
+// verwendet (ersetzt durch die 3-Stufen-Einschätzung, 15.2).
 export const EINSCHAETZUNG_STATUS = [
   "Ausstehend",
   "Positiv",
   "Bedingt positiv",
   "Abgelehnt",
 ] as const satisfies readonly Enums["einschaetzung_status_enum"][];
+
+// ── Finanzierungseinschätzung NEU (V4.1, 15.2) ───────────────────────────
+// Nur noch drei Stati; bei „eingeschätzt" zusätzlich „finanzierbar bis ca. €"
+// und optional „auf Objekt belegt". Gilt ausschließlich für Immobilien.
+export const EINSCHAETZUNG = [
+  { value: "ausstehend", label: "Ausstehend", tone: "muted" as const },
+  { value: "eingeschaetzt", label: "Eingeschätzt", tone: "success" as const },
+  {
+    value: "nicht_finanzierbar",
+    label: "Nicht finanzierbar",
+    tone: "danger" as const,
+  },
+] as const;
+
+export type EinschaetzungValue = (typeof EINSCHAETZUNG)[number]["value"];
+
+export function einschaetzungLabel(value: string): string {
+  return EINSCHAETZUNG.find((e) => e.value === value)?.label ?? value;
+}
+export function einschaetzungTone(value: string) {
+  return EINSCHAETZUNG.find((e) => e.value === value)?.tone ?? "muted";
+}
+
+// ── Qualifizierter Lead (15.2, GEKLÄRT) ──────────────────────────────────
+// Automatisch aus den Kontaktdaten: Nettoeinkommen ≥ Schwelle UND
+// Eigenkapital ≥ Schwelle. Konfigurierbar; kein manueller Status.
+export const QUALIFIZIERT_MIN_NETTO = 2500; // €/Monat (Spanne 2.500–2.700)
+export const QUALIFIZIERT_MIN_EIGENKAPITAL = 10000; // €
+
+export function istQualifiziert(
+  nettoverdienst: number | null | undefined,
+  eigenkapital: number | null | undefined,
+): boolean {
+  return (
+    (nettoverdienst ?? 0) >= QUALIFIZIERT_MIN_NETTO &&
+    (eigenkapital ?? 0) >= QUALIFIZIERT_MIN_EIGENKAPITAL
+  );
+}
 
 // ── Deal-Felder (Phase 4) ────────────────────────────────────────────────
 export const OBJEKT_STATUS = [

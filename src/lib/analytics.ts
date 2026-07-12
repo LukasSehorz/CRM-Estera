@@ -16,6 +16,9 @@ import {
   dealVolumen,
   dealEsteraUmsatz,
   dealBeraterProvision,
+  dealBeraterGewinn,
+  dealTippgeberAnteil,
+  zahlartOf,
   EINBEHALT_REST,
   FACTORING_ANTEIL,
   PROVISIONSSATZ,
@@ -39,8 +42,11 @@ export type Deal = {
   kaufpreis: number | null;
   bws: number | null;
   factoring: boolean | null;
+  vv_zahlart: string | null;
+  ratierlich: boolean | null;
   provisionssatz: number | null;
   berater_anteil: number | null;
+  tippgeber: string | null;
   tippgeber_satz: number | null;
   berater_id: string;
   closed_at: string | null;
@@ -52,10 +58,12 @@ export type Contact = {
   leadquelle: string | null;
   berater_id: string;
   interesse: string[];
-  einschaetzung_erhalten: boolean;
-  einschaetzung_status: string | null;
+  // Finanzierungseinschätzung NEU (15.2): 3 Stati + „finanzierbar bis" + belegt
+  einschaetzung: string;
   eingeschaetzter_betrag: number | null;
-  finanzierungsrahmen_betrag: number | null;
+  belegt_deal_id: string | null;
+  nettoverdienst_monatlich: number | null;
+  eigenkapital: number | null;
   vorname: string;
   nachname: string;
 };
@@ -76,11 +84,19 @@ export type AnalyticsData = {
   /** Umsatz eines Deals gemäß Rolle: GF = Estera-Umsatz, Berater = eigene Provision. */
   umsatzOf: (d: Deal) => number;
   /**
-   * Einbehalt (15 %) eines VV-Deals ohne Factoring — rollenbewusst:
-   * GF = gesamter Einbehalt (Netto-Provision × 15 %),
-   * Berater = 15 % der EIGENEN Provision (2.1: „eigene Einbehalte").
+   * Einbehalt (15 %) — gibt es NUR MIT Factoring (V4.1, 7.1 GEKLÄRT).
+   * Basis ist der Auszahlungsanspruch des Beraters (Stufe − Tippgeber);
+   * der Topf ist für GF und Berater derselbe Betrag (bei Estera geparkt).
    */
   einbehaltOf: (d: Deal) => number;
+  /**
+   * Umsatz-Buchung (1.1 GEKLÄRT): Immobilien realisieren zum NOTARTERMIN
+   * (nicht erst bei „Kauf abgeschlossen"), VV bei Policierung (= gewonnen).
+   * Stornierte/verlorene Deals sind nie realisiert.
+   */
+  istRealisiert: (d: Deal) => boolean;
+  /** Buchungsdatum des realisierten Umsatzes (Immo: Eintritt Notartermin). */
+  realisiertAm: (d: Deal) => string | null;
 };
 
 /** Auswahl im Bereichs-Umschalter der Dashboards. */
@@ -158,11 +174,12 @@ export function forecastGewichtet(a: AnalyticsData) {
 }
 
 /**
- * Summen-Skala (6.2, NUR GF): realisierte Provision der gewonnenen Deals als
- * Wasserfall — Brutto (nach Factoring) → − Einbehalt (geparkt) → − Tippgeber
- * → − Berater-Provision = Estera-Netto (liquide). Defaults gemäß
- * OFFEN-Register: Hausanteil = 100 % − Stufe, Factoring zuerst,
- * Tippgeber von der Netto-Provision.
+ * Summen-Skala (6.2, NUR GF): realisierte Provision als Zerlegung von
+ * „Summe X nach Factoring" in DISJUNKTE Teile (V4.1, 7.1 + Modell Lukas):
+ *   brutto = esteraNetto + beraterProvision (Auszahlung) + einbehalt + tippgeber
+ * Einbehalt (15 %) gibt es nur mit Factoring und ist der geparkte Teil des
+ * Berater-Anspruchs; der Tippgeber wird aus dem Berater-Anteil bedient.
+ * Realisiert = Immobilien ab Notartermin, VV bei Policierung (1.1).
  */
 export type SummenSkala = {
   brutto: number;
@@ -181,19 +198,24 @@ export function summenSkala(
   let tippgeber = 0;
   let beraterProvision = 0;
   for (const d of a.deals) {
-    if (!isWon(d, a.sMap)) continue;
+    if (!a.istRealisiert(d)) continue;
     if (bereich && d.bereich !== bereich) continue;
     if (d.bereich === "immobilien") {
       const b = (d.kaufpreis ?? 0) * ((d.provisionssatz ?? 0) / 100);
       brutto += b;
-      beraterProvision += b * ((d.berater_anteil ?? 0) / 100);
+      beraterProvision += dealBeraterProvision(d, a.stufeOf(d.berater_id));
     } else {
       const netto =
-        (d.bws ?? 0) * PROVISIONSSATZ * (d.factoring ? FACTORING_ANTEIL : 1);
+        (d.bws ?? 0) *
+        PROVISIONSSATZ *
+        (zahlartOf(d) === "factoring" ? FACTORING_ANTEIL : 1);
       brutto += netto;
-      if (!d.factoring) einbehalt += netto * EINBEHALT_REST;
-      tippgeber += netto * ((d.tippgeber_satz ?? 0) / 100);
-      beraterProvision += netto * (a.stufeOf(d.berater_id) / 100);
+      const tipp = dealTippgeberAnteil(d);
+      const gewinn = dealBeraterGewinn(d, a.stufeOf(d.berater_id));
+      const einb = zahlartOf(d) === "factoring" ? gewinn * EINBEHALT_REST : 0;
+      tippgeber += tipp;
+      einbehalt += einb;
+      beraterProvision += gewinn - einb; // Auszahlungsanteil (sofort/ratierlich)
     }
   }
   return {
@@ -219,7 +241,7 @@ export async function loadAnalytics(): Promise<AnalyticsData> {
     supabase
       .from("deals")
       .select(
-        "id, dealname, bereich, stage_id, contact_id, kaufpreis, bws, factoring, provisionssatz, berater_anteil, tippgeber_satz, berater_id, closed_at, created_at",
+        "id, dealname, bereich, stage_id, contact_id, kaufpreis, bws, factoring, vv_zahlart, ratierlich, provisionssatz, berater_anteil, tippgeber, tippgeber_satz, berater_id, closed_at, created_at",
       ),
     supabase
       .from("pipeline_stages")
@@ -228,7 +250,7 @@ export async function loadAnalytics(): Promise<AnalyticsData> {
     supabase
       .from("contacts")
       .select(
-        "id, leadquelle, berater_id, interesse, einschaetzung_erhalten, einschaetzung_status, eingeschaetzter_betrag, finanzierungsrahmen_betrag, vorname, nachname",
+        "id, leadquelle, berater_id, interesse, einschaetzung, eingeschaetzter_betrag, belegt_deal_id, nettoverdienst_monatlich, eigenkapital, vorname, nachname",
       ),
     supabase
       .from("profiles")
@@ -260,19 +282,49 @@ export async function loadAnalytics(): Promise<AnalyticsData> {
       ? dealEsteraUmsatz(d, stufeMap.get(d.berater_id))
       : dealBeraterProvision(d, stufeMap.get(d.berater_id));
 
+  // Einbehalt NUR MIT Factoring (7.1) — 15 % des Auszahlungsanspruchs
+  // (Stufe − Tippgeber). Der geparkte Topf ist für GF und Berater identisch.
   const einbehaltOf = (d: Deal) => {
-    if (d.bereich !== "vv" || d.factoring) return 0;
-    const netto = (d.bws ?? 0) * PROVISIONSSATZ * (d.factoring ? FACTORING_ANTEIL : 1);
-    const basis = isGf
-      ? netto
-      : netto * ((stufeMap.get(d.berater_id) ?? 0) / 100);
-    return basis * EINBEHALT_REST;
+    if (d.bereich !== "vv" || zahlartOf(d) !== "factoring") return 0;
+    return dealBeraterGewinn(d, stufeMap.get(d.berater_id)) * EINBEHALT_REST;
+  };
+
+  const deals = (dealsQ.data ?? []) as Deal[];
+  const history = (histQ.data ?? []) as Hist[];
+
+  // Umsatz-Buchung (1.1 GEKLÄRT): Immobilien realisieren zum NOTARTERMIN.
+  // Buchungsdatum = erster Eintritt in die Notartermin-Phase (Historie);
+  // Rückstufung/Storno heilt sich selbst, weil der aktuelle Status zählt.
+  const notarStage = stages.find(
+    (s) => s.bereich === "immobilien" && s.name === "Notartermin",
+  );
+  const notarEntered = new Map<string, string>();
+  if (notarStage) {
+    for (const h of history) {
+      if (h.stage_id !== notarStage.id) continue;
+      const prev = notarEntered.get(h.deal_id);
+      if (!prev || h.entered_at < prev) notarEntered.set(h.deal_id, h.entered_at);
+    }
+  }
+  const istRealisiert = (d: Deal): boolean => {
+    const s = sMap.get(d.stage_id);
+    if (!s || s.is_lost) return false;
+    if (d.bereich === "vv") return s.is_won; // Policierung
+    if (s.is_won) return true;
+    return notarStage != null && s.position >= notarStage.position;
+  };
+  const realisiertAm = (d: Deal): string | null => {
+    if (!istRealisiert(d)) return null;
+    if (d.bereich === "immobilien") {
+      return notarEntered.get(d.id) ?? d.closed_at ?? d.created_at;
+    }
+    return d.closed_at ?? d.created_at;
   };
 
   return {
-    deals: (dealsQ.data ?? []) as Deal[],
+    deals,
     stages,
-    history: (histQ.data ?? []) as Hist[],
+    history,
     contacts: (contactsQ.data ?? []) as Contact[],
     sMap,
     beraterMap,
@@ -282,6 +334,8 @@ export async function loadAnalytics(): Promise<AnalyticsData> {
     stufeOf: (id: string) => stufeMap.get(id) ?? 0,
     umsatzOf,
     einbehaltOf,
+    istRealisiert,
+    realisiertAm,
   };
 }
 
@@ -435,12 +489,13 @@ export function closingRate(a: AnalyticsData, beraterId?: string): number | null
   return won / base;
 }
 
-// ── Umsatz (gewonnen) — Provision, nicht Volumen (1.1) ──────────────────
+// ── Umsatz (realisiert) — Provision, nicht Volumen (1.1) ─────────────────
+// Realisiert = Immobilien ab Notartermin, VV bei Policierung (GEKLÄRT-Box).
 export function umsatzGesamt(a: AnalyticsData, beraterId?: string) {
   return a.deals
     .filter(
       (d) =>
-        isWon(d, a.sMap) && (!beraterId || d.berater_id === beraterId),
+        a.istRealisiert(d) && (!beraterId || d.berater_id === beraterId),
     )
     .reduce((s, d) => s + a.umsatzOf(d), 0);
 }
@@ -455,7 +510,7 @@ export function volumenGewonnen(a: AnalyticsData, beraterId?: string) {
     .reduce((s, d) => s + betragOf(d), 0);
 }
 
-/** Umsatz je Monat (letzte n Monate) aus gewonnenen Deals (nach closed_at). */
+/** Umsatz je Monat (letzte n Monate) — nach Buchungsdatum (realisiertAm). */
 export function umsatzProMonat(a: AnalyticsData, monate: number, now: Date) {
   const buckets: { label: string; value: number; key: string }[] = [];
   const monat = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];
@@ -469,8 +524,9 @@ export function umsatzProMonat(a: AnalyticsData, monate: number, now: Date) {
   }
   const map = new Map(buckets.map((b) => [b.key, b]));
   for (const d of a.deals) {
-    if (!isWon(d, a.sMap) || !d.closed_at) continue;
-    const c = new Date(d.closed_at);
+    const am = a.realisiertAm(d);
+    if (!am) continue;
+    const c = new Date(am);
     const b = map.get(`${c.getFullYear()}-${c.getMonth()}`);
     if (b) b.value += a.umsatzOf(d);
   }
@@ -490,8 +546,9 @@ export function umsatzRollierend(a: AnalyticsData, now: Date, tage = 30) {
   let current = 0;
   let previous = 0;
   for (const d of a.deals) {
-    if (!isWon(d, a.sMap) || !d.closed_at) continue;
-    const t = new Date(d.closed_at).getTime();
+    const am = a.realisiertAm(d);
+    if (!am) continue;
+    const t = new Date(am).getTime();
     if (t > now.getTime()) continue;
     if (t >= grenzeAktuell) current += a.umsatzOf(d);
     else if (t >= grenzeVor) previous += a.umsatzOf(d);
@@ -499,12 +556,12 @@ export function umsatzRollierend(a: AnalyticsData, now: Date, tage = 30) {
   return { current, previous };
 }
 
-// ── Umsatz nach Leadquelle (gewonnene Deals → Kontakt → Quelle) ──────────
+// ── Umsatz nach Leadquelle (realisierte Deals → Kontakt → Quelle) ────────
 export function umsatzNachQuelle(a: AnalyticsData) {
   const cMap = new Map(a.contacts.map((c) => [c.id, c.leadquelle ?? "Sonstige"]));
   const acc = new Map<string, number>();
   for (const d of a.deals) {
-    if (!isWon(d, a.sMap)) continue;
+    if (!a.istRealisiert(d)) continue;
     const q = cMap.get(d.contact_id) ?? "Sonstige";
     acc.set(q, (acc.get(q) ?? 0) + a.umsatzOf(d));
   }
@@ -533,7 +590,10 @@ export function beraterPerformance(a: AnalyticsData): BeraterPerf[] {
     .map((id) => {
       const mine = a.deals.filter((d) => d.berater_id === id);
       const wonDeals = mine.filter((d) => isWon(d, a.sMap));
-      const umsatz = wonDeals.reduce((s, d) => s + a.umsatzOf(d), 0);
+      // Umsatz nach Buchungslogik 1.1 (Immo ab Notartermin, VV Policierung)
+      const umsatz = mine
+        .filter((d) => a.istRealisiert(d))
+        .reduce((s, d) => s + a.umsatzOf(d), 0);
       // Ø Deal-Größe bleibt bewusst das Transaktionsvolumen (1.1) —
       // "wie groß sind die Abschlüsse", nicht "was verdienen wir daran".
       const volumenWon = wonDeals.reduce((s, d) => s + betragOf(d), 0);

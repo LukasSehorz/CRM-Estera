@@ -9,7 +9,8 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Topbar } from "@/components/layout/topbar";
-import { einbehaltFaelligAm } from "@/lib/provision";
+import { einbehaltFaelligAm, zahlartOf } from "@/lib/provision";
+import { istQualifiziert } from "@/config/enums";
 import { loadDealRows, isOffen, type DealRow } from "./lists-data";
 
 /* -------------------------------------------------------------------------
@@ -286,7 +287,7 @@ export default async function ListenHubPage() {
       supabase
         .from("contacts")
         .select(
-          "id, interesse, termin_status, einschaetzung_erhalten, created_at",
+          "id, interesse, termin_status, einschaetzung, nettoverdienst_monatlich, eigenkapital, created_at",
         ),
       loadDealRows(),
       supabase.from("profiles").select("id", { count: "exact", head: true }),
@@ -302,9 +303,18 @@ export default async function ListenHubPage() {
   );
   const cImmo = kontakte.filter((c) => c.interesse?.includes("immobilien"));
   const cVv = kontakte.filter((c) => c.interesse?.includes("vv"));
-  const cEing = kontakte.filter((c) => c.einschaetzung_erhalten);
+  // Eingeschätzte Kunden (15.2): nur Immobilien, Status „eingeschätzt".
+  const cEing = kontakte.filter(
+    (c) => c.interesse?.includes("immobilien") && c.einschaetzung === "eingeschaetzt",
+  );
+  // Heiß (15.2, optionales Zusatz-Signal): qualifiziert + positive
+  // Einschätzung + kürzliche Aktivität (Termin durchgeführt als Proxy).
   const cHeiss = kontakte.filter(
-    (c) => c.termin_status === "Durchgeführt" && !fortgeschritten.has(c.id),
+    (c) =>
+      istQualifiziert(c.nettoverdienst_monatlich, c.eigenkapital) &&
+      c.einschaetzung === "eingeschaetzt" &&
+      c.termin_status === "Durchgeführt" &&
+      !fortgeschritten.has(c.id),
   );
   const cOffen = kontakte.filter((c) => c.termin_status === "Nicht vereinbart");
 
@@ -325,8 +335,13 @@ export default async function ListenHubPage() {
   );
   const dVerkauft = deals.filter((d) => d.isWon);
   const dOffen = deals.filter(isOffen);
-  const dMitEinbehalt = deals.filter((d) => d.bereich === "vv" && !d.factoring);
-  const dOhneEinbehalt = deals.filter((d) => d.bereich === "vv" && d.factoring);
+  // Einbehalt gibt es NUR mit Factoring (7.1).
+  const dMitEinbehalt = deals.filter(
+    (d) => d.bereich === "vv" && zahlartOf(d) === "factoring",
+  );
+  const dOhneEinbehalt = deals.filter(
+    (d) => d.bereich === "vv" && zahlartOf(d) !== "factoring",
+  );
   const dEinbehaltOffen = dMitEinbehalt.filter((d) => {
     const faelligISO = einbehaltFaelligAm(d.closedAt ?? d.createdAt);
     return faelligISO ? new Date(faelligISO).getTime() > now.getTime() : true;
@@ -374,8 +389,8 @@ export default async function ListenHubPage() {
       tone: "var(--gold-contrast)",
       bereich: "vv",
       items: [
-        { href: "/listen/deals?preset=mit-einbehalt", label: "Deals mit Einbehalt (ohne Factoring)", count: dMitEinbehalt.length },
-        { href: "/listen/deals?preset=ohne-einbehalt", label: "Deals ohne Einbehalt (mit Factoring)", count: dOhneEinbehalt.length },
+        { href: "/listen/deals?preset=mit-einbehalt", label: "Deals mit Einbehalt (mit Factoring)", count: dMitEinbehalt.length },
+        { href: "/listen/deals?preset=ohne-einbehalt", label: "Deals ohne Einbehalt (voll sofort)", count: dOhneEinbehalt.length },
         { href: "/listen/deals?preset=einbehalt-offen", label: "Offener Einbehalt je Kunde", count: dEinbehaltOffen.length },
       ],
     },

@@ -15,16 +15,20 @@ import {
   KONTAKT_STATUS,
   TERMIN_STATUS,
   LEADQUELLE,
-  FINANZIERUNGSRAHMEN_PRESETS,
   FINANZIERUNGSSTATUS,
-  EINSCHAETZUNG_STATUS,
+  EINSCHAETZUNG,
   BEREICH,
+  istQualifiziert,
+  QUALIFIZIERT_MIN_NETTO,
+  QUALIFIZIERT_MIN_EIGENKAPITAL,
 } from "@/config/enums";
+import { formatEUR } from "@/lib/format";
+import { Pill } from "@/components/ui/pill";
+import { CheckCircle2 } from "lucide-react";
 import { CollapsibleSection } from "@/components/collapsible-section";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CurrencyInput } from "@/components/ui/currency-input";
-import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -50,12 +54,10 @@ export type FormState = {
   interesse: string[];
   nettoverdienst_monatlich: string;
   eigenkapital: string;
-  finanzierungsrahmen_betrag: string;
-  einschaetzung_erhalten: boolean;
-  datum_einschaetzung: string;
+  // Finanzierungseinschätzung NEU (15.2): 3 Stati + „finanzierbar bis" + belegt
+  einschaetzung: string;
   eingeschaetzter_betrag: string;
-  einschaetzung_durch: string;
-  einschaetzung_status: string;
+  belegt_deal_id: string;
   unterlagen_vollstaendig: boolean;
   fehlende_unterlagen: string;
   finanzierungsstatus: string;
@@ -96,12 +98,15 @@ export function ContactForm({
   initial,
   canAssignBerater,
   beraterOptions,
+  dealOptions = [],
 }: {
   mode: "create" | "edit";
   contactId?: string;
   initial: FormState;
   canAssignBerater: boolean;
   beraterOptions: { id: string; name: string }[];
+  /** Immobilien-Deals des Kontakts — für „auf Objekt belegt" (15.2). */
+  dealOptions?: { id: string; name: string }[];
 }) {
   const router = useRouter();
   const [v, setV] = useState<FormState>(initial);
@@ -133,13 +138,10 @@ export function ContactForm({
       interesse: v.interesse as ContactInput["interesse"],
       nettoverdienst_monatlich: num(v.nettoverdienst_monatlich),
       eigenkapital: num(v.eigenkapital),
-      finanzierungsrahmen_betrag: num(v.finanzierungsrahmen_betrag),
-      einschaetzung_erhalten: v.einschaetzung_erhalten,
-      datum_einschaetzung: txt(v.datum_einschaetzung),
+      einschaetzung: (v.einschaetzung ||
+        "ausstehend") as ContactInput["einschaetzung"],
       eingeschaetzter_betrag: num(v.eingeschaetzter_betrag),
-      einschaetzung_durch: txt(v.einschaetzung_durch),
-      einschaetzung_status: (v.einschaetzung_status ||
-        null) as ContactInput["einschaetzung_status"],
+      belegt_deal_id: v.belegt_deal_id || null,
       unterlagen_vollstaendig: v.unterlagen_vollstaendig,
       fehlende_unterlagen: txt(v.fehlende_unterlagen),
       finanzierungsstatus: (v.finanzierungsstatus ||
@@ -335,7 +337,7 @@ export function ContactForm({
       {/* ── Finanzdaten ── */}
       <CollapsibleSection
         title="Finanzdaten"
-        description="Einkommen, Eigenkapital, Rahmen"
+        description="Einkommen & Eigenkapital — steuern die Qualifikation"
       >
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Nettoverdienst monatlich (€)" htmlFor="netto">
@@ -352,34 +354,8 @@ export function ContactForm({
               onValueChange={(val) => set("eigenkapital", val)}
             />
           </Field>
-          <Field
-            label="Finanzierungsrahmen (€)"
-            htmlFor="rahmen"
-            className="sm:col-span-2"
-          >
-            <CurrencyInput
-              id="rahmen"
-              value={v.finanzierungsrahmen_betrag}
-              onValueChange={(val) => set("finanzierungsrahmen_betrag", val)}
-            />
-            <div className="flex flex-wrap gap-1.5 pt-1">
-              {FINANZIERUNGSRAHMEN_PRESETS.map((p) => (
-                <button
-                  key={p}
-                  type="button"
-                  onClick={() => set("finanzierungsrahmen_betrag", String(p))}
-                  className="rounded-md border border-border bg-surface-2 px-2 py-1 text-xs text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
-                >
-                  {p / 1000}k
-                </button>
-              ))}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Freier Betrag ist führend; Presets sind nur Schnellauswahl.
-            </p>
-          </Field>
 
-          {/* Finanzierungsstatus (Schleife 2, 3.4): Akten-Status auf einen Blick */}
+          {/* Finanzierungsstatus (3.4): Akten-Status auf einen Blick */}
           <Field label="Finanzierungsstatus" htmlFor="finstatus">
             <Select
               value={v.finanzierungsstatus || "offen"}
@@ -397,83 +373,116 @@ export function ContactForm({
               </SelectContent>
             </Select>
           </Field>
+
+          {/* Qualifikation (15.2): automatisch aus Netto + EK, kein Handstatus */}
+          <Field label="Qualifikation (automatisch)">
+            <div className="flex h-9 items-center">
+              {istQualifiziert(
+                num(v.nettoverdienst_monatlich),
+                num(v.eigenkapital),
+              ) ? (
+                <Pill tone="success">
+                  <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
+                  Qualifiziert
+                </Pill>
+              ) : (
+                <span className="text-xs text-muted-foreground">
+                  Nicht qualifiziert — ab {formatEUR(QUALIFIZIERT_MIN_NETTO)}{" "}
+                  netto & {formatEUR(QUALIFIZIERT_MIN_EIGENKAPITAL)} EK
+                </span>
+              )}
+            </div>
+          </Field>
         </div>
       </CollapsibleSection>
 
-      {/* ── Einschätzung ── */}
-      <CollapsibleSection
-        title="Finanzierungseinschätzung"
-        description="Bank-/Finanzierer-Feedback"
-      >
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Einschätzung erhalten?" className="sm:col-span-2">
-            <label className="flex cursor-pointer items-center gap-2 text-sm">
-              <Checkbox
-                checked={v.einschaetzung_erhalten}
-                onCheckedChange={(c) =>
-                  set("einschaetzung_erhalten", c === true)
-                }
-              />
-              Ja, eine Einschätzung liegt vor
-            </label>
-          </Field>
-          <Field label="Datum der Einschätzung" htmlFor="datum">
-            <DateInput
-              id="datum"
-              value={v.datum_einschaetzung}
-              onChange={(e) => set("datum_einschaetzung", e.target.value)}
-            />
-          </Field>
-          <Field label="Eingeschätzter Betrag (€)" htmlFor="betrag">
-            <CurrencyInput
-              id="betrag"
-              value={v.eingeschaetzter_betrag}
-              onValueChange={(val) => set("eingeschaetzter_betrag", val)}
-            />
-            {/* Plausibilität (Schleife 2, 1.6): Warnung, blockiert aber nicht. */}
-            {(() => {
-              const betrag = Number(v.eingeschaetzter_betrag);
-              const rahmen = Number(v.finanzierungsrahmen_betrag);
-              return betrag > 0 && rahmen > 0 && betrag > rahmen ? (
-                <p className="flex items-center gap-1.5 text-xs font-medium text-warning">
-                  <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-                  Betrag liegt über dem Finanzierungsrahmen (
-                  {new Intl.NumberFormat("de-DE").format(rahmen)} €) — bitte
-                  prüfen.
-                </p>
-              ) : null;
-            })()}
-          </Field>
-          <Field label="Einschätzung durch" htmlFor="durch">
-            <Input
-              id="durch"
-              placeholder="Bank / Finanzierer"
-              value={v.einschaetzung_durch}
-              onChange={(e) => set("einschaetzung_durch", e.target.value)}
-            />
-          </Field>
-          <Field label="Einschätzung-Status" htmlFor="estatus">
-            <Select
-              value={v.einschaetzung_status || NONE}
-              onValueChange={(val) =>
-                set("einschaetzung_status", val === NONE ? "" : val)
-              }
-            >
-              <SelectTrigger id="estatus">
-                <SelectValue placeholder="Keine Angabe" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={NONE}>Keine Angabe</SelectItem>
-                {EINSCHAETZUNG_STATUS.map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {s}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </Field>
-        </div>
-      </CollapsibleSection>
+      {/* ── Finanzierungseinschätzung NEU (15.2) — nur bei Immobilien-Interesse ── */}
+      {v.interesse.includes("immobilien") && (
+        <CollapsibleSection
+          title="Finanzierungseinschätzung"
+          description="Ausstehend · Eingeschätzt · Nicht finanzierbar (nur Immobilien)"
+        >
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Einschätzung" htmlFor="einsch" className="sm:col-span-2">
+              <Select
+                value={v.einschaetzung || "ausstehend"}
+                onValueChange={(val) => set("einschaetzung", val)}
+              >
+                <SelectTrigger id="einsch" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {EINSCHAETZUNG.map((e) => (
+                    <SelectItem key={e.value} value={e.value}>
+                      {e.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+
+            {/* Nur bei „eingeschätzt": finanzierbar bis + auf Objekt belegt */}
+            {v.einschaetzung === "eingeschaetzt" && (
+              <>
+                <Field
+                  label="Finanzierbar bis ca. (€)"
+                  htmlFor="betrag"
+                  className="sm:col-span-2"
+                >
+                  <CurrencyInput
+                    id="betrag"
+                    value={v.eingeschaetzter_betrag}
+                    onValueChange={(val) => set("eingeschaetzter_betrag", val)}
+                  />
+                </Field>
+
+                <Field label="Bereits auf Objekt belegt?" className="sm:col-span-2">
+                  <label className="flex cursor-pointer items-center gap-2 text-sm">
+                    <Checkbox
+                      checked={v.belegt_deal_id !== ""}
+                      onCheckedChange={(c) =>
+                        set(
+                          "belegt_deal_id",
+                          c === true ? (dealOptions[0]?.id ?? "__belegt") : "",
+                        )
+                      }
+                    />
+                    Das Budget ist bereits einem Objekt zugeordnet
+                  </label>
+                  {v.belegt_deal_id !== "" && dealOptions.length > 0 && (
+                    <Select
+                      value={
+                        dealOptions.some((d) => d.id === v.belegt_deal_id)
+                          ? v.belegt_deal_id
+                          : dealOptions[0].id
+                      }
+                      onValueChange={(val) => set("belegt_deal_id", val)}
+                    >
+                      <SelectTrigger className="mt-2 w-full">
+                        <SelectValue placeholder="Objekt/Deal wählen" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {dealOptions.map((d) => (
+                          <SelectItem key={d.id} value={d.id}>
+                            {d.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                  {v.belegt_deal_id !== "" && dealOptions.length === 0 && (
+                    <p className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                      Noch kein Immobilien-Deal vorhanden — lege zuerst einen an,
+                      um ihn zu verknüpfen.
+                    </p>
+                  )}
+                </Field>
+              </>
+            )}
+          </div>
+        </CollapsibleSection>
+      )}
 
       {/* ── Unterlagen ── */}
       <CollapsibleSection title="Unterlagen" description="Vollständigkeit">

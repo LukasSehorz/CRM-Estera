@@ -57,7 +57,7 @@ export default async function KontaktePage() {
   const { data: contacts, error } = await supabase
     .from("contacts")
     .select(
-      "id, vorname, nachname, email, telefon, status, termin_status, leadquelle, interesse, finanzierungsrahmen_betrag, berater_id, created_at",
+      "id, vorname, nachname, email, telefon, status, termin_status, leadquelle, interesse, nettoverdienst_monatlich, eigenkapital, einschaetzung, berater_id, created_at",
     )
     .order("created_at", { ascending: false });
 

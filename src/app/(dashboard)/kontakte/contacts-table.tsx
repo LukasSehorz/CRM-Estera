@@ -17,7 +17,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { BEREICH, KONTAKT_STATUS, bereichLabel } from "@/config/enums";
+import {
+  BEREICH,
+  KONTAKT_STATUS,
+  bereichLabel,
+  istQualifiziert,
+  einschaetzungLabel,
+  einschaetzungTone,
+} from "@/config/enums";
 
 export type ContactRow = {
   id: string;
@@ -29,7 +36,9 @@ export type ContactRow = {
   termin_status: string;
   leadquelle: string | null;
   interesse: string[];
-  finanzierungsrahmen_betrag: number | null;
+  nettoverdienst_monatlich: number | null;
+  eigenkapital: number | null;
+  einschaetzung: string;
   eingeschaetzter_betrag?: number | null;
   berater_id: string;
   created_at: string;
@@ -53,6 +62,7 @@ export function ContactsTable({
   const [q, setQ] = useState("");
   const [status, setStatus] = useState(ALL);
   const [interesse, setInteresse] = useState(ALL);
+  const [nurQualifiziert, setNurQualifiziert] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>(
     showVolumen ? "volumen" : "created_at",
   );
@@ -71,6 +81,11 @@ export function ContactsTable({
     let list = contacts.filter((c) => {
       if (status !== ALL && c.status !== status) return false;
       if (interesse !== ALL && !c.interesse.includes(interesse)) return false;
+      if (
+        nurQualifiziert &&
+        !istQualifiziert(c.nettoverdienst_monatlich, c.eigenkapital)
+      )
+        return false;
       if (needle) {
         const hay =
           `${c.vorname} ${c.nachname} ${c.email ?? ""} ${c.telefon ?? ""}`.toLowerCase();
@@ -92,7 +107,7 @@ export function ContactsTable({
       return sortAsc ? cmp : -cmp;
     });
     return list;
-  }, [contacts, q, status, interesse, sortKey, sortAsc]);
+  }, [contacts, q, status, interesse, nurQualifiziert, sortKey, sortAsc]);
 
   const SortIcon = ({ k }: { k: SortKey }) =>
     sortKey === k ? (
@@ -139,6 +154,19 @@ export function ContactsTable({
             ))}
           </SelectContent>
         </Select>
+        {/* Qualifiziert-Filter (15.2): automatisch aus Netto + Eigenkapital */}
+        <button
+          type="button"
+          onClick={() => setNurQualifiziert((x) => !x)}
+          aria-pressed={nurQualifiziert}
+          className={
+            nurQualifiziert
+              ? "rounded-md border border-success/50 bg-success/10 px-3 py-2 text-sm font-medium text-success"
+              : "rounded-md border border-border px-3 py-2 text-sm text-muted-foreground transition-colors hover:border-success/40 hover:text-foreground"
+          }
+        >
+          Nur qualifizierte
+        </button>
         <span className="text-sm text-muted-foreground sm:ml-auto">
           {rows.length} {rows.length === 1 ? "Kontakt" : "Kontakte"}
         </span>
@@ -170,7 +198,7 @@ export function ContactsTable({
               <th className="px-4 py-3 font-medium">Termin</th>
               <th className="px-4 py-3 font-medium">Interesse</th>
               <th className="px-4 py-3 font-medium">Leadquelle</th>
-              <th className="px-4 py-3 font-medium">Rahmen</th>
+              <th className="px-4 py-3 font-medium">Qualifikation</th>
               {showVolumen && (
                 <th className="px-4 py-3 font-medium">
                   <button
@@ -236,8 +264,29 @@ export function ContactsTable({
                   <td className="px-4 py-3 text-muted-foreground">
                     {c.leadquelle ?? "—"}
                   </td>
-                  <td className="px-4 py-3 tabular-nums text-muted-foreground">
-                    {formatEUR(c.finanzierungsrahmen_betrag)}
+                  <td className="px-4 py-3">
+                    <div className="flex flex-wrap items-center gap-1">
+                      {istQualifiziert(
+                        c.nettoverdienst_monatlich,
+                        c.eigenkapital,
+                      ) && <Pill tone="success">Qualifiziert</Pill>}
+                      {c.interesse.includes("immobilien") &&
+                        c.einschaetzung &&
+                        c.einschaetzung !== "ausstehend" && (
+                          <Pill tone={einschaetzungTone(c.einschaetzung)}>
+                            {einschaetzungLabel(c.einschaetzung)}
+                          </Pill>
+                        )}
+                      {!istQualifiziert(
+                        c.nettoverdienst_monatlich,
+                        c.eigenkapital,
+                      ) &&
+                        (!c.interesse.includes("immobilien") ||
+                          !c.einschaetzung ||
+                          c.einschaetzung === "ausstehend") && (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                    </div>
                   </td>
                   {showVolumen && (
                     <td className="px-4 py-3 tabular-nums font-medium text-foreground">
