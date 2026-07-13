@@ -10,6 +10,7 @@ import {
   setBeraterAnbindung,
   setBeraterBereiche,
   setMonatsziele,
+  setRolle,
   setVertrieblerStufe,
 } from "./actions";
 import { Input } from "@/components/ui/input";
@@ -194,9 +195,29 @@ function StufeRow({
         )}
       </td>
       <td className="px-4 py-3">
-        <Pill tone={istGf ? "accent" : "muted"}>
-          {istGf ? "Geschäftsführung" : "Berater"}
-        </Pill>
+        {istGf ? (
+          <Pill tone="accent">Geschäftsführung</Pill>
+        ) : (
+          <Select
+            value={row.rolle}
+            onValueChange={(val) => {
+              if (val === row.rolle) return;
+              start(async () => {
+                const res = await setRolle(row.id, val as "berater" | "backoffice");
+                if ("error" in res) toast.error(res.error);
+                else toast.success(`Rolle für ${row.name} geändert`);
+              });
+            }}
+          >
+            <SelectTrigger className="w-36">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="berater">Berater</SelectItem>
+              <SelectItem value="backoffice">Backoffice</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
       </td>
       <td className="px-4 py-3">
         {istGf ? (
@@ -334,6 +355,7 @@ export function NeuerBeraterForm() {
     stufe: "30",
   });
   const [bereiche, setBereiche] = useState<Bereich[]>(["immobilien", "vv"]);
+  const [rolle, setRolleState] = useState<"berater" | "backoffice">("berater");
   const [pending, start] = useTransition();
 
   function set<K extends keyof typeof v>(key: K, value: string) {
@@ -360,14 +382,18 @@ export function NeuerBeraterForm() {
         passwort: v.passwort,
         stufe: Number(v.stufe.replace(",", ".")),
         bereiche,
+        rolle,
       });
       if ("error" in res) {
         toast.error(res.error);
         return;
       }
-      toast.success(`Berater ${v.vorname} ${v.nachname} angelegt`);
+      toast.success(
+        `${rolle === "backoffice" ? "Backoffice" : "Berater"} ${v.vorname} ${v.nachname} angelegt`,
+      );
       setV({ vorname: "", nachname: "", email: "", passwort: "", stufe: "30" });
       setBereiche(["immobilien", "vv"]);
+      setRolleState("berater");
       router.refresh();
     });
   }
@@ -428,6 +454,21 @@ export function NeuerBeraterForm() {
             onChange={(e) => set("passwort", e.target.value)}
             placeholder="Wird dem Berater mitgeteilt"
           />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="nb-rolle">Rolle</Label>
+          <Select
+            value={rolle}
+            onValueChange={(val) => setRolleState(val as "berater" | "backoffice")}
+          >
+            <SelectTrigger id="nb-rolle">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="berater">Berater</SelectItem>
+              <SelectItem value="backoffice">Backoffice (ohne Provision)</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="nb-stufe">Vertriebler-Stufe (%)</Label>

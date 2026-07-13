@@ -142,6 +142,57 @@ export async function setBeraterAnbindung(
   return { ok: true };
 }
 
+type Rolle = "berater" | "backoffice";
+
+/**
+ * Ändert die Rolle zwischen Berater und Backoffice (2.5). Nutzt den Admin-
+ * Client (Service-Role, serverseitig) nach GF-Prüfung — die GF-Rolle selbst
+ * wird nie über diese Funktion vergeben oder entzogen.
+ */
+export async function setRolle(
+  beraterId: string,
+  rolle: Rolle,
+): Promise<StufeResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Nicht angemeldet." };
+  const { data: me } = await supabase
+    .from("profiles")
+    .select("rolle")
+    .eq("id", user.id)
+    .single();
+  if (me?.rolle !== "geschaeftsfuehrung")
+    return { error: "Nur die Geschäftsführung darf Rollen ändern." };
+
+  // Ziel darf nicht die GF sein (GF-Rolle bleibt unangetastet).
+  const { data: ziel } = await supabase
+    .from("profiles")
+    .select("rolle")
+    .eq("id", beraterId)
+    .single();
+  if (ziel?.rolle === "geschaeftsfuehrung")
+    return { error: "Die Geschäftsführungs-Rolle kann hier nicht geändert werden." };
+
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!serviceKey || !url)
+    return { error: "Server nicht konfiguriert (Service-Role-Key fehlt)." };
+
+  const admin = createSupabaseAdmin<Database>(url, serviceKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  const { error } = await admin
+    .from("profiles")
+    .update({ rolle })
+    .eq("id", beraterId);
+  if (error) return { error: "Speichern fehlgeschlagen. Bitte erneut versuchen." };
+
+  revalidatePath("/team");
+  return { ok: true };
+}
+
 export type NeuerBeraterInput = {
   vorname: string;
   nachname: string;
@@ -149,6 +200,7 @@ export type NeuerBeraterInput = {
   passwort: string;
   stufe: number;
   bereiche: Bereich[];
+  rolle: Rolle;
 };
 
 export type NeuerBeraterResult = { ok: true } | { error: string };
@@ -214,11 +266,12 @@ export async function createBerater(
     };
   }
 
+  const rolle: Rolle = input.rolle === "backoffice" ? "backoffice" : "berater";
   const { error: profileError } = await admin.from("profiles").insert({
     id: created.user.id,
     vorname,
     nachname,
-    rolle: "berater",
+    rolle,
     aktiv: true,
     vertriebler_stufe: input.stufe,
     bereich: input.bereiche,

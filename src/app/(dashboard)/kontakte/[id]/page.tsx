@@ -15,6 +15,7 @@ import {
 } from "../document-checklist";
 import { ContactTimeline, type ActivityRow } from "../contact-timeline";
 import { ContactTasks, type TaskRow } from "../contact-tasks";
+import { QuickActions } from "../quick-actions";
 
 export default async function KontaktDetailPage({
   params,
@@ -221,8 +222,13 @@ export default async function KontaktDetailPage({
             )}
           </div>
 
-          {/* Rechte Spalte: Deals, Aufgaben, Timeline */}
+          {/* Rechte Spalte: Schnellaktionen, Deals, Aufgaben, Timeline */}
           <div className="space-y-6">
+            <QuickActions
+              telefon={c.telefon}
+              email={c.email}
+              name={`${c.vorname} ${c.nachname}`}
+            />
             <div className="rounded-xl border border-border bg-surface p-5">
               <h2 className="text-base font-semibold">Deals des Kunden</h2>
               {(contactDeals ?? []).length === 0 ? (

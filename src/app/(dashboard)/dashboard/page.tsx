@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { CheckCircle2, Layers, TrendingUp, Wallet } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Topbar } from "@/components/layout/topbar";
@@ -48,10 +49,13 @@ export default async function DashboardPage({
   if (user) {
     const { data } = await supabase
       .from("profiles")
-      .select("vorname")
+      .select("vorname, rolle")
       .eq("id", user.id)
       .single();
     vorname = data?.vorname ?? "";
+    // Backoffice (2.5): kein Zugriff auf die provisionslastige Übersicht —
+    // direkt in die Kontaktverwaltung leiten.
+    if (data?.rolle === "backoffice") redirect("/kontakte");
   }
 
   const aFull = await loadAnalytics();

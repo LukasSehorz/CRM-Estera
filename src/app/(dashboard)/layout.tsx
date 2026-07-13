@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/sonner";
 const ROLLE_LABEL: Record<string, string> = {
   geschaeftsfuehrung: "Geschäftsführung",
   berater: "Berater",
+  backoffice: "Backoffice",
 };
 
 /**
@@ -33,18 +34,32 @@ export default async function DashboardLayout({
     : (user.email ?? "");
   const rolle = profile ? (ROLLE_LABEL[profile.rolle] ?? profile.rolle) : "";
   const isGf = profile?.rolle === "geschaeftsfuehrung";
-  // Sparten-Sichtbarkeit (Schleife 2 / Wunsch C): GF sieht immer beide.
-  const bereiche: string[] = isGf
-    ? ["immobilien", "vv"]
-    : profile?.bereich?.length
-      ? profile.bereich
-      : ["immobilien", "vv"];
+  // Backoffice (2.5): Admin ohne Provisionsrechte — sieht beide Sparten.
+  const isBackoffice = profile?.rolle === "backoffice";
+  const bereiche: string[] =
+    isGf || isBackoffice
+      ? ["immobilien", "vv"]
+      : profile?.bereich?.length
+        ? profile.bereich
+        : ["immobilien", "vv"];
 
   return (
     <div className="min-h-screen">
-      <MobileNav name={name} rolle={rolle} isGf={isGf} bereiche={bereiche} />
+      <MobileNav
+        name={name}
+        rolle={rolle}
+        isGf={isGf}
+        isBackoffice={isBackoffice}
+        bereiche={bereiche}
+      />
       <div className="lg:flex">
-        <DesktopSidebar name={name} rolle={rolle} isGf={isGf} bereiche={bereiche} />
+        <DesktopSidebar
+          name={name}
+          rolle={rolle}
+          isGf={isGf}
+          isBackoffice={isBackoffice}
+          bereiche={bereiche}
+        />
         <main className="min-w-0 flex-1">{children}</main>
       </div>
       <Toaster />

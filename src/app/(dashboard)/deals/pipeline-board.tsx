@@ -19,6 +19,7 @@ import {
 } from "@dnd-kit/core";
 import { cn } from "@/lib/utils";
 import { moveDeal } from "./actions";
+import { celebrateWin } from "./win-celebration";
 import {
   DealCardContent,
   type BoardDeal,
@@ -183,6 +184,11 @@ export function PipelineBoard({
     const deal = deals.find((d) => d.id === dealId);
     if (!deal || deal.stage_id === targetStageId) return;
 
+    // Erfolgs-Moment (9.2): Wechsel in eine Gewinn-Phase feiern.
+    const zielStage = stages.find((s) => s.id === targetStageId);
+    const vorherStage = stages.find((s) => s.id === deal.stage_id);
+    const wirdGewonnen = !!zielStage?.is_won && !vorherStage?.is_won;
+
     const prev = deals;
     // Optimistisch verschieben
     setDeals((ds) =>
@@ -194,6 +200,7 @@ export function PipelineBoard({
         setDeals(prev); // Rollback bei Fehler
         toast.error(res.error);
       } else {
+        if (wirdGewonnen) celebrateWin(deal.dealname);
         // Server-Wahrheit holen (closed_at, Historie etc.)
         router.refresh();
       }

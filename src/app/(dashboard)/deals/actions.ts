@@ -57,6 +57,26 @@ async function createAutoTasks(
         deal_id: deal.id,
         owner_id: deal.berater_id,
       }));
+
+    // Fehlende Unterlagen -> Aufgabe (15.1 / Kap. 5+14): beim Eintritt in die
+    // Finanzierungsprüfung eines Immobilien-Deals eine Aufgabe erzeugen, wenn
+    // Pflichtunterlagen der Akte noch fehlen.
+    if (deal.bereich === "immobilien" && stage?.name === "Finanzierung in Prüfung") {
+      const offenN = await zaehleFehlendeUnterlagen(supabase, deal.contact_id);
+      const titel = "Fehlende Unterlagen anfordern";
+      if (offenN > 0 && !offen.has(titel)) {
+        rows.push({
+          titel,
+          faellig_am: new Date(heute.getTime() + 3 * 86_400_000)
+            .toISOString()
+            .slice(0, 10),
+          contact_id: deal.contact_id,
+          deal_id: deal.id,
+          owner_id: deal.berater_id,
+        });
+      }
+    }
+
     if (rows.length) {
       const { error: insErr } = await supabase.from("tasks").insert(rows);
       if (insErr) console.error("[auto-tasks] insert fehlgeschlagen:", insErr.message);
@@ -66,6 +86,45 @@ async function createAutoTasks(
     // Grund gehört ins Server-Log statt ins Nirwana.
     console.error("[auto-tasks] Fehler:", e);
   }
+}
+
+/** Anzahl noch fehlender Pflicht-Dokumente eines Immobilien-Kontakts. */
+async function zaehleFehlendeUnterlagen(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  contactId: string,
+): Promise<number> {
+  const [{ data: contact }, { data: types }, { data: status }] =
+    await Promise.all([
+      supabase
+        .from("contacts")
+        .select("ist_selbststaendig, ist_immobilienbesitzer")
+        .eq("id", contactId)
+        .maybeSingle(),
+      supabase.from("document_types").select("id, gruppe").eq("aktiv", true),
+      supabase
+        .from("contact_document_status")
+        .select("document_type_id, vorhanden")
+        .eq("contact_id", contactId),
+      // Hochgeladene Dateien zählen ebenfalls als „vorhanden" (14.2).
+    ]);
+  if (!contact) return 0;
+  const { data: files } = await supabase
+    .from("contact_documents")
+    .select("document_type_id")
+    .eq("contact_id", contactId);
+
+  const vorhanden = new Set(
+    (status ?? []).filter((s) => s.vorhanden).map((s) => s.document_type_id),
+  );
+  for (const f of files ?? []) if (f.document_type_id) vorhanden.add(f.document_type_id);
+
+  const anwendbar = (types ?? []).filter(
+    (t) =>
+      t.gruppe === "allgemein" ||
+      (t.gruppe === "selbststaendig" && contact.ist_selbststaendig) ||
+      (t.gruppe === "immobilienbesitzer" && contact.ist_immobilienbesitzer),
+  );
+  return anwendbar.filter((t) => !vorhanden.has(t.id)).length;
 }
 
 export type DealInput = {

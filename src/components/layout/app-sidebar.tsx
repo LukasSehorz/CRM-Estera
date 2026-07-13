@@ -87,19 +87,23 @@ function Brand() {
 
 function NavLinks({
   isGf,
+  isBackoffice,
   bereiche,
   onNavigate,
 }: {
   isGf: boolean;
+  isBackoffice: boolean;
   bereiche: string[];
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
   const base = NAV.map((section) => ({
     ...section,
-    items: section.items.filter(
-      (it) => !it.bereich || isGf || bereiche.includes(it.bereich),
-    ),
+    items: section.items.filter((it) => {
+      // Backoffice (2.5): kein provisionslastiges Dashboard.
+      if (isBackoffice && it.href === "/dashboard") return false;
+      return !it.bereich || isGf || bereiche.includes(it.bereich);
+    }),
   })).filter((section) => section.items.length > 0);
   const sections = isGf ? [...base, ADMIN_NAV] : base;
   return (
@@ -178,17 +182,19 @@ export function DesktopSidebar({
   name,
   rolle,
   isGf,
+  isBackoffice,
   bereiche,
 }: {
   name: string;
   rolle: string;
   isGf: boolean;
+  isBackoffice: boolean;
   bereiche: string[];
 }) {
   return (
     <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-border bg-sidebar lg:flex">
       <Brand />
-      <NavLinks isGf={isGf} bereiche={bereiche} />
+      <NavLinks isGf={isGf} isBackoffice={isBackoffice} bereiche={bereiche} />
       <Footer name={name} rolle={rolle} />
     </aside>
   );
@@ -198,11 +204,13 @@ export function MobileNav({
   name,
   rolle,
   isGf,
+  isBackoffice,
   bereiche,
 }: {
   name: string;
   rolle: string;
   isGf: boolean;
+  isBackoffice: boolean;
   bereiche: string[];
 }) {
   const [open, setOpen] = useState(false);
@@ -242,7 +250,12 @@ export function MobileNav({
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <NavLinks isGf={isGf} bereiche={bereiche} onNavigate={close} />
+            <NavLinks
+              isGf={isGf}
+              isBackoffice={isBackoffice}
+              bereiche={bereiche}
+              onNavigate={close}
+            />
             <Footer name={name} rolle={rolle} onNavigate={close} />
           </div>
         </div>
