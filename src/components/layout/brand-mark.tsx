@@ -1,15 +1,15 @@
 import { cn } from "@/lib/utils";
+import { BRANDING } from "@/config/branding";
 
 /**
- * Estera-Logo als quadratische Marken-Kachel. Die Bilddatei liegt unter
- * public/estera-logo.jpg (das Logo bringt seinen dunklen Hintergrund selbst
- * mit). Größe und Eckradius werden über className gesteuert.
+ * Marken-Kachel (Logo). Quelle & Alt-Text kommen aus der Branding-Konfig,
+ * damit eine White-Label-Instanz nur `BRANDING` tauschen muss (Kap. 10).
  * Bewusst ein einfaches <img> (kleines statisches Asset, in Server- wie
  * Client-Komponenten nutzbar).
  */
 export function BrandMark({
   className,
-  alt = "Estera",
+  alt = BRANDING.company,
 }: {
   className?: string;
   alt?: string;
@@ -17,7 +17,7 @@ export function BrandMark({
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src="/estera-logo.jpg"
+      src={BRANDING.logoSrc}
       alt={alt}
       className={cn("shrink-0 rounded-md object-cover", className)}
     />

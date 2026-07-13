@@ -19,6 +19,7 @@ import {
 import { cn } from "@/lib/utils";
 import { BrandMark } from "@/components/layout/brand-mark";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { BRANDING } from "@/config/branding";
 import { logout } from "@/app/(dashboard)/actions";
 
 type NavItem = {
@@ -80,7 +81,9 @@ function Brand() {
   return (
     <div className="flex items-center gap-2.5 px-5 py-5">
       <BrandMark className="h-8 w-8" />
-      <span className="text-base font-semibold tracking-tight">Estera CRM</span>
+      <span className="text-base font-semibold tracking-tight">
+        {BRANDING.appName}
+      </span>
     </div>
   );
 }
@@ -220,7 +223,7 @@ export function MobileNav({
       <div className="flex items-center justify-between border-b border-border bg-sidebar px-4 py-3">
         <div className="flex items-center gap-2.5">
           <BrandMark className="h-7 w-7" />
-          <span className="font-semibold">Estera CRM</span>
+          <span className="font-semibold">{BRANDING.appName}</span>
         </div>
         <button
           type="button"
