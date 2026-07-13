@@ -7,7 +7,7 @@
 //     der vom eigenen Berater-Anteil abgeht (Vorgabe Lukas).
 // =====================================================================
 import type { AnalyticsData } from "@/lib/analytics";
-import { isOpen, isWon, betragOf } from "@/lib/analytics";
+import { isOpen, betragOf } from "@/lib/analytics";
 import {
   dealBeraterProvision,
   dealOverheadFuerUpline,

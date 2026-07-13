@@ -98,7 +98,7 @@ function ZielKarte({
           Monatsziel {bereichLabel(sparte.bereich)}
         </div>
         <p className="mt-3 text-sm text-muted-foreground">
-          Noch kein Monatsziel gesetzt — leg über „Ziel bearbeiten" dein
+          Noch kein Monatsziel gesetzt — leg über „Ziel bearbeiten&ldquo; dein
           persönliches Ziel fest, dann siehst du hier deinen Fortschritt.
         </p>
       </div>

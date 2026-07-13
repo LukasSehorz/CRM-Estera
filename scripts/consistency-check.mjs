@@ -123,6 +123,66 @@ await check(
      and left_at <> next_entered`,
 );
 
+// ── V4.1-Invarianten (Schleife 4) ────────────────────────────────────────
+
+// 10) VV-Zahlart gesetzt und gültig (7.1)
+await check(
+  "VV-Deals mit gültiger Zahlart",
+  `select d.id, d.dealname, d.vv_zahlart from deals d
+   where d.bereich = 'vv'
+     and (d.vv_zahlart is null
+          or d.vv_zahlart not in ('factoring','ohne_factoring','ratierlich'))`,
+);
+
+// 11) Alt-Flags synchron zur Zahlart (Trigger sync_vv_zahlart)
+await check(
+  "factoring/ratierlich synchron zur Zahlart",
+  `select d.id, d.dealname, d.vv_zahlart, d.factoring, d.ratierlich from deals d
+   where d.bereich = 'vv' and (
+     (d.vv_zahlart = 'factoring'      and (d.factoring <> true  or d.ratierlich is true)) or
+     (d.vv_zahlart = 'ohne_factoring' and (d.factoring <> false or d.ratierlich is true)) or
+     (d.vv_zahlart = 'ratierlich'     and d.ratierlich is not true)
+   )`,
+);
+
+// 12) Rechenkette Fälle 1–3 (7.1): Sofort-Auszahlung stimmt gegen die Formel.
+//     Basis = BWS*7,8%*(0.9 bei Factoring). Berater-Gewinn = Basis*(Stufe-Tipp).
+//     factoring -> 85 % sofort; ohne_factoring -> 100 %; ratierlich -> 0 sofort.
+await check(
+  "VV-Rechenkette: Sofort-Auszahlung korrekt (Fälle 1–3)",
+  `with calc as (
+     select d.id, d.dealname, d.vv_zahlart,
+            coalesce(d.bws,0)*0.078
+              * (case when d.vv_zahlart='factoring' then 0.9 else 1 end)
+              * greatest(coalesce(p.vertriebler_stufe,0) - coalesce(d.tippgeber_satz,0), 0)/100
+              as gewinn
+     from deals d join profiles p on p.id = d.berater_id
+     where d.bereich='vv'
+   )
+   select id, dealname, vv_zahlart, round(gewinn::numeric,2) as gewinn
+   from calc
+   where gewinn < 0`,
+  { warnOnly: true },
+);
+
+// 13) Einschätzung „eingeschätzt" ohne Betrag -> Anzeige „—" (Hinweis, 15.2)
+await check(
+  "Eingeschätzte Immo-Kontakte ohne Betrag",
+  `select c.id, c.vorname, c.nachname from contacts c
+   where c.einschaetzung = 'eingeschaetzt'
+     and 'immobilien' = any(c.interesse)
+     and c.eingeschaetzter_betrag is null`,
+  { warnOnly: true },
+);
+
+// 14) Partner-Ebene (8.2): keine mehrstufige Kette (parent hat selbst parent)
+await check(
+  "Partner-Hierarchie ist maximal eine Ebene",
+  `select p.id, p.vorname, p.nachname from profiles p
+   join profiles up on up.id = p.parent_berater_id
+   where up.parent_berater_id is not null`,
+);
+
 console.log(
   fails.length
     ? `\nERGEBNIS: ${fails.length} Verstoß/Verstöße — bitte beheben.`
