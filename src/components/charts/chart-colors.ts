@@ -21,11 +21,12 @@ export const CHART_COLORS = [
   "var(--chart-6)", // Bronze
 ] as const;
 
-/** Feste Hex (Gold-Familie) für Verläufe & lerpHex — in beiden Modi lesbar. */
+/** Feste Hex für Verläufe & lerpHex — Midnight-Redesign: Luna-Blau-Familie
+ *  (Slots behalten ihre Namen, damit alle Verwender unverändert bleiben). */
 export const CHART_HEX = {
-  goldSoft: "#E3C888", // hsl(42 62% 71%)
-  gold: "#C9A24B", // hsl(41 54% 54%)
-  bronze: "#A67C28", // hsl(40 61% 40%)
+  goldSoft: "#A7EBF2", // Luna Cyan hell
+  gold: "#54ACBF", // Luna Steel-Cyan
+  bronze: "#26658C", // Luna Tiefblau
   steel: "#5E86B5", // hsl(212 40% 54%)
   teal: "#3CA79A", // hsl(174 48% 44%)
   slate: "#8B93A6", // hsl(219 12% 60%)

@@ -12,8 +12,8 @@ export const config = {
      * Auf alle Pfade anwenden, außer:
      * - _next/static, _next/image (Build-Assets)
      * - favicon.ico
-     * - gängige Bilddateien
+     * - gängige Bild- und Videodateien
      */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|mp4|webm)$).*)",
   ],
 };

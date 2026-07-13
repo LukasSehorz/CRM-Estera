@@ -10,7 +10,7 @@ import {
   type BereichScope,
 } from "@/lib/analytics";
 
-type Werte = {
+export type Werte = {
   volumen: number;
   erwartet: number;
   gewichtet: number;
@@ -18,7 +18,7 @@ type Werte = {
   naechsteFaelligkeit: string | null;
 };
 
-function werteFuer(a: AnalyticsData, bereich: "immobilien" | "vv"): Werte {
+export function werteFuer(a: AnalyticsData, bereich: "immobilien" | "vv"): Werte {
   const offene = a.deals.filter(
     (d) => d.bereich === bereich && isOpen(d, a.sMap),
   );

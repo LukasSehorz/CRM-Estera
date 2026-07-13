@@ -37,13 +37,15 @@ export function HeuteTaskItem({
   }
 
   return (
-    <li className="flex items-center gap-2 py-1 text-sm">
+    // Grid mit minmax(0,1fr): der Titel MUSS schrumpfen (Ellipsis), das
+    // Fälligkeits-Chip bleibt sicher innerhalb der Karte.
+    <li className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 py-1 text-sm">
       <Checkbox
         checked={false}
         disabled={pending}
         onCheckedChange={(c) => erledigen(c === true)}
       />
-      <span className="min-w-0 flex-1 truncate">
+      <span className="truncate">
         {titel}
         {kontaktName && kontaktId && (
           <>
@@ -60,7 +62,7 @@ export function HeuteTaskItem({
       {faelligAm && (
         <span
           className={cn(
-            "shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
+            "rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
             ueberfaellig
               ? "bg-danger/15 text-danger"
               : "bg-secondary text-muted-foreground",

@@ -164,6 +164,127 @@
 }
 
 /* =====================================================================
+   Midnight-Theme (Dashboard-Redesign): Luna-Blau-Palette
+   (#A7EBF2 · #54ACBF · #26658C · #023859 · #011C40) — komplett ohne Gold.
+   Zwei Varianten im App-Shell: `.theme-midnight` = HELL (gleiche Blau-
+   Sprache auf hellem Grund), `.dark .theme-midnight` = DUNKEL (Schwarz).
+   Login/Marketing bleiben unberührt.
+   ===================================================================== */
+.theme-midnight {
+  --background: hsl(210 40% 98%); /* #F6F9FC */
+  --foreground: hsl(220 45% 8%); /* #0B111D  fast Schwarz */
+  --surface: hsl(0 0% 100%); /* #FFFFFF */
+  --surface-2: hsl(210 30% 94%); /* #EBF0F5 */
+  --border: hsl(212 26% 87%); /* #D7DFE8 */
+  --text-secondary: hsl(215 22% 32%); /* #405063 */
+  --text-muted: hsl(215 15% 44%); /* #5F6C7E */
+
+  /* Blau-Akzent statt Gold (für Text auf Weiß abgedunkelt, AA) */
+  --gold: hsl(197 60% 38%); /* #27819F */
+  --gold-soft: hsl(199 55% 45%); /* #3489B3 */
+  --gold-contrast: hsl(203 65% 30%); /* #1B5A7E */
+  --accent-400: hsl(199 60% 40%); /* #298CB8 */
+  --accent-500: hsl(197 62% 36%); /* #237E9F */
+  --accent-600: hsl(205 62% 27%); /* #1A5070 */
+  --accent-gradient: linear-gradient(135deg, #2985ad 0%, #023859 100%);
+
+  --primary: hsl(203 66% 33%); /* #1D648C  Links/CTAs auf Weiß */
+  --primary-foreground: hsl(0 0% 100%);
+  --primary-soft: hsl(203 66% 33%);
+  --info: hsl(203 72% 38%); /* #1B77A8 */
+  --danger: hsl(331 74% 45%); /* #C81E6E  Magenta (statt Rot) */
+  --warning: hsl(331 74% 45%); /* #C81E6E  Pink (Wunsch: alles Orange -> Pink) */
+  --pop: hsl(331 74% 45%); /* #C81E6E  Signal-Pink (Wunsch: alles Orange -> Pink) */
+  --pink: hsl(331 74% 45%); /* #C81E6E  Design-Pink (wie Monatsziele) */
+  --ring: hsl(197 62% 36%);
+
+  --sidebar: hsl(0 0% 100%);
+  /* Matte helle Fläche (Heute, Aktuelle Deals) */
+  --graphite: hsl(213 22% 93%); /* #E8EDF2 */
+
+  /* Stages ohne Gold/Amber (blau-geführt, weiter unterscheidbar) */
+  --stage-3: hsl(190 62% 30%); /* #1D7383  Cyan tief */
+  --stage-4: hsl(212 64% 40%); /* #2563A8  Königsblau */
+
+  /* Chart-Palette: Luna-Blues, für Weiß abgedunkelt */
+  --chart-1: hsl(197 62% 38%); /* #2585A5 */
+  --chart-2: hsl(190 44% 48%); /* #45A0B3 */
+  --chart-3: hsl(205 62% 27%); /* #1A5070 */
+  --chart-4: hsl(199 70% 45%); /* #229BD4 */
+  --chart-5: hsl(215 16% 47%); /* #66758B */
+  --chart-6: hsl(207 78% 18%); /* #0A3552 */
+}
+
+.dark .theme-midnight {
+  --background: hsl(220 45% 3%); /* #04070C  nahezu Schwarz */
+  --foreground: hsl(210 45% 98%); /* #F6FAFD  Weiß */
+  --surface: hsl(219 40% 6%); /* #090F16  Karten, Panels */
+  --surface-2: hsl(218 36% 10%); /* #101828  erhöhte Flächen, Inputs */
+  --border: hsl(217 30% 15%); /* #1B2532  Kartenränder */
+  --text-secondary: hsl(213 24% 76%); /* #B4C1D1 */
+  --text-muted: hsl(214 16% 58%); /* #82909F */
+
+  /* Blau-Akzent übernimmt die Gold-Slots (Luna-Palette) */
+  --gold: hsl(190 44% 54%); /* #54ACBF */
+  --gold-soft: hsl(187 71% 80%); /* #A7EBF2 */
+  --gold-contrast: hsl(187 71% 80%);
+  --accent-400: hsl(187 71% 80%); /* #A7EBF2 */
+  --accent-500: hsl(190 44% 54%); /* #54ACBF */
+  --accent-600: hsl(203 57% 35%); /* #26658C */
+  --accent-gradient: linear-gradient(135deg, #a7ebf2 0%, #26658c 100%);
+
+  --primary: hsl(190 52% 62%); /* #6BC4D6  Links/CTAs, ~9:1 auf Schwarz */
+  --primary-foreground: hsl(220 45% 3%);
+  --primary-soft: hsl(187 71% 80%);
+  --info: hsl(197 78% 62%); /* #52B9EE  knalliger */
+  --danger: hsl(331 92% 67%); /* #FA5CA9  knalliges Magenta statt Rot */
+  --warning: hsl(331 92% 67%); /* #FA5CA9  Pink (Wunsch: alles Orange -> Pink) */
+  --pop: hsl(331 92% 67%); /* #FA5CA9  Signal-Pink (Wunsch: alles Orange -> Pink) */
+  --pink: hsl(331 92% 67%); /* #FA5CA9  Design-Pink (wie Monatsziele) */
+  --ring: hsl(190 44% 54%);
+
+  /* Matt-dunkelgraue Kartenfläche (Heute, Aktuelle Deals) */
+  --graphite: hsl(222 10% 10%); /* #17191C */
+
+  --sidebar: hsl(220 43% 4%); /* #060A11 */
+
+  /* Stages ohne Gold/Amber (blau-geführt, auf Schwarz lesbar) */
+  --stage-3: hsl(190 55% 55%); /* #4CBDD2  Cyan */
+  --stage-4: hsl(210 70% 62%); /* #5A9BE2  Königsblau hell */
+
+  /* Chart-Palette: kräftige Luna-Blues auf Schwarz */
+  --chart-1: hsl(190 44% 54%); /* #54ACBF */
+  --chart-2: hsl(187 71% 80%); /* #A7EBF2 */
+  --chart-3: hsl(203 57% 35%); /* #26658C */
+  --chart-4: hsl(199 74% 60%); /* #4EB4E8 */
+  --chart-5: hsl(214 20% 66%); /* #98A7BA */
+  --chart-6: hsl(207 65% 26%); /* #17466E */
+}
+
+/* Knallig-blaue Karte (Heute, Aktuelle Deals): kräftiger Luna-Verlauf.
+   Innen werden die Semantik-Tokens auf Weiß-Transparenzen umgebogen,
+   damit alle Kind-Elemente (Chips, Links, Muted-Texte) lesbar bleiben. */
+.card-vivid-blue {
+  background: linear-gradient(160deg, #2f86c4 0%, #0e4f80 55%, #023859 100%);
+  /* Status-Töne auf der blauen Fläche: in Hell UND Dunkel knallig lesbar */
+  --danger: hsl(331 92% 70%);
+  --warning: hsl(40 95% 68%);
+  --success: hsl(150 70% 62%);
+  --info: hsl(197 90% 76%);
+  --muted-foreground: rgba(234, 244, 255, 0.78);
+  --text-secondary: rgba(234, 244, 255, 0.85);
+  --foreground: #ffffff;
+  --card-foreground: #ffffff;
+  --primary: #ffffff;
+  --secondary: rgba(255, 255, 255, 0.14);
+  --surface-2: rgba(255, 255, 255, 0.12);
+  --border: rgba(255, 255, 255, 0.22);
+  --accent-400: #eaf6ff;
+  --accent-500: #ffffff;
+  color: #ffffff;
+}
+
+/* =====================================================================
    Tailwind-Theme: Tokens als Utilities verfügbar machen
    (bg-background, text-foreground, bg-surface-2, text-success, ...)
    ===================================================================== */
@@ -206,6 +327,9 @@
   --color-gold: var(--gold);
   --color-gold-soft: var(--gold-soft);
   --color-gold-contrast: var(--gold-contrast);
+  --color-graphite: var(--graphite, var(--surface));
+  --color-pop: var(--pop, var(--warning));
+  --color-pink: var(--pink, var(--danger));
 
   --color-success: var(--success);
   --color-warning: var(--warning);
@@ -246,6 +370,15 @@
 /* Akzent-Verlauf als Utility (Charts, Hero-Zahlen) */
 .bg-accent-gradient {
   background-image: var(--accent-gradient);
+}
+
+/* Cyan→Pink-Verlauf (Hero-Zahlen, Signatur-Akzente des Midnight-Designs) */
+.bg-cyan-pink-gradient {
+  background-image: linear-gradient(
+    100deg,
+    var(--accent-400) 0%,
+    var(--pink, var(--danger)) 70%
+  );
 }
 
 /* Dezente, hochwertige Scrollleiste (z. B. Kanban-Boards horizontal) */

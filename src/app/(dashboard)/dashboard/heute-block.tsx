@@ -87,7 +87,7 @@ export async function HeuteBlock() {
     (faellig ?? []).length === 0 && termine.length === 0 && stale.length === 0;
 
   return (
-    <div className="rounded-xl border border-border bg-surface p-5">
+    <div className="overflow-hidden rounded-xl border border-border bg-surface p-5 transition-[border-color,box-shadow] duration-300 hover:border-accent-500/40 hover:shadow-[0_0_36px_-10px_color-mix(in_srgb,var(--accent-500)_45%,transparent)]">
       <div className="flex items-center justify-between gap-2">
         <div>
           <h2 className="text-base font-semibold">Heute</h2>
@@ -110,7 +110,9 @@ export async function HeuteBlock() {
           Deals. 🎉
         </p>
       ) : (
-        <div className="mt-4 grid gap-5 lg:grid-cols-3">
+        // Vertikal gestapelt: der Block sitzt im Midnight-Grid in einer
+        // schmalen Spalte — drei Spalten wären zu eng.
+        <div className="mt-4 grid gap-5">
           {/* Aufgaben heute + überfällig */}
           <div>
             <p className="mb-2 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
@@ -159,7 +161,7 @@ export async function HeuteBlock() {
                   <li key={`${t.art}-${t.id}`}>
                     <Link
                       href={`/deals/${t.id}`}
-                      className="-mx-1.5 flex items-center gap-2 rounded-md px-1.5 py-1.5 text-sm transition-colors hover:bg-surface-2"
+                      className="-mx-1.5 grid grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-md px-1.5 py-1.5 text-sm transition-colors hover:bg-surface-2"
                     >
                       <span
                         className={
@@ -194,7 +196,7 @@ export async function HeuteBlock() {
                   <li key={d.id}>
                     <Link
                       href={`/deals/${d.id}`}
-                      className="-mx-1.5 flex items-center justify-between gap-2 rounded-md px-1.5 py-1.5 text-sm transition-colors hover:bg-surface-2"
+                      className="-mx-1.5 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-md px-1.5 py-1.5 text-sm transition-colors hover:bg-surface-2"
                     >
                       <span className="truncate">{d.dealname}</span>
                       <span className="shrink-0 rounded-full bg-warning/15 px-1.5 py-0.5 text-[10px] font-semibold text-warning">
