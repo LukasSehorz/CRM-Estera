@@ -193,6 +193,36 @@ export async function setRolle(
   return { ok: true };
 }
 
+/**
+ * Setzt den globalen Immobilien-Provisions-Modus (V4.1 Kap. 1.5, OFFEN #2):
+ * Berater-Anteil von der Estera-Provision oder vom Kaufpreis. Berechtigung
+ * (nur GF) + Wert-Validierung erzwingt die SECURITY-DEFINER-Funktion
+ * set_immo_provision_modus in der DB.
+ */
+export async function setImmoProvisionModus(
+  modus: "anteil_von_provision" | "anteil_von_kaufpreis",
+): Promise<StufeResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Nicht angemeldet." };
+
+  const { error } = await supabase.rpc("set_immo_provision_modus", {
+    p_modus: modus,
+  });
+  if (error)
+    return {
+      error:
+        "Speichern fehlgeschlagen — nur die Geschäftsführung darf die Provisionsberechnung ändern.",
+    };
+  // Betrifft praktisch alle Provisions-/Umsatz-Anzeigen.
+  revalidatePath("/team");
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/performance");
+  return { ok: true };
+}
+
 export type NeuerBeraterInput = {
   vorname: string;
   nachname: string;

@@ -1,7 +1,9 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Topbar } from "@/components/layout/topbar";
+import { getImmoModus } from "@/lib/einstellungen";
 import { NeuerBeraterForm, StufeTable, type BeraterRow } from "./stufe-table";
+import { ImmoProvisionCard } from "./einstellungen-card";
 
 /**
  * Team-Verwaltung: nur Geschäftsführung. Berater anlegen, Vertriebler-Stufe
@@ -21,6 +23,7 @@ export default async function TeamPage() {
     .single();
   if (me?.rolle !== "geschaeftsfuehrung") redirect("/dashboard");
 
+  const immoModus = await getImmoModus();
   const [{ data: profiles }, { data: ziele }] = await Promise.all([
     supabase
       .from("profiles")
@@ -74,6 +77,7 @@ export default async function TeamPage() {
       />
       <div className="space-y-6 px-6 py-6">
         <NeuerBeraterForm />
+        <ImmoProvisionCard aktuell={immoModus} />
         <div className="space-y-2">
           <p className="max-w-2xl text-sm text-muted-foreground">
             Die Stufe bestimmt den persönlichen Provisionsanteil (Netto-Provision

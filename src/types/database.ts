@@ -575,6 +575,12 @@ export type Database = {
         };
         Relationships: [];
       };
+      crm_einstellungen: {
+        Row: { key: string; value: string; updated_at: string };
+        Insert: { key: string; value: string; updated_at?: string };
+        Update: { key?: string; value?: string; updated_at?: string };
+        Relationships: [];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -610,6 +616,10 @@ export type Database = {
       is_backoffice: {
         Args: Record<string, never>;
         Returns: boolean;
+      };
+      set_immo_provision_modus: {
+        Args: { p_modus: string };
+        Returns: undefined;
       };
     };
     Enums: {

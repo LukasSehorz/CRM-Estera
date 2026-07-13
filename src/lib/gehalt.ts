@@ -17,6 +17,7 @@ import {
   zahlartOf,
   EINBEHALT_REST,
   RATIERLICH_MONATE,
+  type ImmoProvisionModus,
 } from "@/lib/provision";
 
 export type EinbehaltPosten = {
@@ -61,8 +62,8 @@ function monateSeit(vonISO: string, now: Date): number {
 }
 
 /** Sofort ausgezahlter Berater-Anteil eines realisierten Deals. */
-function sofortBetrag(d: Deal, stufe: number): number {
-  if (d.bereich === "immobilien") return dealBeraterProvision(d, stufe);
+function sofortBetrag(d: Deal, stufe: number, modus: ImmoProvisionModus): number {
+  if (d.bereich === "immobilien") return dealBeraterProvision(d, stufe, modus);
   const z = zahlartOf(d);
   if (z === "ratierlich") return 0; // läuft über die Monatsraten
   const gewinn = dealBeraterGewinn(d, stufe);
@@ -91,7 +92,7 @@ export function computeGehalt(
     const am = new Date(amISO);
 
     // Sofort-Auszahlung nach Periode (Buchungsdatum).
-    const betrag = sofortBetrag(d, stufe);
+    const betrag = sofortBetrag(d, stufe, a.immoModus);
     sofort.gesamt += betrag;
     if (am.getFullYear() === now.getFullYear()) {
       sofort.jahr += betrag;
@@ -149,6 +150,7 @@ export function computeGehalt(
         a.stufeOf(beraterId),
         a.immoDefaultOf(beraterId),
         a.stufeOf(partnerId),
+        a.immoModus,
       );
       if (oh > 0) {
         summe += oh;

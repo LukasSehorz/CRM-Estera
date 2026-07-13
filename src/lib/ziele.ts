@@ -5,7 +5,12 @@
 // der Hausanteil bleibt unsichtbar (Schleife 2, 2.2).
 // =====================================================================
 import { createClient } from "@/lib/supabase/server";
-import { dealBeraterProvision, type DealFinanz } from "@/lib/provision";
+import {
+  dealBeraterProvision,
+  type DealFinanz,
+  type ImmoProvisionModus,
+} from "@/lib/provision";
+import { getImmoModus } from "@/lib/einstellungen";
 
 export type SpartenZiel = {
   bereich: "immobilien" | "vv";
@@ -47,13 +52,14 @@ function provisionImMonat(
   jahr: number,
   monat: number,
   stufe: number,
+  modus: ImmoProvisionModus,
 ): number {
   let sum = 0;
   for (const d of deals) {
     if (d.bereich !== bereich) continue;
     const c = new Date(d.closed_at);
     if (c.getFullYear() !== jahr || c.getMonth() !== monat) continue;
-    sum += dealBeraterProvision(d, stufe);
+    sum += dealBeraterProvision(d, stufe, modus);
   }
   return sum;
 }
@@ -72,6 +78,7 @@ function monatsStreak(
   stufe: number,
   eintritt: Date,
   now: Date,
+  modus: ImmoProvisionModus,
 ): number {
   if (ziel <= 0) return 0;
   const eintrittKey = eintritt.getFullYear() * 12 + eintritt.getMonth();
@@ -79,7 +86,7 @@ function monatsStreak(
   let monat = now.getMonth();
   let streak = 0;
   // Laufender Monat: zählt nur, wenn schon erreicht — bricht sonst nicht.
-  if (provisionImMonat(deals, bereich, jahr, monat, stufe) >= ziel) streak += 1;
+  if (provisionImMonat(deals, bereich, jahr, monat, stufe, modus) >= ziel) streak += 1;
   for (let i = 0; i < 120; i++) {
     monat -= 1;
     if (monat < 0) {
@@ -87,7 +94,7 @@ function monatsStreak(
       jahr -= 1;
     }
     if (jahr * 12 + monat < eintrittKey) break;
-    if (provisionImMonat(deals, bereich, jahr, monat, stufe) >= ziel) streak += 1;
+    if (provisionImMonat(deals, bereich, jahr, monat, stufe, modus) >= ziel) streak += 1;
     else break;
   }
   return streak;
@@ -171,6 +178,7 @@ export async function loadZielDaten(): Promise<ZielDaten | null> {
   const now = new Date();
   const stufe = Number(profil.vertriebler_stufe ?? 0);
   const eintritt = new Date(profil.created_at);
+  const immoModus = await getImmoModus();
   const wonIds = new Set(
     (stagesQ.data ?? []).filter((s) => s.is_won).map((s) => s.id),
   );
@@ -203,9 +211,10 @@ export async function loadZielDaten(): Promise<ZielDaten | null> {
         now.getFullYear(),
         now.getMonth(),
         stufe,
+        immoModus,
       ),
       streakMonate: ziel
-        ? monatsStreak(wonDeals, b, ziel, stufe, eintritt, now)
+        ? monatsStreak(wonDeals, b, ziel, stufe, eintritt, now, immoModus)
         : 0,
     };
   });

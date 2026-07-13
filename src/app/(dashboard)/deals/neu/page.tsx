@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Topbar } from "@/components/layout/topbar";
 import { bereichLabel } from "@/config/enums";
+import { getImmoModus } from "@/lib/einstellungen";
 import { DealForm, type DealFormState } from "../deal-form";
 
 export default async function NeuerDealPage({
@@ -92,6 +93,7 @@ export default async function NeuerDealPage({
           contactOptions={contactOpts}
           vertrieblerStufe={vertrieblerStufe}
           isGf={isGf}
+          immoModus={await getImmoModus()}
         />
       </div>
     </>

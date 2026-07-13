@@ -7,6 +7,7 @@ import {
   dealBeraterProvision,
   type DealFinanz,
 } from "@/lib/provision";
+import { getImmoModus } from "@/lib/einstellungen";
 import { BeraterTable, type BeraterRow } from "./berater-table";
 
 type Scope = "gesamt" | "immobilien" | "vv";
@@ -40,12 +41,13 @@ export default async function BeraterUebersichtPage() {
   const isGf =
     (profiles ?? []).find((p) => p.id === user.id)?.rolle ===
     "geschaeftsfuehrung";
+  const immoModus = await getImmoModus();
   // Gleiche Definition wie in den Dashboards (1.2): Umsatz = Provision —
   // GF sieht den Estera-Umsatz, ein Berater seine eigene Provision.
   const umsatzOf = (d: DealFinanz & { berater_id: string }) =>
     isGf
-      ? dealEsteraUmsatz(d, stufeMap.get(d.berater_id))
-      : dealBeraterProvision(d, stufeMap.get(d.berater_id));
+      ? dealEsteraUmsatz(d, stufeMap.get(d.berater_id), immoModus)
+      : dealBeraterProvision(d, stufeMap.get(d.berater_id), immoModus);
 
   const mkBucket = () => ({ offene: 0, pipeline: 0, umsatz: 0 });
   // Ergebnisse je Berater STRIKT getrennt nach Immobilien und VV (Wunsch 10).

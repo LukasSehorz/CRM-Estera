@@ -40,12 +40,13 @@ export function meinePartner(a: AnalyticsData, beraterId: string): PartnerRow[] 
       }
       if (a.istRealisiert(d)) {
         abschluesse += 1;
-        provision += dealBeraterProvision(d, a.stufeOf(partnerId));
+        provision += dealBeraterProvision(d, a.stufeOf(partnerId), a.immoModus);
         overhead += dealOverheadFuerUpline(
           d,
           a.stufeOf(beraterId),
           a.immoDefaultOf(beraterId),
           a.stufeOf(partnerId),
+          a.immoModus,
         );
       }
     }

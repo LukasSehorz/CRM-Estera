@@ -22,7 +22,9 @@ import {
   EINBEHALT_REST,
   FACTORING_ANTEIL,
   PROVISIONSSATZ,
+  type ImmoProvisionModus,
 } from "@/lib/provision";
+import { IMMO_MODUS_KEY, parseImmoModus } from "@/lib/einstellungen";
 
 export type Stage = {
   id: string;
@@ -81,6 +83,8 @@ export type AnalyticsData = {
   meineBereiche: ("immobilien" | "vv")[];
   /** Vertriebler-Stufe eines Beraters (Prozent, z. B. 30). */
   stufeOf: (beraterId: string) => number;
+  /** Globaler Immo-Provisions-Modus (GF-Einstellung, 1.5). */
+  immoModus: ImmoProvisionModus;
   /** Immobilien-Anteil-Default eines Beraters (Prozent, Anbindung 1.5/8.4). */
   immoDefaultOf: (beraterId: string) => number;
   /** Übergeordneter Partner (Upline) eines Beraters — null, wenn keiner. */
@@ -213,7 +217,11 @@ export function summenSkala(
     if (d.bereich === "immobilien") {
       const b = (d.kaufpreis ?? 0) * ((d.provisionssatz ?? 0) / 100);
       brutto += b;
-      beraterProvision += dealBeraterProvision(d, a.stufeOf(d.berater_id));
+      beraterProvision += dealBeraterProvision(
+        d,
+        a.stufeOf(d.berater_id),
+        a.immoModus,
+      );
     } else {
       const netto =
         (d.bws ?? 0) *
@@ -221,7 +229,7 @@ export function summenSkala(
         (zahlartOf(d) === "factoring" ? FACTORING_ANTEIL : 1);
       brutto += netto;
       const tipp = dealTippgeberAnteil(d);
-      const gewinn = dealBeraterGewinn(d, a.stufeOf(d.berater_id));
+      const gewinn = dealBeraterGewinn(d, a.stufeOf(d.berater_id), a.immoModus);
       const einb = zahlartOf(d) === "factoring" ? gewinn * EINBEHALT_REST : 0;
       tippgeber += tipp;
       einbehalt += einb;
@@ -247,7 +255,7 @@ export async function loadAnalytics(): Promise<AnalyticsData> {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const [dealsQ, stagesQ, histQ, contactsQ, profilesQ] = await Promise.all([
+  const [dealsQ, stagesQ, histQ, contactsQ, profilesQ, einstQ] = await Promise.all([
     supabase
       .from("deals")
       .select(
@@ -267,8 +275,14 @@ export async function loadAnalytics(): Promise<AnalyticsData> {
       .select(
         "id, vorname, nachname, aktiv, rolle, vertriebler_stufe, bereich, immo_anteil_default, parent_berater_id, karriere_fenster_start",
       ),
+    supabase
+      .from("crm_einstellungen")
+      .select("value")
+      .eq("key", IMMO_MODUS_KEY)
+      .maybeSingle(),
   ]);
 
+  const immoModus = parseImmoModus(einstQ.data?.value);
   const stages = (stagesQ.data ?? []) as Stage[];
   const sMap = new Map(stages.map((s) => [s.id, s]));
   const profiles = profilesQ.data ?? [];
@@ -308,14 +322,16 @@ export async function loadAnalytics(): Promise<AnalyticsData> {
   // eigene Provision. Die GF rechnet auf den Estera-Umsatz.
   const umsatzOf = (d: Deal) =>
     isGf
-      ? dealEsteraUmsatz(d, stufeMap.get(d.berater_id))
-      : dealBeraterProvision(d, stufeMap.get(d.berater_id));
+      ? dealEsteraUmsatz(d, stufeMap.get(d.berater_id), immoModus)
+      : dealBeraterProvision(d, stufeMap.get(d.berater_id), immoModus);
 
   // Einbehalt NUR MIT Factoring (7.1) — 15 % des Auszahlungsanspruchs
   // (Stufe − Tippgeber). Der geparkte Topf ist für GF und Berater identisch.
   const einbehaltOf = (d: Deal) => {
     if (d.bereich !== "vv" || zahlartOf(d) !== "factoring") return 0;
-    return dealBeraterGewinn(d, stufeMap.get(d.berater_id)) * EINBEHALT_REST;
+    return (
+      dealBeraterGewinn(d, stufeMap.get(d.berater_id), immoModus) * EINBEHALT_REST
+    );
   };
 
   const deals = (dealsQ.data ?? []) as Deal[];
@@ -361,6 +377,7 @@ export async function loadAnalytics(): Promise<AnalyticsData> {
     isGf,
     meineBereiche,
     stufeOf: (id: string) => stufeMap.get(id) ?? 0,
+    immoModus,
     immoDefaultOf: (id: string) => immoDefaultMap.get(id) ?? 0,
     parentOf: (id: string) => parentMap.get(id) ?? null,
     downlineOf: (id: string) => downlineMap.get(id) ?? [],

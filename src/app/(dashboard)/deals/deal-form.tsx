@@ -111,6 +111,7 @@ export function DealForm({
   contactName,
   vertrieblerStufe = 0,
   isGf = false,
+  immoModus = "anteil_von_provision",
 }: {
   mode: "create" | "edit";
   dealId?: string;
@@ -121,6 +122,7 @@ export function DealForm({
   contactName?: string;
   vertrieblerStufe?: number;
   isGf?: boolean;
+  immoModus?: "anteil_von_provision" | "anteil_von_kaufpreis";
 }) {
   const router = useRouter();
   const [v, setV] = useState<DealFormState>(initial);
@@ -483,6 +485,7 @@ export function DealForm({
                     num(v.kaufpreis),
                     num(v.provisionssatz),
                     num(v.berater_anteil),
+                    immoModus,
                   );
                   return (
                     <>

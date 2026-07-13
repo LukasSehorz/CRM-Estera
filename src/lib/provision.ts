@@ -153,11 +153,11 @@ export function computeImmoProvision(
   kaufpreis: number | null | undefined,
   provisionssatz: number | null | undefined,
   beraterAnteil: number | null | undefined,
+  modus: ImmoProvisionModus = IMMO_PROVISION_MODUS,
 ): ImmoProvisionResult {
   const kp = kaufpreis ?? 0;
   const esteraProvision = kp * ((provisionssatz ?? 0) / 100);
-  const basis =
-    IMMO_PROVISION_MODUS === "anteil_von_kaufpreis" ? kp : esteraProvision;
+  const basis = modus === "anteil_von_kaufpreis" ? kp : esteraProvision;
   const beraterProvision = basis * ((beraterAnteil ?? 0) / 100);
   return {
     esteraProvision,
@@ -198,6 +198,7 @@ export function dealVolumen(d: DealFinanz): number {
 export function dealEsteraUmsatz(
   d: DealFinanz,
   vertrieblerStufe: number | null | undefined,
+  modus: ImmoProvisionModus = IMMO_PROVISION_MODUS,
 ): number {
   // Kanonische Umsatz-Definition (Kap. 1.1): Umsatz = Estera-NETTO, also der
   // Hausanteil NACH Abzug des Berater-Anteils. Immobilien liefert daher den
@@ -206,7 +207,7 @@ export function dealEsteraUmsatz(
   // (1 − Stufe %) bereits netto — damit stimmen GF-Umsatz und Estera-Netto
   // überein (keine Zwitter-Zahl mehr).
   if (d.bereich === "immobilien") {
-    return computeImmoProvision(d.kaufpreis, d.provisionssatz, d.berater_anteil)
+    return computeImmoProvision(d.kaufpreis, d.provisionssatz, d.berater_anteil, modus)
       .hausAnteil;
   }
   return vvBasis(d) * (1 - (vertrieblerStufe ?? 0) / 100);
@@ -215,9 +216,10 @@ export function dealEsteraUmsatz(
 export function dealBeraterProvision(
   d: DealFinanz,
   vertrieblerStufe: number | null | undefined,
+  modus: ImmoProvisionModus = IMMO_PROVISION_MODUS,
 ): number {
   if (d.bereich === "immobilien") {
-    return computeImmoProvision(d.kaufpreis, d.provisionssatz, d.berater_anteil)
+    return computeImmoProvision(d.kaufpreis, d.provisionssatz, d.berater_anteil, modus)
       .beraterProvision;
   }
   return vvBasis(d) * ((vertrieblerStufe ?? 0) / 100);
@@ -227,8 +229,9 @@ export function dealBeraterProvision(
 export function dealBeraterGewinn(
   d: DealFinanz,
   vertrieblerStufe: number | null | undefined,
+  modus: ImmoProvisionModus = IMMO_PROVISION_MODUS,
 ): number {
-  const umsatz = dealBeraterProvision(d, vertrieblerStufe);
+  const umsatz = dealBeraterProvision(d, vertrieblerStufe, modus);
   if (d.bereich !== "vv") return umsatz;
   return umsatz - vvBasis(d) * ((d.tippgeber_satz ?? 0) / 100);
 }
@@ -253,6 +256,7 @@ export function dealOverheadFuerUpline(
   uplineVvStufe: number | null | undefined,
   uplineImmoDefault: number | null | undefined,
   partnerVvStufe: number | null | undefined,
+  modus: ImmoProvisionModus = IMMO_PROVISION_MODUS,
 ): number {
   if (d.bereich === "vv") {
     const diff = Math.max(0, (uplineVvStufe ?? 0) - (partnerVvStufe ?? 0));
@@ -260,9 +264,7 @@ export function dealOverheadFuerUpline(
   }
   const esteraProvision = (d.kaufpreis ?? 0) * ((d.provisionssatz ?? 0) / 100);
   const basis =
-    IMMO_PROVISION_MODUS === "anteil_von_kaufpreis"
-      ? (d.kaufpreis ?? 0)
-      : esteraProvision;
+    modus === "anteil_von_kaufpreis" ? (d.kaufpreis ?? 0) : esteraProvision;
   const diff = Math.max(0, (uplineImmoDefault ?? 0) - (d.berater_anteil ?? 0));
   return basis * (diff / 100);
 }
