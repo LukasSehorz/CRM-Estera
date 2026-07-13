@@ -4,7 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Plus, Trash2 } from "lucide-react";
+import { ChevronDown, Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDate } from "@/lib/format";
 import { addTask, deleteTask, toggleTask } from "../kontakte/actions";
@@ -102,6 +102,10 @@ export function AufgabenView({
   const [kontakt, setKontakt] = useState(NONE);
   const [deal, setDeal] = useState(NONE);
   const [pending, start] = useTransition();
+  // Auf-/zuklappbare Gruppen — „Erledigt" startet eingeklappt (Wunsch Lukas).
+  const [zu, setZu] = useState<Record<string, boolean>>({ erledigt: true });
+  const toggleGruppe = (key: string) =>
+    setZu((prev) => ({ ...prev, [key]: !prev[key] }));
 
   const gruppen = useMemo(() => gruppieren(rows), [rows]);
 
@@ -205,20 +209,33 @@ export function AufgabenView({
           </p>
         </div>
       ) : (
-        gruppen.map((g) => (
+        gruppen.map((g) => {
+          const eingeklappt = zu[g.key] ?? false;
+          return (
           <section key={g.key}>
-            <h2
+            <button
+              type="button"
+              onClick={() => toggleGruppe(g.key)}
+              aria-expanded={!eingeklappt}
               className={cn(
-                "mb-2 flex items-center gap-2 text-sm font-semibold",
+                "mb-2 flex w-full items-center gap-2 text-sm font-semibold",
                 g.tone === "danger" && "text-danger",
                 g.tone === "warning" && "text-warning",
               )}
             >
+              <ChevronDown
+                className={cn(
+                  "h-4 w-4 shrink-0 text-muted-foreground transition-transform",
+                  eingeklappt && "-rotate-90",
+                )}
+                aria-hidden
+              />
               {g.label}
               <span className="rounded-full bg-secondary px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">
                 {g.rows.length}
               </span>
-            </h2>
+            </button>
+            {!eingeklappt && (
             <ul className="divide-y divide-border rounded-xl border border-border bg-surface px-4">
               {g.rows.map((r) => {
                 const ueberfaellig =
@@ -284,8 +301,10 @@ export function AufgabenView({
                 );
               })}
             </ul>
+            )}
           </section>
-        ))
+          );
+        })
       )}
     </div>
   );

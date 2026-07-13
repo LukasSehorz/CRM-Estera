@@ -48,7 +48,6 @@ export default async function DashboardPage({
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  let profilVorname = "";
   let profilName = "";
   let profilIstGf = false;
   if (user) {
@@ -57,14 +56,12 @@ export default async function DashboardPage({
       .select("vorname, nachname, rolle")
       .eq("id", user.id)
       .single();
-    profilVorname = data?.vorname ?? "";
     profilName = data ? `${data.vorname} ${data.nachname}` : (user.email ?? "");
     profilIstGf = data?.rolle === "geschaeftsfuehrung";
     // Backoffice (2.5): kein Zugriff auf die provisionslastige Übersicht —
     // direkt in die Kontaktverwaltung leiten.
     if (data?.rolle === "backoffice") redirect("/kontakte");
   }
-  const vorname = profilIstGf ? "Ioannis" : profilVorname;
   const name = profilIstGf ? "Ioannis Orfanidis" : profilName;
   const rolleLabel = profilIstGf
     ? ROLLE_LABEL.geschaeftsfuehrung
@@ -189,7 +186,7 @@ export default async function DashboardPage({
 
   return (
     <>
-      <MidnightHeader vorname={vorname} name={name} rolle={rolleLabel} fotoUrl={fotoUrl} />
+      <MidnightHeader name={name} rolle={rolleLabel} fotoUrl={fotoUrl} />
       <div className="space-y-4 px-6 py-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <DashboardTabs />

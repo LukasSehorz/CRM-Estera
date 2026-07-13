@@ -182,7 +182,6 @@ export function MidnightPreview() {
         />
       </div>
       <MidnightHeader
-        vorname="Ioannis"
         name="Ioannis Orfanidis"
         rolle="Geschäftsführer"
         fotoUrl="/dashboard/profil-ioannis.png"

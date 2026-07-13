@@ -169,59 +169,15 @@ function GlobalSearch() {
   );
 }
 
-/** Begrüßungs-Rotation links neben dem Profil: drei Sätze im Wechsel. */
-function GreetingCycle({ vorname }: { vorname: string }) {
-  const h = new Date().getHours();
-  const gruss = h < 11 ? "Guten Morgen" : h < 18 ? "Guten Tag" : "Guten Abend";
-  const saetze = [
-    `${gruss} ${vorname || ""}`.trim(),
-    "Zeit, Geld zu verdienen!",
-    "Σας εύχομαι μια επιτυχημένη εργάσιμη ημέρα!",
-  ];
-  const [idx, setIdx] = useState(0);
-  const [sichtbar, setSichtbar] = useState(true);
-
-  useEffect(() => {
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    if (mq.matches) return; // reduzierte Bewegung: erster Satz bleibt stehen
-    const zyklus = setInterval(() => {
-      setSichtbar(false);
-      setTimeout(() => {
-        setIdx((i) => (i + 1) % saetze.length);
-        setSichtbar(true);
-      }, 420);
-    }, 4200);
-    return () => clearInterval(zyklus);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  return (
-    // Fester Slot (w-[340px] = längster Satz): der Header verschiebt sich
-    // beim Satzwechsel nicht. Knalliges Gold als Kontrast zu den Blues.
-    <p
-      aria-live="polite"
-      className={cn(
-        // Signal-Orange (#F97316-Familie): Komplementär-Akzent zu den Blues
-        "hidden w-[340px] shrink-0 truncate text-right text-sm font-semibold text-pop transition-all duration-300 xl:block",
-        sichtbar ? "translate-y-0 opacity-100" : "-translate-y-1.5 opacity-0",
-      )}
-    >
-      {saetze[idx]}
-    </p>
-  );
-}
-
 /**
- * Dashboard-Header (Midnight-Redesign): globale Suche, Datum,
- * Begrüßungs-Animation und Profil mit freigestelltem Porträt.
+ * Dashboard-Header (Midnight-Redesign): globale Suche, Datum und Profil mit
+ * freigestelltem Porträt.
  */
 export function MidnightHeader({
-  vorname,
   name,
   rolle,
   fotoUrl = null,
 }: {
-  vorname: string;
   name: string;
   rolle: string;
   fotoUrl?: string | null;
@@ -267,8 +223,6 @@ export function MidnightHeader({
             <CalendarDays className="h-3.5 w-3.5 text-accent-400" aria-hidden />
             {heute}
           </span>
-
-          <GreetingCycle vorname={vorname} />
 
           <div className="flex items-center gap-3">
             <div className="hidden text-right sm:block">

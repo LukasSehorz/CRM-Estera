@@ -169,7 +169,8 @@ export function computeImmoProvision(
 // =====================================================================
 // Zentrale Deal-Größen (Kap. 1.1/1.2: Volumen ≠ Umsatz).
 //   dealVolumen          Transaktionsvolumen (Kaufpreis bzw. BWS)
-//   dealEsteraUmsatz     was Estera verdient (GF-Sicht)
+//   dealEsteraUmsatz     kanonischer Estera-Umsatz = Estera-NETTO (GF-Sicht,
+//                        Kap. 1.1: „realisierte Estera-Provision, Estera-Netto")
 //   dealBeraterProvision was der Berater UMSETZT (Basis × Stufe)
 //   dealBeraterGewinn    Umsatz − Tippgeber-Anteil (Vorgabe Lukas)
 // =====================================================================
@@ -198,9 +199,15 @@ export function dealEsteraUmsatz(
   d: DealFinanz,
   vertrieblerStufe: number | null | undefined,
 ): number {
+  // Kanonische Umsatz-Definition (Kap. 1.1): Umsatz = Estera-NETTO, also der
+  // Hausanteil NACH Abzug des Berater-Anteils. Immobilien liefert daher den
+  // hausAnteil (nicht die volle esteraProvision — die ist „Provision brutto"
+  // und steckt in der Summen-Skala als „Summe X"). VV ist über
+  // (1 − Stufe %) bereits netto — damit stimmen GF-Umsatz und Estera-Netto
+  // überein (keine Zwitter-Zahl mehr).
   if (d.bereich === "immobilien") {
     return computeImmoProvision(d.kaufpreis, d.provisionssatz, d.berater_anteil)
-      .esteraProvision;
+      .hausAnteil;
   }
   return vvBasis(d) * (1 - (vertrieblerStufe ?? 0) / 100);
 }

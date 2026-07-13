@@ -5,8 +5,10 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
 import {
+  ChevronDown,
   Download,
   FileText,
+  Folder,
   FolderOpen,
   Loader2,
   Lock,
@@ -310,21 +312,64 @@ function PortalLibrary({
   );
 }
 
-/** Kundenunterlagen: alle hochgeladenen Kundendokumente, durchsuchbar. */
+type KundenOrdner = {
+  contactId: string;
+  kundenname: string;
+  docs: KundenDoc[];
+  letztes: string; // jüngstes Upload-Datum im Ordner
+};
+
+/**
+ * Kundenunterlagen als ORDNER je Kunde (Wunsch Lukas): jeder Kunde erscheint
+ * genau einmal; Klick öffnet den Ordner mit allen Dokumenten. Lädt ein Berater
+ * bei einem Kontakt eine Datei hoch, landet sie automatisch im Ordner dieses
+ * Kunden (der Ordner entsteht aus den vorhandenen Dokumenten — kein Extra-Schritt).
+ */
 function KundenListe({ docs }: { docs: KundenDoc[] }) {
   const supabase = useMemo(() => createClient(), []);
   const [q, setQ] = useState("");
+  const [offen, setOffen] = useState<Set<string>>(new Set());
 
-  const rows = useMemo(() => {
-    const needle = q.trim().toLowerCase();
-    if (!needle) return docs;
-    return docs.filter(
-      (d) =>
-        d.kundenname.toLowerCase().includes(needle) ||
-        d.dateiname.toLowerCase().includes(needle) ||
-        d.kategorie.toLowerCase().includes(needle),
-    );
-  }, [docs, q]);
+  const needle = q.trim().toLowerCase();
+
+  // Nach Kunde bündeln; Suche filtert Ordner (Name) ODER Dateien darin.
+  const ordner = useMemo(() => {
+    const map = new Map<string, KundenOrdner>();
+    for (const d of docs) {
+      const o =
+        map.get(d.contactId) ??
+        { contactId: d.contactId, kundenname: d.kundenname, docs: [], letztes: "" };
+      o.docs.push(d);
+      if (d.created_at > o.letztes) o.letztes = d.created_at;
+      map.set(d.contactId, o);
+    }
+    let list = [...map.values()];
+    if (needle) {
+      list = list
+        .map((o) => {
+          if (o.kundenname.toLowerCase().includes(needle)) return o;
+          const treffer = o.docs.filter(
+            (d) =>
+              d.dateiname.toLowerCase().includes(needle) ||
+              d.kategorie.toLowerCase().includes(needle),
+          );
+          return treffer.length ? { ...o, docs: treffer } : null;
+        })
+        .filter((o): o is KundenOrdner => o != null);
+    }
+    return list.sort((a, b) => b.letztes.localeCompare(a.letztes));
+  }, [docs, needle]);
+
+  // Bei aktiver Suche passende Ordner automatisch aufklappen.
+  const istOffen = (id: string) => offen.has(id) || needle.length > 0;
+  function toggle(id: string) {
+    setOffen((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
 
   async function download(d: KundenDoc) {
     const { data, error } = await supabase.storage
@@ -347,11 +392,12 @@ function KundenListe({ docs }: { docs: KundenDoc[] }) {
           className="sm:max-w-sm"
         />
         <span className="text-sm text-muted-foreground sm:ml-auto">
-          {rows.length} {rows.length === 1 ? "Dokument" : "Dokumente"}
+          {ordner.length} {ordner.length === 1 ? "Kunde" : "Kunden"} ·{" "}
+          {docs.length} {docs.length === 1 ? "Dokument" : "Dokumente"}
         </span>
       </div>
 
-      {rows.length === 0 ? (
+      {ordner.length === 0 ? (
         <div className="flex flex-col items-center gap-2 rounded-xl border border-border bg-surface px-6 py-12 text-center">
           <FolderOpen className="h-8 w-8 text-muted-foreground" />
           <p className="text-sm text-muted-foreground">
@@ -359,50 +405,85 @@ function KundenListe({ docs }: { docs: KundenDoc[] }) {
           </p>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-border bg-surface">
-          <table className="w-full min-w-[680px] text-sm">
-            <thead>
-              <tr className="border-b border-border text-left text-xs text-muted-foreground">
-                <th className="px-4 py-3 font-medium">Kunde</th>
-                <th className="px-4 py-3 font-medium">Dokument</th>
-                <th className="px-4 py-3 font-medium">Kategorie</th>
-                <th className="px-4 py-3 font-medium">Datum</th>
-                <th className="px-4 py-3 font-medium" />
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((d) => (
-                <tr key={d.id} className="border-b border-border last:border-0">
-                  <td className="px-4 py-3">
-                    <Link
-                      href={`/kontakte/${d.contactId}`}
-                      className="font-medium text-foreground hover:underline"
-                    >
-                      {d.kundenname}
-                    </Link>
-                  </td>
-                  <td className="max-w-[240px] truncate px-4 py-3 text-muted-foreground">
-                    {d.dateiname}
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">{d.kategorie}</td>
-                  <td className="px-4 py-3 tabular-nums text-muted-foreground">
-                    {formatDate(d.created_at)}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <button
-                      type="button"
-                      onClick={() => download(d)}
-                      title="Herunterladen"
-                      className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-                    >
-                      <Download className="h-4 w-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <ul className="space-y-2">
+          {ordner.map((o) => {
+            const auf = istOffen(o.contactId);
+            return (
+              <li
+                key={o.contactId}
+                className="overflow-hidden rounded-xl border border-border bg-surface"
+              >
+                {/* Ordner-Kopf: ein Kunde, ein Eintrag */}
+                <button
+                  type="button"
+                  onClick={() => toggle(o.contactId)}
+                  aria-expanded={auf}
+                  className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-2"
+                >
+                  <ChevronDown
+                    className={cn(
+                      "h-4 w-4 shrink-0 text-muted-foreground transition-transform",
+                      !auf && "-rotate-90",
+                    )}
+                    aria-hidden
+                  />
+                  {auf ? (
+                    <FolderOpen className="h-5 w-5 shrink-0 text-accent-500" />
+                  ) : (
+                    <Folder className="h-5 w-5 shrink-0 text-accent-500" />
+                  )}
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-semibold">
+                      {o.kundenname}
+                    </span>
+                    <span className="block text-xs text-muted-foreground">
+                      {o.docs.length}{" "}
+                      {o.docs.length === 1 ? "Dokument" : "Dokumente"} · zuletzt{" "}
+                      {formatDate(o.letztes)}
+                    </span>
+                  </span>
+                  <Link
+                    href={`/kontakte/${o.contactId}`}
+                    onClick={(e) => e.stopPropagation()}
+                    className="shrink-0 text-xs font-medium text-primary hover:underline"
+                  >
+                    Zur Akte
+                  </Link>
+                </button>
+
+                {/* Inhalt des Ordners: die Dokumente dieses Kunden */}
+                {auf && (
+                  <ul className="divide-y divide-border border-t border-border">
+                    {o.docs.map((d) => (
+                      <li
+                        key={d.id}
+                        className="flex items-center gap-3 px-4 py-2.5 pl-11"
+                      >
+                        <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm">
+                            {d.dateiname}
+                          </span>
+                          <span className="block truncate text-xs text-muted-foreground">
+                            {d.kategorie} · {formatDate(d.created_at)}
+                          </span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => download(d)}
+                          title="Herunterladen"
+                          className="shrink-0 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                        >
+                          <Download className="h-4 w-4" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </li>
+            );
+          })}
+        </ul>
       )}
     </div>
   );
