@@ -101,12 +101,14 @@ export const FINANZIERUNGSRAHMEN_PRESETS = [
 // Objekt/Bauträger; diese Werte sind nur Schnellauswahl-Vorschläge.
 export const PROVISIONSSATZ_PRESETS = [12, 14, 25] as const;
 
-// Kundendokumente-Kategorien (Fachkonzept 1.2).
+// Kundendokumente-Kategorien (Fachkonzept 1.2 + Call SJ 1.6: Reservierungen).
 export const DOKUMENT_KATEGORIEN = [
   "Gehaltsabrechnung",
   "Selbstauskunft",
   "Ausweis",
   "Eigenkapitalnachweis",
+  "Reservierungsvereinbarung",
+  "Reservierungsformular",
   "Sonstige",
 ] as const;
 

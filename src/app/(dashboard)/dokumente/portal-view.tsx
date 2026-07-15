@@ -108,7 +108,7 @@ export function PortalView({
           isGf={isGf}
           sichtbarkeit="vorlage"
           leerText="Noch keine Vorlagen hinterlegt."
-          hinweis="Vorlagen (Selbstauskunft, Reservierungsvereinbarung, Leitfäden …) — für alle Vertriebspartner sichtbar."
+          hinweis="Vorlagen je Bereich — Immobilien (Selbstauskunft, Reservierungsvereinbarung, Reservierungsformular), Vermögensverwaltung (Anbindungsformular) — beim Hochladen den Bereich wählen. Für alle Vertriebspartner sichtbar."
         />
       )}
       {tab === "kunden" && <KundenListe docs={kunden} />}

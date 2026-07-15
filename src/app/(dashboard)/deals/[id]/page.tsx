@@ -5,6 +5,7 @@ import { bereichLabel } from "@/config/enums";
 import { getImmoModus } from "@/lib/einstellungen";
 import { DealForm, type DealFormState } from "../deal-form";
 import { DealSidebar, type HistoryItem } from "./deal-sidebar";
+import { DealDokumente } from "./deal-dokumente";
 
 export default async function DealDetailPage({
   params,
@@ -105,9 +106,9 @@ export default async function DealDetailPage({
         subtitle={`${bereichLabel(bereich)} · ${contactName}`}
         backHref={bereich === "vv" ? "/vermoegensverwaltung" : "/immobilien"}
       />
-      <div className="px-6 py-6">
+      <div className="px-6 py-6 pb-28">
         <div className="grid gap-6 lg:grid-cols-3">
-          <div className="lg:col-span-2">
+          <div className="space-y-6 lg:col-span-2">
             <DealForm
               mode="edit"
               dealId={d.id}
@@ -120,6 +121,8 @@ export default async function DealDetailPage({
               isGf={isGf}
               immoModus={await getImmoModus()}
             />
+            {/* Kundenunterlagen direkt am Deal (Call SJ 1.4) */}
+            <DealDokumente contactId={d.contact_id} bereich={bereich} />
           </div>
           <DealSidebar
             bereich={bereich}

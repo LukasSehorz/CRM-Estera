@@ -203,7 +203,7 @@ export default async function KontaktDetailPage({
               beraterOptions={beraterOptions}
               dealOptions={dealOptions}
             />
-            {/* Dokumente nur für Immobilien-Kontakte (3.1) */}
+            {/* Immobilien: strukturierte Finanzierungs-Checkliste (3.1) */}
             {istImmoKontakt && (
               <DocumentChecklist
                 contactId={c.id}
@@ -214,12 +214,10 @@ export default async function KontaktDetailPage({
                 filesByType={filesByType}
               />
             )}
-            {istImmoKontakt && freieDocs.length > 0 && (
-              <ContactDocuments
-                contactId={c.id}
-                documents={freieDocs as DocRow[]}
-              />
-            )}
+            {/* Freie Dokumente/Unterlagen — für JEDEN Kunden (auch VV / ohne
+                Interesse), Upload jederzeit möglich. Behebt „wird nicht
+                angezeigt / kann nicht öffnen" (Call SJ, Phase 1.1). */}
+            <ContactDocuments contactId={c.id} documents={freieDocs as DocRow[]} />
           </div>
 
           {/* Rechte Spalte: Schnellaktionen, Deals, Aufgaben, Timeline */}

@@ -54,41 +54,57 @@ export function ContactDocuments({
   const [busy, setBusy] = useState(false);
   const [, startTransition] = useTransition();
 
-  async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
+  // Mehrere Dateien je Upload (Call SJ 1.2): z. B. drei Gehaltsnachweise
+  // nacheinander. Kategorie gilt für alle in einem Rutsch gewählten Dateien.
+  async function onFiles(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
     e.target.value = ""; // erneutes Wählen derselben Datei erlauben
-    if (!file) return;
-    if (file.size > MAX_BYTES) {
-      toast.error("Datei zu groß (max. 15 MB).");
-      return;
-    }
+    if (!files?.length) return;
     setBusy(true);
+    let ok = 0;
     try {
-      const path = `${contactId}/${crypto.randomUUID()}_${safeName(file.name)}`;
-      const { error: upErr } = await supabase.storage
-        .from(BUCKET)
-        .upload(path, file, { upsert: false, contentType: file.type || undefined });
-      if (upErr) throw upErr;
-
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      const { error: insErr } = await supabase.from("contact_documents").insert({
-        contact_id: contactId,
-        dateiname: file.name,
-        storage_path: path,
-        kategorie,
-        groesse: file.size,
-        uploaded_by: user?.id ?? null,
-      });
-      if (insErr) {
-        await supabase.storage.from(BUCKET).remove([path]); // Rollback
-        throw insErr;
+      for (const file of Array.from(files)) {
+        if (file.size > MAX_BYTES) {
+          toast.error(`„${file.name}" ist zu groß (max. 15 MB).`);
+          continue;
+        }
+        const path = `${contactId}/${crypto.randomUUID()}_${safeName(file.name)}`;
+        const { error: upErr } = await supabase.storage
+          .from(BUCKET)
+          .upload(path, file, {
+            upsert: false,
+            contentType: file.type || undefined,
+          });
+        if (upErr) {
+          toast.error(`Upload von „${file.name}" fehlgeschlagen.`);
+          continue;
+        }
+        const { error: insErr } = await supabase
+          .from("contact_documents")
+          .insert({
+            contact_id: contactId,
+            dateiname: file.name,
+            storage_path: path,
+            kategorie,
+            groesse: file.size,
+            uploaded_by: user?.id ?? null,
+          });
+        if (insErr) {
+          await supabase.storage.from(BUCKET).remove([path]); // Rollback
+          toast.error(`„${file.name}" konnte nicht gespeichert werden.`);
+          continue;
+        }
+        ok++;
       }
-      toast.success("Dokument hochgeladen");
-      router.refresh();
-    } catch {
-      toast.error("Upload fehlgeschlagen. Bitte erneut versuchen.");
+      if (ok > 0) {
+        toast.success(
+          ok === 1 ? "Dokument hochgeladen" : `${ok} Dokumente hochgeladen`,
+        );
+        router.refresh();
+      }
     } finally {
       setBusy(false);
     }
@@ -147,8 +163,9 @@ export function ContactDocuments({
           <input
             ref={fileRef}
             type="file"
+            multiple
             className="hidden"
-            onChange={onFile}
+            onChange={onFiles}
           />
           <Button
             type="button"
@@ -160,7 +177,7 @@ export function ContactDocuments({
             ) : (
               <Upload className="mr-1 h-4 w-4" />
             )}
-            Datei hochladen
+            Dateien hochladen
           </Button>
         </div>
 

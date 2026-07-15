@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Calculator, Home, Users, Wallet } from "lucide-react";
 import { formatEUR } from "@/lib/format";
@@ -167,8 +168,13 @@ export function EingeschaetztView({
             ) : (
               tableRows.map((r) => (
                 <tr key={r.id} className="border-b border-border last:border-0">
-                  <td className="px-4 py-3 font-medium text-foreground">
-                    {r.name}
+                  <td className="px-4 py-3 font-medium">
+                    <Link
+                      href={`/kontakte/${r.id}`}
+                      className="text-foreground transition-colors hover:text-primary hover:underline"
+                    >
+                      {r.name}
+                    </Link>
                   </td>
                   {isGf && (
                     <td className="px-4 py-3 text-muted-foreground">

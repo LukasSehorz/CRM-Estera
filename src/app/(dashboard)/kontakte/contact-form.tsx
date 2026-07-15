@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { AlertTriangle, Trash2 } from "lucide-react";
+import { AlertTriangle, FileText, Trash2, Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
 import {
   createContact,
   updateContact,
@@ -18,6 +19,7 @@ import {
   FINANZIERUNGSSTATUS,
   EINSCHAETZUNG,
   BEREICH,
+  DOKUMENT_KATEGORIEN,
   istQualifiziert,
   QUALIFIZIERT_MIN_NETTO,
   QUALIFIZIERT_MIN_EIGENKAPITAL,
@@ -41,6 +43,18 @@ import {
 } from "@/components/ui/select";
 
 const NONE = "__none";
+
+// Upload direkt beim Anlegen (Call SJ 1.3): Dateien werden zwischengespeichert
+// und nach dem Anlegen (sobald die Kontakt-ID existiert) hochgeladen.
+const BUCKET = "kundendokumente";
+const MAX_BYTES = 15 * 1024 * 1024;
+function safeName(name: string): string {
+  return name
+    .normalize("NFKD")
+    .replace(/[^\w.\-]+/g, "_")
+    .slice(-120);
+}
+type StagedDoc = { id: string; file: File; kategorie: string };
 
 export type FormState = {
   vorname: string;
@@ -109,9 +123,67 @@ export function ContactForm({
   dealOptions?: { id: string; name: string }[];
 }) {
   const router = useRouter();
+  const supabase = useMemo(() => createClient(), []);
+  const fileRef = useRef<HTMLInputElement>(null);
   const [v, setV] = useState<FormState>(initial);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  // Beim Anlegen zwischengespeicherte Unterlagen (1.3).
+  const [staged, setStaged] = useState<StagedDoc[]>([]);
+  const [docKategorie, setDocKategorie] = useState<string>(
+    DOKUMENT_KATEGORIEN[0],
+  );
+
+  function onStageFiles(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
+    e.target.value = "";
+    if (!files?.length) return;
+    const neu: StagedDoc[] = [];
+    for (const file of Array.from(files)) {
+      if (file.size > MAX_BYTES) {
+        toast.error(`„${file.name}" ist zu groß (max. 15 MB).`);
+        continue;
+      }
+      neu.push({ id: crypto.randomUUID(), file, kategorie: docKategorie });
+    }
+    setStaged((prev) => [...prev, ...neu]);
+  }
+  function removeStaged(id: string) {
+    setStaged((prev) => prev.filter((s) => s.id !== id));
+  }
+
+  // Nach dem Anlegen: zwischengespeicherte Dateien auf die neue Kontakt-ID
+  // hochladen. Fehler einzelner Dateien blockieren den Anlege-Flow nicht.
+  async function uploadStaged(contactId: string): Promise<number> {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    let ok = 0;
+    for (const { file, kategorie } of staged) {
+      const path = `${contactId}/${crypto.randomUUID()}_${safeName(file.name)}`;
+      const { error: upErr } = await supabase.storage
+        .from(BUCKET)
+        .upload(path, file, {
+          upsert: false,
+          contentType: file.type || undefined,
+        });
+      if (upErr) continue;
+      const { error: insErr } = await supabase.from("contact_documents").insert({
+        contact_id: contactId,
+        dateiname: file.name,
+        storage_path: path,
+        kategorie,
+        groesse: file.size,
+        uploaded_by: user?.id ?? null,
+      });
+      if (insErr) {
+        await supabase.storage.from(BUCKET).remove([path]);
+        continue;
+      }
+      ok++;
+    }
+    return ok;
+  }
 
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setV((prev) => ({ ...prev, [key]: value }));
@@ -169,7 +241,16 @@ export function ContactForm({
         return;
       }
       if (mode === "create" && res.id) {
-        toast.success("Kontakt angelegt");
+        if (staged.length) {
+          const ok = await uploadStaged(res.id);
+          toast.success(
+            ok > 0
+              ? `Kontakt angelegt · ${ok} Dokument${ok === 1 ? "" : "e"} hochgeladen`
+              : "Kontakt angelegt",
+          );
+        } else {
+          toast.success("Kontakt angelegt");
+        }
         router.push(`/kontakte/${res.id}`);
       } else {
         toast.success("Änderungen gespeichert");
@@ -512,6 +593,84 @@ export function ContactForm({
           </Field>
         </div>
       </CollapsibleSection>
+
+      {/* ── Dokumente direkt beim Anlegen (Call SJ 1.3) ── */}
+      {mode === "create" && (
+        <CollapsibleSection
+          title="Dokumente (optional)"
+          description="Schon beim Anlegen Unterlagen mitgeben — Upload nach dem Speichern"
+        >
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-wrap items-end gap-2">
+              <div className="flex flex-col gap-1.5">
+                <span className="text-xs text-muted-foreground">Kategorie</span>
+                <Select value={docKategorie} onValueChange={setDocKategorie}>
+                  <SelectTrigger className="w-56">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DOKUMENT_KATEGORIEN.map((k) => (
+                      <SelectItem key={k} value={k}>
+                        {k}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <input
+                ref={fileRef}
+                type="file"
+                multiple
+                className="hidden"
+                onChange={onStageFiles}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => fileRef.current?.click()}
+              >
+                <Upload className="mr-1 h-4 w-4" />
+                Dateien wählen
+              </Button>
+            </div>
+
+            {staged.length > 0 && (
+              <ul className="divide-y divide-border rounded-lg border border-border">
+                {staged.map((s) => (
+                  <li
+                    key={s.id}
+                    className="flex items-center gap-3 px-3 py-2.5"
+                  >
+                    <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-medium">
+                        {s.file.name}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {s.kategorie}
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label="Entfernen"
+                      className="text-destructive hover:text-destructive"
+                      onClick={() => removeStaged(s.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Max. 15 MB je Datei. Weitere Unterlagen kannst du jederzeit in der
+              Kundenakte ergänzen.
+            </p>
+          </div>
+        </CollapsibleSection>
+      )}
 
       {/* ── Sticky Footer: Aktionen ── */}
       <div className="fixed inset-x-0 bottom-0 z-10 border-t border-border bg-background/90 px-6 py-3 backdrop-blur lg:left-64">
