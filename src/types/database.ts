@@ -581,6 +581,36 @@ export type Database = {
         Update: { key?: string; value?: string; updated_at?: string };
         Relationships: [];
       };
+      tippgeber: {
+        Row: {
+          id: string;
+          name: string;
+          owner_id: string;
+          provision_satz: number | null;
+          bereiche: Database["public"]["Enums"]["bereich_enum"][];
+          aktiv: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          owner_id: string;
+          provision_satz?: number | null;
+          bereiche?: Database["public"]["Enums"]["bereich_enum"][];
+          aktiv?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          owner_id?: string;
+          provision_satz?: number | null;
+          bereiche?: Database["public"]["Enums"]["bereich_enum"][];
+          aktiv?: boolean;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       [_ in never]: never;

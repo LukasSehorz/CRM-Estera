@@ -322,3 +322,65 @@ export async function createBerater(
   revalidatePath("/team");
   return { ok: true };
 }
+
+export type TippgeberInput = {
+  name: string;
+  ownerId: string;
+  provisionSatz: number | null;
+  bereiche: Bereich[];
+};
+
+/**
+ * Legt einen Tippgeber an (Struktur-Kern, F6): leichter Eintrag ohne Login,
+ * hängt unter owner_id. RLS erzwingt die Berechtigung — die GF darf jeden
+ * owner setzen, ein Berater nur sich selbst.
+ */
+export async function createTippgeber(
+  input: TippgeberInput,
+): Promise<StufeResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Nicht angemeldet." };
+
+  const name = input.name.trim();
+  if (!name) return { error: "Bitte einen Namen angeben." };
+  if (!input.ownerId) return { error: "Bitte den zugehörigen Berater wählen." };
+  if (
+    input.provisionSatz != null &&
+    (Number.isNaN(input.provisionSatz) ||
+      input.provisionSatz < 0 ||
+      input.provisionSatz > 100)
+  )
+    return { error: "Provisionssatz muss zwischen 0 und 100 liegen." };
+  if (input.bereiche.length < 1)
+    return { error: "Mindestens eine Sparte auswählen." };
+
+  const { error } = await supabase.from("tippgeber").insert({
+    name,
+    owner_id: input.ownerId,
+    provision_satz: input.provisionSatz,
+    bereiche: input.bereiche,
+  });
+  if (error)
+    return {
+      error:
+        "Anlegen fehlgeschlagen — erlaubt sind nur eigene Tippgeber (bzw. GF für alle).",
+    };
+  revalidatePath("/team");
+  return { ok: true };
+}
+
+/** Löscht einen Tippgeber (RLS: GF oder Besitzer). */
+export async function deleteTippgeber(id: string): Promise<StufeResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Nicht angemeldet." };
+  const { error } = await supabase.from("tippgeber").delete().eq("id", id);
+  if (error) return { error: "Löschen fehlgeschlagen." };
+  revalidatePath("/team");
+  return { ok: true };
+}

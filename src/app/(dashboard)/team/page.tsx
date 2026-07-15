@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Topbar } from "@/components/layout/topbar";
 import { NeuerBeraterForm, StufeTable, type BeraterRow } from "./stufe-table";
+import { TippgeberSection, type TippgeberRow } from "./tippgeber-section";
 
 /**
  * Team-Verwaltung: nur Geschäftsführung. Berater anlegen, Vertriebler-Stufe
@@ -21,18 +22,23 @@ export default async function TeamPage() {
     .single();
   if (me?.rolle !== "geschaeftsfuehrung") redirect("/dashboard");
 
-  const [{ data: profiles }, { data: ziele }] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select(
-        "id, vorname, nachname, rolle, aktiv, vertriebler_stufe, bereich, immo_anteil_default, parent_berater_id",
-      )
-      .order("rolle")
-      .order("vorname"),
-    supabase
-      .from("berater_monatsziele")
-      .select("berater_id, monatsziel_immobilien, monatsziel_vv"),
-  ]);
+  const [{ data: profiles }, { data: ziele }, { data: tippgeber }] =
+    await Promise.all([
+      supabase
+        .from("profiles")
+        .select(
+          "id, vorname, nachname, rolle, aktiv, vertriebler_stufe, bereich, immo_anteil_default, parent_berater_id",
+        )
+        .order("rolle")
+        .order("vorname"),
+      supabase
+        .from("berater_monatsziele")
+        .select("berater_id, monatsziel_immobilien, monatsziel_vv"),
+      supabase
+        .from("tippgeber")
+        .select("id, name, owner_id, provision_satz, bereiche")
+        .order("created_at", { ascending: false }),
+    ]);
 
   const zielMap = new Map(
     (ziele ?? []).map((z) => [z.berater_id, z]),
@@ -44,6 +50,26 @@ export default async function TeamPage() {
   const partnerKandidaten = (profiles ?? [])
     .filter((p) => p.rolle !== "geschaeftsfuehrung" && p.parent_berater_id == null)
     .map((p) => ({ id: p.id, name: `${p.vorname} ${p.nachname}` }));
+
+  const profNameMap = new Map(
+    (profiles ?? []).map((p) => [p.id, `${p.vorname} ${p.nachname}`]),
+  );
+  // Besitzer-Optionen für Tippgeber: alle aktiven Profile (Berater + GF).
+  const ownerOptions = (profiles ?? [])
+    .filter((p) => p.aktiv)
+    .map((p) => ({ id: p.id, name: `${p.vorname} ${p.nachname}` }));
+  const tippgeberRows: TippgeberRow[] = (tippgeber ?? []).map((t) => ({
+    id: t.id,
+    name: t.name,
+    ownerId: t.owner_id,
+    ownerName: profNameMap.get(t.owner_id) ?? "—",
+    provisionSatz:
+      t.provision_satz == null ? "" : String(Number(t.provision_satz)),
+    bereiche: (t.bereiche?.length ? t.bereiche : ["immobilien"]) as (
+      | "immobilien"
+      | "vv"
+    )[],
+  }));
 
   const rows: BeraterRow[] = (profiles ?? []).map((p) => {
     const z = zielMap.get(p.id);
@@ -84,6 +110,7 @@ export default async function TeamPage() {
           </p>
           <StufeTable rows={rows} partnerKandidaten={partnerKandidaten} />
         </div>
+        <TippgeberSection rows={tippgeberRows} ownerOptions={ownerOptions} />
       </div>
     </>
   );

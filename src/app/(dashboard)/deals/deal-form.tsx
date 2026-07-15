@@ -654,7 +654,11 @@ export function DealForm({
                 {num(v.tippgeber_satz) ? (
                   <>
                     <ProvRow
-                      label={`− Tippgeber (${num(v.tippgeber_satz)} % der Provision)`}
+                      label={
+                        (v.vv_zahlart || "factoring") === "factoring"
+                          ? `− Tippgeber (${num(v.tippgeber_satz)} % der Provision nach Factoring, 90 %)`
+                          : `− Tippgeber (${num(v.tippgeber_satz)} % der Provision, 100 %)`
+                      }
                       value={formatEURCents(prov.tippgeberAnteil)}
                     />
                     <ProvRow
