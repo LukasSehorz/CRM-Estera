@@ -1,17 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
-import { ContactDocuments, type DocRow } from "../../kontakte/contact-documents";
-import {
-  DocumentChecklist,
-  type DocFile,
-  type DocType,
-} from "../../kontakte/document-checklist";
+import { DocumentChecklist, type DocType } from "../../kontakte/document-checklist";
+import { groupDocsByType } from "@/lib/dokumente";
 
 /**
- * Kundenunterlagen direkt am Deal (Call SJ, Phase 1.4). Dokumente sind
- * kundenbezogen gespeichert — hier werden die Unterlagen des verknüpften
- * Kunden gezeigt: bei Immobilien die strukturierte Checkliste („Vorlage, was
- * hochzuladen ist"), für alle Bereiche der freie Uploader. So sind die
- * Unterlagen auch „unten am Deal" erreichbar, nicht nur in der Kundenakte.
+ * Kundenunterlagen direkt am Deal (Call SJ): dieselbe universelle Dokumenten-
+ * Checkliste wie in der Kundenakte, bezogen auf den verknüpften Kunden. Nur für
+ * Immobilien-Deals (VV braucht keine Unterlagen-Checkliste, Call 31:51).
  */
 export async function DealDokumente({
   contactId,
@@ -20,6 +14,8 @@ export async function DealDokumente({
   contactId: string;
   bereich: "immobilien" | "vv";
 }) {
+  if (bereich !== "immobilien") return null;
+
   const supabase = await createClient();
 
   const [{ data: contact }, { data: docs }, { data: docTypes }, { data: docStatus }] =
@@ -47,38 +43,31 @@ export async function DealDokumente({
         .eq("contact_id", contactId),
     ]);
 
+  const sichtbareTypes = (docTypes ?? []) as DocType[];
   const vorhandenMap: Record<string, boolean> = {};
   for (const s of docStatus ?? []) vorhandenMap[s.document_type_id] = s.vorhanden;
 
-  // Dateien je Dokumenttyp (mehrere je Typ).
-  const filesByType: Record<string, DocFile[]> = {};
-  for (const d of docs ?? []) {
-    if (!d.document_type_id) continue;
-    (filesByType[d.document_type_id] ??= []).push({
+  const filesByType = groupDocsByType(
+    (docs ?? []).map((d) => ({
       id: d.id,
       dateiname: d.dateiname,
       storage_path: d.storage_path,
       groesse: d.groesse,
-    });
-  }
-  const freieDocs = (docs ?? []).filter((d) => !d.document_type_id);
-  // Die Finanzierungs-Checkliste ist nur für Immobilien-Deals sinnvoll (VV
-  // braucht keine Kundenunterlagen-Checkliste — Call SJ 31:51).
-  const zeigeChecklist = bereich === "immobilien";
+      created_at: d.created_at,
+      document_type_id: d.document_type_id,
+      kategorie: d.kategorie,
+    })),
+    sichtbareTypes,
+  );
 
   return (
-    <div className="space-y-6">
-      {zeigeChecklist && (
-        <DocumentChecklist
-          contactId={contactId}
-          istSelbststaendig={contact?.ist_selbststaendig ?? false}
-          istImmobilienbesitzer={contact?.ist_immobilienbesitzer ?? false}
-          types={(docTypes ?? []) as DocType[]}
-          vorhanden={vorhandenMap}
-          filesByType={filesByType}
-        />
-      )}
-      <ContactDocuments contactId={contactId} documents={freieDocs as DocRow[]} />
-    </div>
+    <DocumentChecklist
+      contactId={contactId}
+      istSelbststaendig={contact?.ist_selbststaendig ?? false}
+      istImmobilienbesitzer={contact?.ist_immobilienbesitzer ?? false}
+      types={sichtbareTypes}
+      vorhanden={vorhandenMap}
+      filesByType={filesByType}
+    />
   );
 }

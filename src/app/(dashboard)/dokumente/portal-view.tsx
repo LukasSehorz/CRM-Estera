@@ -21,6 +21,8 @@ import { createClient } from "@/lib/supabase/client";
 import { formatBytes, formatDate } from "@/lib/format";
 import { bereichLabel } from "@/config/enums";
 import { Input } from "@/components/ui/input";
+import { DocumentChecklist, type DocType } from "../kontakte/document-checklist";
+import { groupDocsByType } from "@/lib/dokumente";
 
 export type PortalDoc = {
   id: string;
@@ -36,13 +38,19 @@ export type KundenDoc = {
   dateiname: string;
   storage_path: string;
   kategorie: string;
+  documentTypeId: string | null;
   groesse: number | null;
   created_at: string;
   contactId: string;
   kundenname: string;
 };
 
-const KUNDEN_BUCKET = "kundendokumente";
+export type KundenMeta = {
+  selbst: boolean;
+  immo: boolean;
+  istImmoKontakt: boolean;
+};
+
 const PORTAL_BUCKET = "vorlagen";
 const MAX_BYTES = 25 * 1024 * 1024;
 
@@ -57,11 +65,17 @@ export function PortalView({
   vorlagen,
   intern,
   kunden,
+  docTypes,
+  statusByContact,
+  metaByContact,
 }: {
   isGf: boolean;
   vorlagen: PortalDoc[];
   intern: PortalDoc[];
   kunden: KundenDoc[];
+  docTypes: DocType[];
+  statusByContact: Record<string, Record<string, boolean>>;
+  metaByContact: Record<string, KundenMeta>;
 }) {
   const [tab, setTab] = useState<Tab>("vorlagen");
 
@@ -111,7 +125,14 @@ export function PortalView({
           hinweis="Vorlagen je Bereich — Immobilien (Selbstauskunft, Reservierungsvereinbarung, Reservierungsformular), Vermögensverwaltung (Anbindungsformular) — beim Hochladen den Bereich wählen. Für alle Vertriebspartner sichtbar."
         />
       )}
-      {tab === "kunden" && <KundenListe docs={kunden} />}
+      {tab === "kunden" && (
+        <KundenListe
+          docs={kunden}
+          docTypes={docTypes}
+          statusByContact={statusByContact}
+          metaByContact={metaByContact}
+        />
+      )}
       {tab === "intern" && isGf && (
         <PortalLibrary
           docs={intern}
@@ -325,81 +346,23 @@ type KundenOrdner = {
  * bei einem Kontakt eine Datei hoch, landet sie automatisch im Ordner dieses
  * Kunden (der Ordner entsteht aus den vorhandenen Dokumenten — kein Extra-Schritt).
  */
-function KundenListe({ docs }: { docs: KundenDoc[] }) {
-  const router = useRouter();
-  const supabase = useMemo(() => createClient(), []);
-  const fileRef = useRef<HTMLInputElement>(null);
+function KundenListe({
+  docs,
+  docTypes,
+  statusByContact,
+  metaByContact,
+}: {
+  docs: KundenDoc[];
+  docTypes: DocType[];
+  statusByContact: Record<string, Record<string, boolean>>;
+  metaByContact: Record<string, KundenMeta>;
+}) {
   const [q, setQ] = useState("");
   const [offen, setOffen] = useState<Set<string>>(new Set());
-  const [uploadFor, setUploadFor] = useState<string | null>(null);
-  const [busyFor, setBusyFor] = useState<string | null>(null);
 
   const needle = q.trim().toLowerCase();
 
-  // Upload direkt im Portal je Kunde (Wunsch Lukas): mehrere Dateien; landen im
-  // Ordner dieses Kunden (Kategorie „Sonstige" — in der Akte fein einsortierbar).
-  const KUNDEN_MAX = 15 * 1024 * 1024;
-  function pickUpload(contactId: string) {
-    setUploadFor(contactId);
-    fileRef.current?.click();
-  }
-  async function onUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = e.target.files;
-    e.target.value = "";
-    const contactId = uploadFor;
-    setUploadFor(null);
-    if (!files?.length || !contactId) return;
-    setBusyFor(contactId);
-    let ok = 0;
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      for (const file of Array.from(files)) {
-        if (file.size > KUNDEN_MAX) {
-          toast.error(`„${file.name}" ist zu groß (max. 15 MB).`);
-          continue;
-        }
-        const path = `${contactId}/${crypto.randomUUID()}_${safeName(file.name)}`;
-        const { error: upErr } = await supabase.storage
-          .from(KUNDEN_BUCKET)
-          .upload(path, file, {
-            upsert: false,
-            contentType: file.type || undefined,
-          });
-        if (upErr) {
-          toast.error(`Upload von „${file.name}" fehlgeschlagen.`);
-          continue;
-        }
-        const { error: insErr } = await supabase
-          .from("contact_documents")
-          .insert({
-            contact_id: contactId,
-            dateiname: file.name,
-            storage_path: path,
-            kategorie: "Sonstige",
-            groesse: file.size,
-            uploaded_by: user?.id ?? null,
-          });
-        if (insErr) {
-          await supabase.storage.from(KUNDEN_BUCKET).remove([path]);
-          toast.error(`„${file.name}" konnte nicht gespeichert werden.`);
-          continue;
-        }
-        ok++;
-      }
-      if (ok > 0) {
-        toast.success(
-          ok === 1 ? "Dokument hochgeladen" : `${ok} Dokumente hochgeladen`,
-        );
-        router.refresh();
-      }
-    } finally {
-      setBusyFor(null);
-    }
-  }
-
-  // Nach Kunde bündeln; Suche filtert Ordner (Name) ODER Dateien darin.
+  // Nach Kunde bündeln; Suche filtert Ordner nach Name ODER enthaltener Datei.
   const ordner = useMemo(() => {
     const map = new Map<string, KundenOrdner>();
     for (const d of docs) {
@@ -412,17 +375,15 @@ function KundenListe({ docs }: { docs: KundenDoc[] }) {
     }
     let list = [...map.values()];
     if (needle) {
-      list = list
-        .map((o) => {
-          if (o.kundenname.toLowerCase().includes(needle)) return o;
-          const treffer = o.docs.filter(
+      list = list.filter(
+        (o) =>
+          o.kundenname.toLowerCase().includes(needle) ||
+          o.docs.some(
             (d) =>
               d.dateiname.toLowerCase().includes(needle) ||
               d.kategorie.toLowerCase().includes(needle),
-          );
-          return treffer.length ? { ...o, docs: treffer } : null;
-        })
-        .filter((o): o is KundenOrdner => o != null);
+          ),
+      );
     }
     return list.sort((a, b) => b.letztes.localeCompare(a.letztes));
   }, [docs, needle]);
@@ -438,26 +399,8 @@ function KundenListe({ docs }: { docs: KundenDoc[] }) {
     });
   }
 
-  async function download(d: KundenDoc) {
-    const { data, error } = await supabase.storage
-      .from(KUNDEN_BUCKET)
-      .createSignedUrl(d.storage_path, 60);
-    if (error || !data) {
-      toast.error("Download nicht möglich.");
-      return;
-    }
-    window.open(data.signedUrl, "_blank");
-  }
-
   return (
     <div className="space-y-4">
-      <input
-        ref={fileRef}
-        type="file"
-        multiple
-        className="hidden"
-        onChange={onUpload}
-      />
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <Input
           placeholder="Nach Kunde, Datei oder Kategorie suchen …"
@@ -482,6 +425,7 @@ function KundenListe({ docs }: { docs: KundenDoc[] }) {
         <ul className="space-y-2">
           {ordner.map((o) => {
             const auf = istOffen(o.contactId);
+            const meta = metaByContact[o.contactId];
             return (
               <li
                 key={o.contactId}
@@ -525,52 +469,30 @@ function KundenListe({ docs }: { docs: KundenDoc[] }) {
                   </Link>
                 </button>
 
-                {/* Inhalt des Ordners: Upload + die Dokumente dieses Kunden */}
+                {/* Aufgeklappt: dieselbe universelle Dokumenten-Checkliste wie
+                    in der Kundenakte (Wunsch Lukas) — Punkte einzeln aufklappbar,
+                    Dateien darunter, Upload je Punkt. */}
                 {auf && (
-                  <div className="border-t border-border">
-                    <div className="flex items-center justify-end px-4 py-2.5">
-                      <button
-                        type="button"
-                        disabled={busyFor === o.contactId}
-                        onClick={() => pickUpload(o.contactId)}
-                        className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground disabled:opacity-50"
-                      >
-                        {busyFor === o.contactId ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <Upload className="h-3.5 w-3.5" />
-                        )}
-                        Dokumente hochladen
-                      </button>
-                    </div>
-                    {o.docs.length > 0 && (
-                      <ul className="divide-y divide-border border-t border-border">
-                        {o.docs.map((d) => (
-                          <li
-                            key={d.id}
-                            className="flex items-center gap-3 px-4 py-2.5 pl-11"
-                          >
-                            <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
-                            <span className="min-w-0 flex-1">
-                              <span className="block truncate text-sm">
-                                {d.dateiname}
-                              </span>
-                              <span className="block truncate text-xs text-muted-foreground">
-                                {d.kategorie} · {formatDate(d.created_at)}
-                              </span>
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => download(d)}
-                              title="Herunterladen"
-                              className="shrink-0 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-                            >
-                              <Download className="h-4 w-4" />
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
+                  <div className="border-t border-border p-4">
+                    <DocumentChecklist
+                      contactId={o.contactId}
+                      istSelbststaendig={meta?.selbst ?? false}
+                      istImmobilienbesitzer={meta?.immo ?? false}
+                      types={docTypes}
+                      vorhanden={statusByContact[o.contactId] ?? {}}
+                      filesByType={groupDocsByType(
+                        o.docs.map((d) => ({
+                          id: d.id,
+                          dateiname: d.dateiname,
+                          storage_path: d.storage_path,
+                          groesse: d.groesse,
+                          created_at: d.created_at,
+                          document_type_id: d.documentTypeId,
+                          kategorie: d.kategorie,
+                        })),
+                        docTypes,
+                      )}
+                    />
                   </div>
                 )}
               </li>

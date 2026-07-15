@@ -2,6 +2,15 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Topbar } from "@/components/layout/topbar";
 import { PortalView, type PortalDoc, type KundenDoc } from "./portal-view";
+import type { DocType } from "../kontakte/document-checklist";
+
+type ContactJoin = {
+  vorname: string;
+  nachname: string;
+  ist_selbststaendig: boolean | null;
+  ist_immobilienbesitzer: boolean | null;
+  interesse: string[] | null;
+};
 
 /**
  * Dokumentenportal (V4.1 Kap. 14) — eigener Hauptbereich der Sidebar:
@@ -24,7 +33,12 @@ export default async function DokumentePortalPage() {
     .single();
   const isGf = me?.rolle === "geschaeftsfuehrung";
 
-  const [{ data: portal }, { data: kunden }] = await Promise.all([
+  const [
+    { data: portal },
+    { data: kunden },
+    { data: docStatus },
+    { data: docTypes },
+  ] = await Promise.all([
     supabase
       .from("portal_documents")
       .select("id, titel, dateiname, storage_path, sichtbarkeit, bereich, groesse, created_at")
@@ -32,10 +46,18 @@ export default async function DokumentePortalPage() {
     supabase
       .from("contact_documents")
       .select(
-        "id, dateiname, storage_path, kategorie, groesse, created_at, contact_id, contacts(vorname, nachname)",
+        "id, dateiname, storage_path, kategorie, document_type_id, groesse, created_at, contact_id, contacts(vorname, nachname, ist_selbststaendig, ist_immobilienbesitzer, interesse)",
       )
       .order("created_at", { ascending: false })
       .limit(500),
+    supabase
+      .from("contact_document_status")
+      .select("contact_id, document_type_id, vorhanden"),
+    supabase
+      .from("document_types")
+      .select("id, gruppe, name, position")
+      .eq("aktiv", true)
+      .order("position"),
   ]);
 
   const vorlagen: PortalDoc[] = (portal ?? [])
@@ -59,23 +81,39 @@ export default async function DokumentePortalPage() {
       groesse: d.groesse,
     }));
 
+  // Kundentyp/Interesse je Kontakt (für die Checkliste im Portal).
+  const metaByContact: Record<
+    string,
+    { selbst: boolean; immo: boolean; istImmoKontakt: boolean }
+  > = {};
   const kundenDocs: KundenDoc[] = (kunden ?? []).map((d) => {
-    const k = d.contacts as unknown as
-      | { vorname: string; nachname: string }
-      | { vorname: string; nachname: string }[]
-      | null;
+    const k = d.contacts as unknown as ContactJoin | ContactJoin[] | null;
     const kontakt = Array.isArray(k) ? k[0] : k;
+    if (kontakt && !metaByContact[d.contact_id]) {
+      metaByContact[d.contact_id] = {
+        selbst: kontakt.ist_selbststaendig ?? false,
+        immo: kontakt.ist_immobilienbesitzer ?? false,
+        istImmoKontakt: (kontakt.interesse ?? []).includes("immobilien"),
+      };
+    }
     return {
       id: d.id,
       dateiname: d.dateiname,
       storage_path: d.storage_path,
       kategorie: d.kategorie,
+      documentTypeId: d.document_type_id,
       groesse: d.groesse,
       created_at: d.created_at,
       contactId: d.contact_id,
       kundenname: kontakt ? `${kontakt.vorname} ${kontakt.nachname}` : "—",
     };
   });
+
+  // Checklisten-Status je Kontakt/Typ.
+  const statusByContact: Record<string, Record<string, boolean>> = {};
+  for (const s of docStatus ?? []) {
+    (statusByContact[s.contact_id] ??= {})[s.document_type_id] = s.vorhanden;
+  }
 
   return (
     <>
@@ -89,6 +127,9 @@ export default async function DokumentePortalPage() {
           vorlagen={vorlagen}
           intern={intern}
           kunden={kundenDocs}
+          docTypes={(docTypes ?? []) as DocType[]}
+          statusByContact={statusByContact}
+          metaByContact={metaByContact}
         />
       </div>
     </>

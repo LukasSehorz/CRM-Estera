@@ -4,8 +4,10 @@ import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
+  ChevronDown,
   Download,
   FileArchive,
+  FileText,
   Loader2,
   Paperclip,
   Plus,
@@ -14,6 +16,7 @@ import {
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { DOKUMENT_UPLOAD_AKTIV } from "@/config/enums";
+import { formatBytes, formatDate } from "@/lib/format";
 import { buildZip, uniqueName } from "@/lib/zip";
 import { setDocumentStatus } from "./actions";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -39,6 +42,7 @@ export type DocFile = {
   dateiname: string;
   storage_path: string;
   groesse: number | null;
+  created_at?: string;
 };
 
 /** Manueller „vorhanden"-Haken je Typ (auch ohne Datei setzbar). */
@@ -84,6 +88,15 @@ export function DocumentChecklist({
   const [dragType, setDragType] = useState<string | null>(null);
   const [zipping, setZipping] = useState(false);
   const [pending, start] = useTransition();
+  // Welche Checklisten-Punkte sind aufgeklappt (zeigen ihre Dateien)?
+  const [openTypes, setOpenTypes] = useState<Set<string>>(new Set());
+  const toggleType = (id: string) =>
+    setOpenTypes((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
   const sichtbar = types.filter(
     (t) =>
@@ -159,6 +172,7 @@ export function DocumentChecklist({
       }
       if (ok > 0) {
         await setDocumentStatus(contactId, typeId, true, null);
+        setOpenTypes((prev) => new Set(prev).add(typeId)); // Punkt aufklappen
         toast.success(ok === 1 ? "Datei hochgeladen" : `${ok} Dateien hochgeladen`);
         router.refresh();
       }
@@ -321,21 +335,32 @@ export function DocumentChecklist({
                           disabled={pending || busy || dateien.length > 0}
                           onCheckedChange={(c) => toggle(t, c === true)}
                         />
-                        <span
-                          className={cn(
-                            "min-w-0 flex-1",
-                            istVorhanden(t.id)
-                              ? "text-muted-foreground"
-                              : "text-foreground",
-                          )}
-                        >
-                          {t.name}
-                          {dateien.length > 0 && (
-                            <span className="ml-1.5 text-xs text-muted-foreground">
-                              ({dateien.length})
+                        {dateien.length > 0 ? (
+                          <button
+                            type="button"
+                            onClick={() => toggleType(t.id)}
+                            aria-expanded={openTypes.has(t.id)}
+                            className="flex min-w-0 flex-1 items-center gap-1.5 text-left"
+                          >
+                            <ChevronDown
+                              className={cn(
+                                "h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform",
+                                !openTypes.has(t.id) && "-rotate-90",
+                              )}
+                              aria-hidden
+                            />
+                            <span className="min-w-0 truncate text-muted-foreground">
+                              {t.name}
+                              <span className="ml-1.5 text-xs text-muted-foreground">
+                                ({dateien.length})
+                              </span>
                             </span>
-                          )}
-                        </span>
+                          </button>
+                        ) : (
+                          <span className="min-w-0 flex-1 pl-5 text-foreground">
+                            {t.name}
+                          </span>
+                        )}
                         {DOKUMENT_UPLOAD_AKTIV && (
                           <button
                             type="button"
@@ -355,35 +380,44 @@ export function DocumentChecklist({
                           </button>
                         )}
                       </div>
-                      {/* Datei-Chips je Punkt — NEBENEINANDER (Wunsch Lukas),
-                          mehrere je Punkt, jederzeit nachreichbar. */}
-                      {dateien.length > 0 && (
-                        <div className="ml-7 mt-1.5 flex flex-wrap gap-2">
+                      {/* Dateien je Punkt — aufklappbar, UNTEREINANDER (Wunsch
+                          Lukas): mehrere je Punkt, jederzeit nachreichbar. */}
+                      {dateien.length > 0 && openTypes.has(t.id) && (
+                        <ul className="ml-7 mt-1.5 space-y-1">
                           {dateien.map((f) => (
-                            <span
+                            <li
                               key={f.id}
-                              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-secondary/50 py-1 pl-2 pr-1 text-xs"
+                              className="flex items-center gap-3 rounded-md border border-border bg-background/50 px-3 py-2"
                             >
+                              <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                              <div className="min-w-0 flex-1">
+                                <div className="truncate text-sm">
+                                  {f.dateiname}
+                                </div>
+                                <div className="truncate text-xs tabular-nums text-muted-foreground">
+                                  {formatBytes(f.groesse)}
+                                  {f.created_at ? ` · ${formatDate(f.created_at)}` : ""}
+                                </div>
+                              </div>
                               <button
                                 type="button"
                                 onClick={() => download(f)}
-                                title={`${f.dateiname} — herunterladen / Vorschau`}
-                                className="inline-flex max-w-[180px] items-center gap-1 text-foreground transition-colors hover:text-primary"
+                                title="Herunterladen / Vorschau"
+                                className="shrink-0 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
                               >
-                                <Download className="h-3.5 w-3.5 shrink-0" />
-                                <span className="truncate">{f.dateiname}</span>
+                                <Download className="h-4 w-4" />
                               </button>
                               <button
                                 type="button"
                                 onClick={() => removeFile(f)}
                                 title="Löschen"
-                                className="rounded p-0.5 text-muted-foreground transition-colors hover:text-danger"
+                                className="shrink-0 rounded-md p-1.5 text-muted-foreground transition-colors hover:text-danger"
                               >
-                                <Trash2 className="h-3 w-3" />
+                                <Trash2 className="h-4 w-4" />
                               </button>
-                            </span>
+                            </li>
                           ))}
-                        </div>
+                        </ul>
                       )}
                     </li>
                   );

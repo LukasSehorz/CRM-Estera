@@ -7,12 +7,8 @@ import { bereichLabel, finanzierungsstatusLabel } from "@/config/enums";
 import { formatEUR } from "@/lib/format";
 import { dealVolumen } from "@/lib/provision";
 import { ContactForm, type FormState } from "../contact-form";
-import { ContactDocuments, type DocRow } from "../contact-documents";
-import {
-  DocumentChecklist,
-  type DocFile,
-  type DocType,
-} from "../document-checklist";
+import { DocumentChecklist, type DocType } from "../document-checklist";
+import { groupDocsByType } from "@/lib/dokumente";
 import { ContactTimeline, type ActivityRow } from "../contact-timeline";
 import { ContactTasks, type TaskRow } from "../contact-tasks";
 import { QuickActions } from "../quick-actions";
@@ -130,19 +126,21 @@ export default async function KontaktDetailPage({
   const vorhandenMap: Record<string, boolean> = {};
   for (const s of docStatus ?? []) vorhandenMap[s.document_type_id] = s.vorhanden;
 
-  // Dateien je Dokumenttyp (14.2: mehrere je Typ).
-  const filesByType: Record<string, DocFile[]> = {};
-  for (const d of docs ?? []) {
-    if (!d.document_type_id) continue;
-    (filesByType[d.document_type_id] ??= []).push({
+  const sichtbareTypes = (docTypes ?? []) as DocType[];
+  // Alle Dokumente (auch Altbestand aus freiem Upload) den Checklisten-Punkten
+  // zuordnen (Call SJ: eine universelle Checkliste, keine getrennte Sektion).
+  const filesByType = groupDocsByType(
+    (docs ?? []).map((d) => ({
       id: d.id,
       dateiname: d.dateiname,
       storage_path: d.storage_path,
       groesse: d.groesse,
-    });
-  }
-
-  const sichtbareTypes = (docTypes ?? []) as DocType[];
+      created_at: d.created_at,
+      document_type_id: d.document_type_id,
+      kategorie: d.kategorie,
+    })),
+    sichtbareTypes,
+  );
   const anwendbar = sichtbareTypes.filter(
     (t) =>
       t.gruppe === "allgemein" ||
@@ -152,9 +150,6 @@ export default async function KontaktDetailPage({
   const vorhandenCount = anwendbar.filter(
     (t) => vorhandenMap[t.id] || (filesByType[t.id]?.length ?? 0) > 0,
   ).length;
-
-  // Uploads ohne Typ-Zuordnung (Altbestand/„Sonstige") separat zeigen.
-  const freieDocs = (docs ?? []).filter((d) => !d.document_type_id);
 
   const profMap = new Map(
     (profiles ?? []).map((p) => [p.id, `${p.vorname} ${p.nachname}`]),
@@ -203,21 +198,17 @@ export default async function KontaktDetailPage({
               beraterOptions={beraterOptions}
               dealOptions={dealOptions}
             />
-            {/* Immobilien: strukturierte Finanzierungs-Checkliste (3.1) */}
-            {istImmoKontakt && (
-              <DocumentChecklist
-                contactId={c.id}
-                istSelbststaendig={c.ist_selbststaendig}
-                istImmobilienbesitzer={c.ist_immobilienbesitzer}
-                types={sichtbareTypes}
-                vorhanden={vorhandenMap}
-                filesByType={filesByType}
-              />
-            )}
-            {/* Freie Dokumente/Unterlagen — für JEDEN Kunden (auch VV / ohne
-                Interesse), Upload jederzeit möglich. Behebt „wird nicht
-                angezeigt / kann nicht öffnen" (Call SJ, Phase 1.1). */}
-            <ContactDocuments contactId={c.id} documents={freieDocs as DocRow[]} />
+            {/* EINE universelle Dokumenten-Checkliste je Kunde — enthält alle
+                Kategorien (inkl. „Sonstige"), Dateien je Punkt aufklappbar.
+                Die frühere freie „Dokumente"-Sektion entfällt (Call SJ). */}
+            <DocumentChecklist
+              contactId={c.id}
+              istSelbststaendig={c.ist_selbststaendig}
+              istImmobilienbesitzer={c.ist_immobilienbesitzer}
+              types={sichtbareTypes}
+              vorhanden={vorhandenMap}
+              filesByType={filesByType}
+            />
           </div>
 
           {/* Rechte Spalte: Schnellaktionen, Deals, Aufgaben, Timeline */}

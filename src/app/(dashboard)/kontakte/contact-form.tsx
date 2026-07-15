@@ -630,10 +630,10 @@ export function ContactForm({
       {/* ── Unterlagen direkt beim Anlegen (Call SJ 1.3 + Checkliste) ── */}
       {mode === "create" && (
         <CollapsibleSection
-          title="Unterlagen (optional)"
+          title="Unterlagen-Checkliste (Optional)"
           description={
             v.interesse.includes("immobilien") && docTypes.length > 0
-              ? "Dokumenten-Checkliste — Dateien werden nach dem Anlegen hochgeladen"
+              ? "Dateien je Punkt vormerken — Upload nach dem Anlegen"
               : "Schon beim Anlegen Unterlagen mitgeben — Upload nach dem Speichern"
           }
         >
