@@ -471,9 +471,12 @@ export function DealForm({
             )}
           </div>
 
-          {/* Provisionsvorschau NUR für die GF (Call SJ F2/2.7); Hausanteil
-              entfällt (F1.1). Der Berater sieht keine Provisions-Aufschlüsselung. */}
-          {isGf && num(v.kaufpreis) && num(v.provisionssatz) ? (
+          {/* Provisionsvorschau: die GF sieht die volle Aufschlüsselung, der
+              Berater nur den eigenen Anteil (€) — ohne Estera-Marge, ohne Sätze
+              (Call SJ 2.7). Hausanteil entfällt (F1.1). */}
+          {(isGf
+            ? num(v.kaufpreis) && num(v.provisionssatz)
+            : num(v.kaufpreis) && num(v.berater_anteil)) ? (
             <div className="mt-4 rounded-lg border border-border bg-surface-2 p-4">
               <div className="mb-2 text-sm font-medium">Provisionsvorschau</div>
               <dl className="space-y-1.5 text-sm">
@@ -484,7 +487,7 @@ export function DealForm({
                     num(v.berater_anteil),
                     immoModus,
                   );
-                  return (
+                  return isGf ? (
                     <>
                       <ProvRow
                         label={`Estera-Provision (${num(v.provisionssatz)} % vom Kaufpreis)`}
@@ -500,6 +503,12 @@ export function DealForm({
                         accent
                       />
                     </>
+                  ) : (
+                    <ProvRow
+                      label="Dein Anteil"
+                      value={formatEURCents(ip.beraterProvision)}
+                      accent
+                    />
                   );
                 })()}
               </dl>
@@ -601,36 +610,44 @@ export function DealForm({
             </Field>
           </div>
 
-          {/* Provisionsvorschau NUR für die GF (Call SJ F2/2.7); Hausanteil
-              entfällt (F1.1). Trennlinie vor „Deine Provision", damit klar ist:
-              der Tippgeber geht von derselben Basis ab wie die Provision, nicht
-              vom Ergebnis darüber (F1.3). */}
-          {isGf && prov && (
+          {/* Provisionsvorschau: die GF sieht die volle Kette (7,8 % → Factoring
+              → Stufe), der Berater nur die eigenen Beträge — ohne Estera-Marge,
+              ohne Stufen-% (Call SJ 2.7). Hausanteil entfällt (F1.1). Trennlinie
+              vor „Deine Provision": der Tippgeber geht von derselben Basis ab. */}
+          {prov && (
             <div className="mt-4 rounded-lg border border-border bg-surface-2 p-4">
               <div className="mb-2 flex items-center justify-between">
                 <span className="text-sm font-medium">Provisionsvorschau</span>
-                <span className="text-xs text-muted-foreground">
-                  Vertriebler-Stufe {vertrieblerStufe}%
-                </span>
+                {isGf && (
+                  <span className="text-xs text-muted-foreground">
+                    Vertriebler-Stufe {vertrieblerStufe}%
+                  </span>
+                )}
               </div>
               <dl className="space-y-1.5 text-sm">
                 <ProvRow label="BWS" value={formatEURCents(prov.bws)} />
-                <ProvRow
-                  label="Grundprovision (7,8 %)"
-                  value={formatEURCents(prov.grundprovision)}
-                />
-                <ProvRow
-                  label={
-                    (v.vv_zahlart || "factoring") === "factoring"
-                      ? "Provision nach Factoring (×90 %)"
-                      : "Provision (×100 %)"
-                  }
-                  value={formatEURCents(prov.nettoProvision)}
-                />
+                {isGf && (
+                  <>
+                    <ProvRow
+                      label="Grundprovision (7,8 %)"
+                      value={formatEURCents(prov.grundprovision)}
+                    />
+                    <ProvRow
+                      label={
+                        (v.vv_zahlart || "factoring") === "factoring"
+                          ? "Provision nach Factoring (×90 %)"
+                          : "Provision (×100 %)"
+                      }
+                      value={formatEURCents(prov.nettoProvision)}
+                    />
+                  </>
+                )}
 
                 <div className="my-1 border-t border-border" />
                 <ProvRow
-                  label={`Deine Provision (${vertrieblerStufe} %)`}
+                  label={
+                    isGf ? `Deine Provision (${vertrieblerStufe} %)` : "Deine Provision"
+                  }
                   value={formatEURCents(prov.vertrieblerGesamt)}
                   accent
                 />
