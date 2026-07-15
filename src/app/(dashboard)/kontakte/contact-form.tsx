@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useRef, useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { AlertTriangle, FileText, Trash2, Upload } from "lucide-react";
+import { AlertTriangle, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -22,7 +22,6 @@ import {
   FINANZIERUNGSSTATUS,
   EINSCHAETZUNG,
   BEREICH,
-  DOKUMENT_KATEGORIEN,
   istQualifiziert,
   QUALIFIZIERT_MIN_NETTO,
   QUALIFIZIERT_MIN_EIGENKAPITAL,
@@ -50,14 +49,12 @@ const NONE = "__none";
 // Upload direkt beim Anlegen (Call SJ 1.3): Dateien werden zwischengespeichert
 // und nach dem Anlegen (sobald die Kontakt-ID existiert) hochgeladen.
 const BUCKET = "kundendokumente";
-const MAX_BYTES = 15 * 1024 * 1024;
 function safeName(name: string): string {
   return name
     .normalize("NFKD")
     .replace(/[^\w.\-]+/g, "_")
     .slice(-120);
 }
-type StagedDoc = { id: string; file: File; kategorie: string };
 
 export type FormState = {
   vorname: string;
@@ -130,35 +127,11 @@ export function ContactForm({
 }) {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
-  const fileRef = useRef<HTMLInputElement>(null);
   const [v, setV] = useState<FormState>(initial);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  // Beim Anlegen zwischengespeicherte Unterlagen (1.3).
-  const [staged, setStaged] = useState<StagedDoc[]>([]);
-  const [docKategorie, setDocKategorie] = useState<string>(
-    DOKUMENT_KATEGORIEN[0],
-  );
-  // Checklisten-Dateien je Dokumenttyp (Immobilien), vorgemerkt (1.3 + Checkliste).
+  // Checklisten-Dateien je Dokumenttyp, vorgemerkt (Upload nach dem Anlegen).
   const [stagedTyped, setStagedTyped] = useState<StagedByType>({});
-
-  function onStageFiles(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = e.target.files;
-    e.target.value = "";
-    if (!files?.length) return;
-    const neu: StagedDoc[] = [];
-    for (const file of Array.from(files)) {
-      if (file.size > MAX_BYTES) {
-        toast.error(`„${file.name}" ist zu groß (max. 15 MB).`);
-        continue;
-      }
-      neu.push({ id: crypto.randomUUID(), file, kategorie: docKategorie });
-    }
-    setStaged((prev) => [...prev, ...neu]);
-  }
-  function removeStaged(id: string) {
-    setStaged((prev) => prev.filter((s) => s.id !== id));
-  }
 
   // Nach dem Anlegen: vorgemerkte Dateien (frei + Checkliste) auf die neue
   // Kontakt-ID hochladen. Fehler einzelner Dateien blockieren den Flow nicht.
@@ -197,10 +170,6 @@ export function ContactForm({
       return true;
     };
 
-    // Freie Dokumente
-    for (const { file, kategorie } of staged) {
-      if (await putOne(file, kategorie, null)) ok++;
-    }
     // Checklisten-Dokumente (typisiert) + „vorhanden"-Haken setzen
     for (const [typeId, files] of Object.entries(stagedTyped)) {
       const typ = docTypes.find((t) => t.id === typeId);
@@ -272,8 +241,7 @@ export function ContactForm({
         return;
       }
       if (mode === "create" && res.id) {
-        const hatDocs =
-          staged.length > 0 || Object.keys(stagedTyped).length > 0;
+        const hatDocs = Object.keys(stagedTyped).length > 0;
         if (hatDocs) {
           const ok = await uploadAllStaged(res.id);
           toast.success(
@@ -627,17 +595,16 @@ export function ContactForm({
         </div>
       </CollapsibleSection>
 
-      {/* ── Unterlagen direkt beim Anlegen (Call SJ 1.3 + Checkliste) ── */}
-      {mode === "create" && (
-        <CollapsibleSection
-          title="Unterlagen-Checkliste (Optional)"
-          description={
-            v.interesse.includes("immobilien") && docTypes.length > 0
-              ? "Dateien je Punkt vormerken — Upload nach dem Anlegen"
-              : "Schon beim Anlegen Unterlagen mitgeben — Upload nach dem Speichern"
-          }
-        >
-          {v.interesse.includes("immobilien") && docTypes.length > 0 ? (
+      {/* Dokumenten-Checkliste beim Anlegen — NUR bei Immobilien-Interesse.
+          Ohne Immobilien gibt es kein Dokumentenfeld (Wunsch Lukas). Dateien
+          werden nach dem Anlegen hochgeladen. */}
+      {mode === "create" &&
+        v.interesse.includes("immobilien") &&
+        docTypes.length > 0 && (
+          <CollapsibleSection
+            title="Unterlagen-Checkliste (Optional)"
+            description="Dateien je Punkt vormerken — Upload nach dem Anlegen"
+          >
             <StagedChecklist
               types={docTypes}
               istSelbststaendig={v.ist_selbststaendig}
@@ -645,79 +612,8 @@ export function ContactForm({
               value={stagedTyped}
               onChange={setStagedTyped}
             />
-          ) : (
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-wrap items-end gap-2">
-              <div className="flex flex-col gap-1.5">
-                <span className="text-xs text-muted-foreground">Kategorie</span>
-                <Select value={docKategorie} onValueChange={setDocKategorie}>
-                  <SelectTrigger className="w-56">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {DOKUMENT_KATEGORIEN.map((k) => (
-                      <SelectItem key={k} value={k}>
-                        {k}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <input
-                ref={fileRef}
-                type="file"
-                multiple
-                className="hidden"
-                onChange={onStageFiles}
-              />
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => fileRef.current?.click()}
-              >
-                <Upload className="mr-1 h-4 w-4" />
-                Dateien wählen
-              </Button>
-            </div>
-
-            {staged.length > 0 && (
-              <ul className="divide-y divide-border rounded-lg border border-border">
-                {staged.map((s) => (
-                  <li
-                    key={s.id}
-                    className="flex items-center gap-3 px-3 py-2.5"
-                  >
-                    <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-medium">
-                        {s.file.name}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {s.kategorie}
-                      </div>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-sm"
-                      aria-label="Entfernen"
-                      className="text-destructive hover:text-destructive"
-                      onClick={() => removeStaged(s.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            )}
-              <p className="text-xs text-muted-foreground">
-                Max. 15 MB je Datei. Weitere Unterlagen kannst du jederzeit in
-                der Kundenakte ergänzen.
-              </p>
-            </div>
-          )}
-        </CollapsibleSection>
-      )}
+          </CollapsibleSection>
+        )}
 
       {/* ── Sticky Footer: Aktionen ── */}
       <div className="fixed inset-x-0 bottom-0 z-10 border-t border-border bg-background/90 px-6 py-3 backdrop-blur lg:left-64">

@@ -72,6 +72,7 @@ export function DocumentChecklist({
   types,
   vorhanden,
   filesByType,
+  onChanged,
 }: {
   contactId: string;
   istSelbststaendig: boolean;
@@ -79,6 +80,9 @@ export function DocumentChecklist({
   types: DocType[];
   vorhanden: Record<string, boolean>;
   filesByType: Record<string, DocFile[]>;
+  /** Optionaler Callback nach Änderungen (für Client-Kontexte ohne
+   *  Server-Reload, z. B. Checkliste im Deal-Anlegen). */
+  onChanged?: () => void;
 }) {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
@@ -121,7 +125,10 @@ export function DocumentChecklist({
     start(async () => {
       const res = await setDocumentStatus(contactId, t.id, checked, null);
       if ("error" in res) toast.error(res.error);
-      else router.refresh();
+      else {
+        router.refresh();
+        onChanged?.();
+      }
     });
   }
 
@@ -175,6 +182,7 @@ export function DocumentChecklist({
         setOpenTypes((prev) => new Set(prev).add(typeId)); // Punkt aufklappen
         toast.success(ok === 1 ? "Datei hochgeladen" : `${ok} Dateien hochgeladen`);
         router.refresh();
+        onChanged?.();
       }
     } finally {
       setBusyType(null);
@@ -214,6 +222,7 @@ export function DocumentChecklist({
     await supabase.storage.from(BUCKET).remove([f.storage_path]);
     toast.success("Datei gelöscht");
     router.refresh();
+    onChanged?.();
   }
 
   /** Alle Dateien des Kunden als ein ZIP (14.2). */

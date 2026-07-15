@@ -22,6 +22,7 @@ import {
 } from "@/lib/provision";
 import { formatEURCents } from "@/lib/format";
 import { CollapsibleSection } from "@/components/collapsible-section";
+import { ContactChecklistLoader } from "../kontakte/contact-checklist-loader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CurrencyInput } from "@/components/ui/currency-input";
@@ -517,6 +518,13 @@ export function DealForm({
             </div>
           ) : null}
         </CollapsibleSection>
+      )}
+
+      {/* Unterlagen-Checkliste zum gewählten Kunden — beim Anlegen eines neuen
+          Immobilien-Deals (Wunsch Lukas). Lädt live für den gewählten Kontakt;
+          Uploads landen sofort beim Kunden. */}
+      {mode === "create" && bereich === "immobilien" && v.contact_id && (
+        <ContactChecklistLoader contactId={v.contact_id} />
       )}
 
       {/* ── VV-Felder + Provisionsvorschau ── */}
