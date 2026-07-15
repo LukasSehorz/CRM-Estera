@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Topbar } from "@/components/layout/topbar";
 import { ContactForm, type FormState } from "../contact-form";
+import type { DocType } from "../document-checklist";
 
 export default async function NeuerKontaktPage() {
   const supabase = await createClient();
@@ -29,6 +30,13 @@ export default async function NeuerKontaktPage() {
       name: `${p.vorname} ${p.nachname}`,
     }));
   }
+
+  // Dokumenttypen für die Checkliste beim Anlegen (Immobilien-Kunden).
+  const { data: docTypes } = await supabase
+    .from("document_types")
+    .select("id, gruppe, name, position")
+    .eq("aktiv", true)
+    .order("position");
 
   const initial: FormState = {
     vorname: "",
@@ -65,6 +73,7 @@ export default async function NeuerKontaktPage() {
           initial={initial}
           canAssignBerater={isGf}
           beraterOptions={beraterOptions}
+          docTypes={(docTypes ?? []) as DocType[]}
         />
       </div>
     </>

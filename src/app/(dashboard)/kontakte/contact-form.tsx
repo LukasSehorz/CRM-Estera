@@ -10,8 +10,11 @@ import {
   createContact,
   updateContact,
   deleteContact,
+  setDocumentStatus,
   type ContactInput,
 } from "./actions";
+import { StagedChecklist, type StagedByType } from "./staged-checklist";
+import type { DocType } from "./document-checklist";
 import {
   KONTAKT_STATUS,
   TERMIN_STATUS,
@@ -113,6 +116,7 @@ export function ContactForm({
   canAssignBerater,
   beraterOptions,
   dealOptions = [],
+  docTypes = [],
 }: {
   mode: "create" | "edit";
   contactId?: string;
@@ -121,6 +125,8 @@ export function ContactForm({
   beraterOptions: { id: string; name: string }[];
   /** Immobilien-Deals des Kontakts — für „auf Objekt belegt" (15.2). */
   dealOptions?: { id: string; name: string }[];
+  /** Dokumenttypen für die Checkliste beim Anlegen (Immobilien). */
+  docTypes?: DocType[];
 }) {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
@@ -133,6 +139,8 @@ export function ContactForm({
   const [docKategorie, setDocKategorie] = useState<string>(
     DOKUMENT_KATEGORIEN[0],
   );
+  // Checklisten-Dateien je Dokumenttyp (Immobilien), vorgemerkt (1.3 + Checkliste).
+  const [stagedTyped, setStagedTyped] = useState<StagedByType>({});
 
   function onStageFiles(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
@@ -152,14 +160,19 @@ export function ContactForm({
     setStaged((prev) => prev.filter((s) => s.id !== id));
   }
 
-  // Nach dem Anlegen: zwischengespeicherte Dateien auf die neue Kontakt-ID
-  // hochladen. Fehler einzelner Dateien blockieren den Anlege-Flow nicht.
-  async function uploadStaged(contactId: string): Promise<number> {
+  // Nach dem Anlegen: vorgemerkte Dateien (frei + Checkliste) auf die neue
+  // Kontakt-ID hochladen. Fehler einzelner Dateien blockieren den Flow nicht.
+  async function uploadAllStaged(contactId: string): Promise<number> {
     const {
       data: { user },
     } = await supabase.auth.getUser();
     let ok = 0;
-    for (const { file, kategorie } of staged) {
+
+    const putOne = async (
+      file: File,
+      kategorie: string,
+      documentTypeId: string | null,
+    ): Promise<boolean> => {
       const path = `${contactId}/${crypto.randomUUID()}_${safeName(file.name)}`;
       const { error: upErr } = await supabase.storage
         .from(BUCKET)
@@ -167,20 +180,38 @@ export function ContactForm({
           upsert: false,
           contentType: file.type || undefined,
         });
-      if (upErr) continue;
+      if (upErr) return false;
       const { error: insErr } = await supabase.from("contact_documents").insert({
         contact_id: contactId,
         dateiname: file.name,
         storage_path: path,
         kategorie,
+        document_type_id: documentTypeId,
         groesse: file.size,
         uploaded_by: user?.id ?? null,
       });
       if (insErr) {
         await supabase.storage.from(BUCKET).remove([path]);
-        continue;
+        return false;
       }
-      ok++;
+      return true;
+    };
+
+    // Freie Dokumente
+    for (const { file, kategorie } of staged) {
+      if (await putOne(file, kategorie, null)) ok++;
+    }
+    // Checklisten-Dokumente (typisiert) + „vorhanden"-Haken setzen
+    for (const [typeId, files] of Object.entries(stagedTyped)) {
+      const typ = docTypes.find((t) => t.id === typeId);
+      let any = false;
+      for (const file of files) {
+        if (await putOne(file, typ?.name ?? "Sonstige", typeId)) {
+          ok++;
+          any = true;
+        }
+      }
+      if (any) await setDocumentStatus(contactId, typeId, true, null);
     }
     return ok;
   }
@@ -241,8 +272,10 @@ export function ContactForm({
         return;
       }
       if (mode === "create" && res.id) {
-        if (staged.length) {
-          const ok = await uploadStaged(res.id);
+        const hatDocs =
+          staged.length > 0 || Object.keys(stagedTyped).length > 0;
+        if (hatDocs) {
+          const ok = await uploadAllStaged(res.id);
           toast.success(
             ok > 0
               ? `Kontakt angelegt · ${ok} Dokument${ok === 1 ? "" : "e"} hochgeladen`
@@ -594,14 +627,27 @@ export function ContactForm({
         </div>
       </CollapsibleSection>
 
-      {/* ── Dokumente direkt beim Anlegen (Call SJ 1.3) ── */}
+      {/* ── Unterlagen direkt beim Anlegen (Call SJ 1.3 + Checkliste) ── */}
       {mode === "create" && (
         <CollapsibleSection
-          title="Dokumente (optional)"
-          description="Schon beim Anlegen Unterlagen mitgeben — Upload nach dem Speichern"
+          title="Unterlagen (optional)"
+          description={
+            v.interesse.includes("immobilien") && docTypes.length > 0
+              ? "Dokumenten-Checkliste — Dateien werden nach dem Anlegen hochgeladen"
+              : "Schon beim Anlegen Unterlagen mitgeben — Upload nach dem Speichern"
+          }
         >
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-wrap items-end gap-2">
+          {v.interesse.includes("immobilien") && docTypes.length > 0 ? (
+            <StagedChecklist
+              types={docTypes}
+              istSelbststaendig={v.ist_selbststaendig}
+              istImmobilienbesitzer={v.ist_immobilienbesitzer}
+              value={stagedTyped}
+              onChange={setStagedTyped}
+            />
+          ) : (
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-wrap items-end gap-2">
               <div className="flex flex-col gap-1.5">
                 <span className="text-xs text-muted-foreground">Kategorie</span>
                 <Select value={docKategorie} onValueChange={setDocKategorie}>
@@ -664,11 +710,12 @@ export function ContactForm({
                 ))}
               </ul>
             )}
-            <p className="text-xs text-muted-foreground">
-              Max. 15 MB je Datei. Weitere Unterlagen kannst du jederzeit in der
-              Kundenakte ergänzen.
-            </p>
-          </div>
+              <p className="text-xs text-muted-foreground">
+                Max. 15 MB je Datei. Weitere Unterlagen kannst du jederzeit in
+                der Kundenakte ergänzen.
+              </p>
+            </div>
+          )}
         </CollapsibleSection>
       )}
 

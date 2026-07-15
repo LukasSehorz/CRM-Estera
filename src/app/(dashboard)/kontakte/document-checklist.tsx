@@ -14,7 +14,6 @@ import {
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { DOKUMENT_UPLOAD_AKTIV } from "@/config/enums";
-import { formatBytes } from "@/lib/format";
 import { buildZip, uniqueName } from "@/lib/zip";
 import { setDocumentStatus } from "./actions";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -356,39 +355,35 @@ export function DocumentChecklist({
                           </button>
                         )}
                       </div>
-                      {/* Datei-Liste je Typ (nachreichbar, mehrere) */}
+                      {/* Datei-Chips je Punkt — NEBENEINANDER (Wunsch Lukas),
+                          mehrere je Punkt, jederzeit nachreichbar. */}
                       {dateien.length > 0 && (
-                        <ul className="ml-7 mt-1 space-y-0.5">
+                        <div className="ml-7 mt-1.5 flex flex-wrap gap-2">
                           {dateien.map((f) => (
-                            <li
+                            <span
                               key={f.id}
-                              className="flex items-center gap-2 rounded px-1.5 py-1 text-xs hover:bg-secondary/60"
+                              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-secondary/50 py-1 pl-2 pr-1 text-xs"
                             >
-                              <span className="min-w-0 flex-1 truncate text-foreground">
-                                {f.dateiname}
-                              </span>
-                              <span className="shrink-0 tabular-nums text-muted-foreground">
-                                {formatBytes(f.groesse)}
-                              </span>
                               <button
                                 type="button"
                                 onClick={() => download(f)}
-                                title="Herunterladen / Vorschau"
-                                className="rounded p-1 text-muted-foreground transition-colors hover:text-foreground"
+                                title={`${f.dateiname} — herunterladen / Vorschau`}
+                                className="inline-flex max-w-[180px] items-center gap-1 text-foreground transition-colors hover:text-primary"
                               >
-                                <Download className="h-3.5 w-3.5" />
+                                <Download className="h-3.5 w-3.5 shrink-0" />
+                                <span className="truncate">{f.dateiname}</span>
                               </button>
                               <button
                                 type="button"
                                 onClick={() => removeFile(f)}
                                 title="Löschen"
-                                className="rounded p-1 text-muted-foreground transition-colors hover:text-danger"
+                                className="rounded p-0.5 text-muted-foreground transition-colors hover:text-danger"
                               >
-                                <Trash2 className="h-3.5 w-3.5" />
+                                <Trash2 className="h-3 w-3" />
                               </button>
-                            </li>
+                            </span>
                           ))}
-                        </ul>
+                        </div>
                       )}
                     </li>
                   );
