@@ -411,73 +411,69 @@ export function DealForm({
               />
             </Field>
 
-            {/* Provision (Schleife 2, 1.5): Satz variabel je Objekt/Bauträger.
-                Das Feld darf der Berater pflegen; die €-Aufschlüsselung
-                (Estera-Provision/Hausanteil) sieht nur die GF. */}
-            <Field label="Provisionssatz (%)" htmlFor="provsatz">
-              <div className="flex items-center gap-2">
-                <Input
-                  id="provsatz"
-                  type="number"
-                  min={0}
-                  max={100}
-                  step="0.1"
-                  inputMode="decimal"
-                  className="w-28"
-                  value={v.provisionssatz}
-                  onChange={(e) => set("provisionssatz", e.target.value)}
-                  placeholder="z. B. 12"
-                />
-                <div className="flex gap-1">
-                  {PROVISIONSSATZ_PRESETS.map((p) => (
-                    <button
-                      key={p}
-                      type="button"
-                      onClick={() => set("provisionssatz", String(p))}
-                      className={cn(
-                        "rounded-md border border-border px-2.5 py-1.5 text-xs font-medium transition-colors hover:border-primary/50",
-                        num(v.provisionssatz) === p
-                          ? "border-primary bg-primary/10 text-primary"
-                          : "text-muted-foreground",
-                      )}
-                    >
-                      {p} %
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Variabel je Objekt/Bauträger.
-              </p>
-            </Field>
-            {isGf ? (
-              <Field label="Berater-Anteil (%)" htmlFor="beranteil">
-                <Input
-                  id="beranteil"
-                  type="number"
-                  min={1}
-                  max={10}
-                  step="0.5"
-                  inputMode="decimal"
-                  value={v.berater_anteil}
-                  onChange={(e) => set("berater_anteil", e.target.value)}
-                  placeholder="1–10"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Nur durch die Geschäftsführung setzbar.
-                </p>
-              </Field>
-            ) : (
-              <Field label="Berater-Anteil (%)">
-                <p className="flex h-9 items-center rounded-md border border-border bg-surface-2 px-3 text-sm text-muted-foreground">
-                  {v.berater_anteil ? `${v.berater_anteil} %` : "Wird von der Geschäftsführung gesetzt"}
-                </p>
-              </Field>
+            {/* Provisionssatz + Berater-Anteil sind Estera-intern → NUR für die
+                Geschäftsführung (Call SJ F2). Der Berater sieht sie nicht. */}
+            {isGf && (
+              <>
+                <Field label="Provisionssatz (%)" htmlFor="provsatz">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="provsatz"
+                      type="number"
+                      min={0}
+                      max={100}
+                      step="0.1"
+                      inputMode="decimal"
+                      className="w-28"
+                      value={v.provisionssatz}
+                      onChange={(e) => set("provisionssatz", e.target.value)}
+                      placeholder="z. B. 12"
+                    />
+                    <div className="flex gap-1">
+                      {PROVISIONSSATZ_PRESETS.map((p) => (
+                        <button
+                          key={p}
+                          type="button"
+                          onClick={() => set("provisionssatz", String(p))}
+                          className={cn(
+                            "rounded-md border border-border px-2.5 py-1.5 text-xs font-medium transition-colors hover:border-primary/50",
+                            num(v.provisionssatz) === p
+                              ? "border-primary bg-primary/10 text-primary"
+                              : "text-muted-foreground",
+                          )}
+                        >
+                          {p} %
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Variabel je Objekt/Bauträger.
+                  </p>
+                </Field>
+                <Field label="Berater-Anteil (%)" htmlFor="beranteil">
+                  <Input
+                    id="beranteil"
+                    type="number"
+                    min={1}
+                    max={10}
+                    step="0.5"
+                    inputMode="decimal"
+                    value={v.berater_anteil}
+                    onChange={(e) => set("berater_anteil", e.target.value)}
+                    placeholder="1–10"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Nur durch die Geschäftsführung setzbar.
+                  </p>
+                </Field>
+              </>
             )}
           </div>
 
-          {/* Immobilien-Provisionsvorschau — Berater sieht nur den eigenen Anteil */}
-          {num(v.kaufpreis) && num(v.provisionssatz) ? (
+          {/* Provisionsvorschau NUR für die GF (Call SJ F2/2.7); Hausanteil
+              entfällt (F1.1). Der Berater sieht keine Provisions-Aufschlüsselung. */}
+          {isGf && num(v.kaufpreis) && num(v.provisionssatz) ? (
             <div className="mt-4 rounded-lg border border-border bg-surface-2 p-4">
               <div className="mb-2 text-sm font-medium">Provisionsvorschau</div>
               <dl className="space-y-1.5 text-sm">
@@ -490,27 +486,19 @@ export function DealForm({
                   );
                   return (
                     <>
-                      {isGf && (
-                        <ProvRow
-                          label={`Estera-Provision (${num(v.provisionssatz)} % vom Kaufpreis)`}
-                          value={formatEURCents(ip.esteraProvision)}
-                        />
-                      )}
+                      <ProvRow
+                        label={`Estera-Provision (${num(v.provisionssatz)} % vom Kaufpreis)`}
+                        value={formatEURCents(ip.esteraProvision)}
+                      />
                       <ProvRow
                         label={
                           num(v.berater_anteil)
-                            ? `Berater-Anteil (${num(v.berater_anteil)} %)`
+                            ? `Berater-Anteil (${num(v.berater_anteil)} % vom Kaufpreis)`
                             : "Berater-Anteil (noch nicht gesetzt)"
                         }
                         value={formatEURCents(ip.beraterProvision)}
                         accent
                       />
-                      {isGf && (
-                        <ProvRow
-                          label="Hausanteil"
-                          value={formatEURCents(ip.hausAnteil)}
-                        />
-                      )}
                     </>
                   );
                 })()}
@@ -613,44 +601,34 @@ export function DealForm({
             </Field>
           </div>
 
-          {/* Berater-Vorschau (7.5): nur die Ergebnisse — BWS → Vorschau →
-              Sofort → Einbehalt → Ratierlich. Die volle Kette (7,8 % →
-              Factoring → Stufe) sieht nur die GF. */}
-          {prov && (
+          {/* Provisionsvorschau NUR für die GF (Call SJ F2/2.7); Hausanteil
+              entfällt (F1.1). Trennlinie vor „Deine Provision", damit klar ist:
+              der Tippgeber geht von derselben Basis ab wie die Provision, nicht
+              vom Ergebnis darüber (F1.3). */}
+          {isGf && prov && (
             <div className="mt-4 rounded-lg border border-border bg-surface-2 p-4">
               <div className="mb-2 flex items-center justify-between">
                 <span className="text-sm font-medium">Provisionsvorschau</span>
-                {isGf && (
-                  <span className="text-xs text-muted-foreground">
-                    Vertriebler-Stufe {vertrieblerStufe}%
-                  </span>
-                )}
+                <span className="text-xs text-muted-foreground">
+                  Vertriebler-Stufe {vertrieblerStufe}%
+                </span>
               </div>
               <dl className="space-y-1.5 text-sm">
                 <ProvRow label="BWS" value={formatEURCents(prov.bws)} />
+                <ProvRow
+                  label="Grundprovision (7,8 %)"
+                  value={formatEURCents(prov.grundprovision)}
+                />
+                <ProvRow
+                  label={
+                    (v.vv_zahlart || "factoring") === "factoring"
+                      ? "Provision nach Factoring (×90 %)"
+                      : "Provision (×100 %)"
+                  }
+                  value={formatEURCents(prov.nettoProvision)}
+                />
 
-                {/* Volle Kette nur für die GF (2.2 / 7.5) */}
-                {isGf && (
-                  <>
-                    <ProvRow
-                      label="Grundprovision (7,8 %)"
-                      value={formatEURCents(prov.grundprovision)}
-                    />
-                    <ProvRow
-                      label={
-                        prov.einbehalt
-                          ? "nach Factoring (×90 %)"
-                          : "Provision (ohne Factoring)"
-                      }
-                      value={formatEURCents(prov.nettoProvision)}
-                    />
-                    <ProvRow
-                      label="Hausanteil (Estera)"
-                      value={formatEURCents(prov.hausAnteil)}
-                    />
-                  </>
-                )}
-
+                <div className="my-1 border-t border-border" />
                 <ProvRow
                   label={`Deine Provision (${vertrieblerStufe} %)`}
                   value={formatEURCents(prov.vertrieblerGesamt)}
@@ -659,7 +637,7 @@ export function DealForm({
                 {num(v.tippgeber_satz) ? (
                   <>
                     <ProvRow
-                      label={`− Tippgeber (${num(v.tippgeber_satz)} %)`}
+                      label={`− Tippgeber (${num(v.tippgeber_satz)} % der Provision)`}
                       value={formatEURCents(prov.tippgeberAnteil)}
                     />
                     <ProvRow
@@ -677,7 +655,7 @@ export function DealForm({
                     value={formatEURCents(prov.monatsrate)}
                     accent
                   />
-                ) : prov.einbehalt ? (
+                ) : (
                   <>
                     <ProvRow
                       label="Sofort (85 %)"
@@ -689,12 +667,6 @@ export function DealForm({
                       value={formatEURCents(prov.einbehaltBetrag)}
                     />
                   </>
-                ) : (
-                  <ProvRow
-                    label="Voll sofort"
-                    value={formatEURCents(prov.sofortAuszahlung)}
-                    accent
-                  />
                 )}
               </dl>
             </div>

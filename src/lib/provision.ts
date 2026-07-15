@@ -1,8 +1,9 @@
 // =====================================================================
 // VV-Provisionslogik — Single Source of Truth (V4.1, Kap. 7.1).
-// Drei Fälle, GEKLÄRT-Box: DER EINBEHALT HÄNGT AM FACTORING.
+// Drei Fälle (Call SJ F1.4): Einbehalt 85/15 bei Factoring UND ohne Factoring;
+// nur ratierlich hat keinen Einbehalt. Unterschied Factoring/ohne = die Basis.
 //   1 · factoring       Grundprov × 90 % × Stufe → 85 % sofort, 15 % nach 12 Mon.
-//   2 · ohne_factoring  Grundprov × 100 % × Stufe → voll sofort, KEIN Einbehalt
+//   2 · ohne_factoring  Grundprov × 100 % × Stufe → 85 % sofort, 15 % nach 12 Mon.
 //   3 · ratierlich      Grundprov × 100 % × Stufe → ÷ 60, monatlich über 5 Jahre
 //
 // Tippgeber (Vorgabe Lukas, 12.07.2026): der Tippgeber-Satz geht vom
@@ -13,14 +14,14 @@
 // Selbsttest (Beispiel aus dem Dokument: BWS 48.000 €, Consultant 40 %):
 //   Grundprovision 7,8 %             = 3.744,00 €
 //   Fall 1: × 90 % = 3.369,60 → × 40 % = 1.347,84 → sofort 1.145,66 / Einbehalt 202,18
-//   Fall 2: × 100 % = 3.744,00 → × 40 % = 1.497,60 → voll sofort
-//   Fall 3: wie Fall 2, ÷ 60 = 24,96 €/Monat über 60 Monate
+//   Fall 2: × 100 % = 3.744,00 → × 40 % = 1.497,60 → sofort 1.272,96 / Einbehalt 224,64
+//   Fall 3: × 100 % = 3.744,00 → × 40 % = 1.497,60 → ÷ 60 = 24,96 €/Monat
 // =====================================================================
 
 export const PROVISIONSSATZ = 0.078; // 7,8 % (global fix)
 export const FACTORING_ANTEIL = 0.9; // 90 % (10 % Factoringgebühr)
-export const EINBEHALT_SOFORT = 0.85; // 85 % sofort (nur bei Factoring)
-export const EINBEHALT_REST = 0.15; // 15 % einbehalten (nur bei Factoring)
+export const EINBEHALT_SOFORT = 0.85; // 85 % sofort (Factoring & ohne Factoring)
+export const EINBEHALT_REST = 0.15; // 15 % einbehalten (Factoring & ohne Factoring)
 export const EINBEHALT_MONATE = 12; // Auszahlung 12 Monate nach Abschluss
 export const RATIERLICH_MONATE = 60; // ratierlich: 60 Monatsraten (5 Jahre)
 export const MAX_ANZAHL_JAHRE = 40; // 7.5: BWS-Laufzeit ist auf 40 Jahre begrenzt
@@ -37,11 +38,11 @@ export const VV_ZAHLARTEN: { value: VvZahlart; label: string; hinweis: string }[
   {
     value: "ohne_factoring",
     label: "Ohne Factoring",
-    hinweis: "100 % Basis · voll sofort · kein Einbehalt",
+    hinweis: "100 % Basis · 85 % sofort · 15 % Einbehalt (nach 12 Monaten)",
   },
   {
     value: "ratierlich",
-    label: "Ratierlich (negative Bonität)",
+    label: "Ratierlich",
     hinweis: "100 % Basis · kein Einbehalt · Auszahlung ÷ 60 Monate",
   },
 ];
@@ -107,13 +108,14 @@ export function computeProvision(input: ProvisionInput): ProvisionResult {
   const vertrieblerGewinn = vertrieblerGesamt - tippgeberAnteil;
   const hausAnteil = nettoProvision - vertrieblerGesamt;
 
-  const einbehalt = mitFactoring;
+  // Einbehalt 85/15 bei Factoring UND ohne Factoring; nur ratierlich ohne
+  // Einbehalt (Call SJ F1.4). Der Unterschied liegt allein in nettoProvision
+  // (× 90 % mit Factoring, × 100 % ohne).
   const ratierlich = input.zahlart === "ratierlich";
+  const einbehalt = !ratierlich;
   const sofortAuszahlung = ratierlich
     ? null
-    : einbehalt
-      ? vertrieblerGewinn * EINBEHALT_SOFORT
-      : vertrieblerGewinn;
+    : vertrieblerGewinn * EINBEHALT_SOFORT;
   const einbehaltBetrag = einbehalt ? vertrieblerGewinn * EINBEHALT_REST : null;
   const monatsrate = ratierlich ? vertrieblerGewinn / RATIERLICH_MONATE : null;
 
@@ -135,13 +137,12 @@ export function computeProvision(input: ProvisionInput): ProvisionResult {
 
 // =====================================================================
 // Immobilien-Provision (Kap. 1.5) — Satz variabel je Deal.
-// OFFEN (Sebastian): Berater-Anteil vom Kaufpreis-Topf oder von der
-// Estera-Provision? Default „anteil_von_provision" — nur diese Konstante
-// umstellen, alle Anzeigen (und der Overhead) rechnen automatisch richtig.
+// FESTGELEGT (Call SJ F3): Der Berater-Anteil wird IMMER vom KAUFPREIS
+// gerechnet. Der Modus-Umschalter entfällt; die Konstante bleibt als Default.
 // Retainer-Modell (8.4, ZUKUNFT) dockt später am per-Deal-Anteil an.
 // =====================================================================
 export type ImmoProvisionModus = "anteil_von_provision" | "anteil_von_kaufpreis";
-export const IMMO_PROVISION_MODUS: ImmoProvisionModus = "anteil_von_provision";
+export const IMMO_PROVISION_MODUS: ImmoProvisionModus = "anteil_von_kaufpreis";
 
 export type ImmoProvisionResult = {
   esteraProvision: number; // Kaufpreis × Satz — der Estera-Umsatz des Deals
