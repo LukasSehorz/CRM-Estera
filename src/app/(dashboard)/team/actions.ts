@@ -372,6 +372,99 @@ export async function createTippgeber(
   return { ok: true };
 }
 
+export type SubBeraterInput = {
+  vorname: string;
+  nachname: string;
+  email: string;
+  passwort: string;
+  stufe: number;
+  immoAnteil: number;
+  bereiche: Bereich[];
+};
+
+/**
+ * Berater-Self-Service (Call SJ F5/3.8): ein Berater legt einen Unter-Berater
+ * (mit Login) an, der UNTER ihm hängt (parent_berater_id = Aufrufer). Nutzt
+ * den Admin-Client serverseitig; der übergeordnete Partner wird zwingend auf
+ * den Aufrufer gesetzt — ein Berater kann nur die eigene Downline aufbauen.
+ */
+export async function createSubBerater(
+  input: SubBeraterInput,
+): Promise<NeuerBeraterResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Nicht angemeldet." };
+
+  const { data: me } = await supabase
+    .from("profiles")
+    .select("rolle")
+    .eq("id", user.id)
+    .single();
+  if (me?.rolle === "backoffice")
+    return { error: "Backoffice darf keine Berater anlegen." };
+
+  const vorname = input.vorname.trim();
+  const nachname = input.nachname.trim();
+  const email = input.email.trim().toLowerCase();
+  if (!vorname || !nachname) return { error: "Bitte Vor- und Nachnamen angeben." };
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+    return { error: "Bitte eine gültige E-Mail-Adresse angeben." };
+  if (input.passwort.length < 8)
+    return { error: "Das Startpasswort braucht mindestens 8 Zeichen." };
+  if (Number.isNaN(input.stufe) || input.stufe < 0 || input.stufe > 100)
+    return { error: "Stufe muss zwischen 0 und 100 liegen." };
+  const immoAnteil =
+    Number.isNaN(input.immoAnteil) || input.immoAnteil < 0
+      ? null
+      : Math.min(input.immoAnteil, 100);
+  if (input.bereiche.length < 1)
+    return { error: "Mindestens eine Sparte auswählen." };
+
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!serviceKey || !url)
+    return { error: "Server nicht konfiguriert (Service-Role-Key fehlt)." };
+
+  const admin = createSupabaseAdmin<Database>(url, serviceKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+
+  const { data: created, error: authError } = await admin.auth.admin.createUser({
+    email,
+    password: input.passwort,
+    email_confirm: true,
+  });
+  if (authError || !created?.user) {
+    return {
+      error: authError?.message?.includes("already")
+        ? "Für diese E-Mail existiert bereits ein Zugang."
+        : "Anlegen fehlgeschlagen. Prüfe die Eingaben und versuche es erneut.",
+    };
+  }
+
+  const { error: profileError } = await admin.from("profiles").insert({
+    id: created.user.id,
+    vorname,
+    nachname,
+    rolle: "berater",
+    aktiv: true,
+    vertriebler_stufe: input.stufe,
+    immo_anteil_default: immoAnteil,
+    bereich: input.bereiche,
+    parent_berater_id: user.id, // hängt unter dem Aufrufer
+  });
+  if (profileError) {
+    await admin.auth.admin.deleteUser(created.user.id);
+    return { error: "Profil konnte nicht angelegt werden. Bitte erneut versuchen." };
+  }
+
+  revalidatePath("/partner");
+  revalidatePath("/team");
+  return { ok: true };
+}
+
 /** Löscht einen Tippgeber (RLS: GF oder Besitzer). */
 export async function deleteTippgeber(id: string): Promise<StufeResult> {
   const supabase = await createClient();

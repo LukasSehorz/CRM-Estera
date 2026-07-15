@@ -11,6 +11,7 @@ import {
   ListChecks,
   LogOut,
   Menu,
+  Network,
   PiggyBank,
   UserCog,
   Users,
@@ -40,6 +41,7 @@ const NAV: NavSection[] = [
       { href: "/kontakte", label: "Kontakte", icon: Users },
       { href: "/dokumente", label: "Dokumente", icon: FolderOpen },
       { href: "/listen", label: "Listen", icon: ListChecks },
+      { href: "/partner", label: "Partner", icon: Network },
     ],
   },
   {
