@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Topbar } from "@/components/layout/topbar";
 import { NeuerBeraterForm, StufeTable, type BeraterRow } from "./stufe-table";
 import { TippgeberSection, type TippgeberRow } from "./tippgeber-section";
+import { StructureTree, type StructureNode } from "./structure-tree";
 
 /**
  * Team-Verwaltung: nur Geschäftsführung. Berater anlegen, Vertriebler-Stufe
@@ -22,23 +23,32 @@ export default async function TeamPage() {
     .single();
   if (me?.rolle !== "geschaeftsfuehrung") redirect("/dashboard");
 
-  const [{ data: profiles }, { data: ziele }, { data: tippgeber }] =
-    await Promise.all([
-      supabase
-        .from("profiles")
-        .select(
-          "id, vorname, nachname, rolle, aktiv, vertriebler_stufe, bereich, immo_anteil_default, parent_berater_id",
-        )
-        .order("rolle")
-        .order("vorname"),
-      supabase
-        .from("berater_monatsziele")
-        .select("berater_id, monatsziel_immobilien, monatsziel_vv"),
-      supabase
-        .from("tippgeber")
-        .select("id, name, owner_id, provision_satz, bereiche")
-        .order("created_at", { ascending: false }),
-    ]);
+  const [
+    { data: profiles },
+    { data: ziele },
+    { data: tippgeber },
+    { data: deals },
+  ] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select(
+        "id, vorname, nachname, rolle, aktiv, vertriebler_stufe, bereich, immo_anteil_default, parent_berater_id",
+      )
+      .order("rolle")
+      .order("vorname"),
+    supabase
+      .from("berater_monatsziele")
+      .select("berater_id, monatsziel_immobilien, monatsziel_vv"),
+    supabase
+      .from("tippgeber")
+      .select("id, name, owner_id, provision_satz, bereiche")
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("deals")
+      .select(
+        "berater_id, bereich, kaufpreis, bws, pipeline_stages!inner(is_won, is_lost)",
+      ),
+  ]);
 
   const zielMap = new Map(
     (ziele ?? []).map((z) => [z.berater_id, z]),
@@ -92,6 +102,76 @@ export default async function TeamPage() {
     };
   });
 
+  // Performance je Berater (Hover-Anzeige im Organigramm): Volumen = Kaufpreis
+  // (Immo) bzw. BWS (VV); gewonnen vs. offen.
+  const perfMap = new Map<
+    string,
+    { abschluesse: number; umsatz: number; pipeline: number }
+  >();
+  for (const d of deals ?? []) {
+    const st = (
+      Array.isArray(d.pipeline_stages) ? d.pipeline_stages[0] : d.pipeline_stages
+    ) as { is_won: boolean; is_lost: boolean } | null;
+    const vol =
+      d.bereich === "immobilien" ? Number(d.kaufpreis ?? 0) : Number(d.bws ?? 0);
+    const cur = perfMap.get(d.berater_id) ?? {
+      abschluesse: 0,
+      umsatz: 0,
+      pipeline: 0,
+    };
+    if (st?.is_won) {
+      cur.abschluesse += 1;
+      cur.umsatz += vol;
+    } else if (!st?.is_lost) {
+      cur.pipeline += vol;
+    }
+    perfMap.set(d.berater_id, cur);
+  }
+
+  // Organigramm: Profile mehrstufig (parent_berater_id) + Tippgeber als Blätter.
+  const nodeMap = new Map<string, StructureNode>();
+  for (const p of profiles ?? []) {
+    nodeMap.set(p.id, {
+      id: p.id,
+      name: `${p.vorname} ${p.nachname}`,
+      kind: p.rolle === "geschaeftsfuehrung" ? "gf" : "berater",
+      stufe:
+        p.vertriebler_stufe == null
+          ? undefined
+          : String(Number(p.vertriebler_stufe)),
+      immoAnteil:
+        p.immo_anteil_default == null
+          ? undefined
+          : String(Number(p.immo_anteil_default)),
+      perf: perfMap.get(p.id),
+      children: [],
+    });
+  }
+  for (const p of profiles ?? []) {
+    if (p.parent_berater_id && nodeMap.has(p.parent_berater_id)) {
+      nodeMap.get(p.parent_berater_id)!.children.push(nodeMap.get(p.id)!);
+    }
+  }
+  for (const t of tippgeber ?? []) {
+    const owner = nodeMap.get(t.owner_id);
+    if (owner)
+      owner.children.push({
+        id: t.id,
+        name: t.name,
+        kind: "tippgeber",
+        provisionSatz:
+          t.provision_satz == null ? undefined : String(Number(t.provision_satz)),
+        bereiche: (t.bereiche?.length ? t.bereiche : ["immobilien"]) as (
+          | "immobilien"
+          | "vv"
+        )[],
+        children: [],
+      });
+  }
+  const structureRoots = (profiles ?? [])
+    .filter((p) => !p.parent_berater_id)
+    .map((p) => nodeMap.get(p.id)!);
+
   return (
     <>
       <Topbar
@@ -100,6 +180,14 @@ export default async function TeamPage() {
       />
       <div className="space-y-6 px-6 py-6">
         <NeuerBeraterForm />
+        <div className="rounded-xl border border-border bg-surface p-5">
+          <h2 className="text-base font-semibold">Struktur / Organigramm</h2>
+          <p className="mb-3 text-xs text-muted-foreground">
+            Mehrstufige Partnerstruktur (Berater &amp; Tippgeber). Fahre über
+            einen Knoten für dessen Performance.
+          </p>
+          <StructureTree roots={structureRoots} />
+        </div>
         <div className="space-y-2">
           <p className="max-w-2xl text-sm text-muted-foreground">
             Die Stufe bestimmt den persönlichen Provisionsanteil (Netto-Provision
