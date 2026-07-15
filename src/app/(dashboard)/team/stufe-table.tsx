@@ -353,6 +353,7 @@ export function NeuerBeraterForm() {
     email: "",
     passwort: "",
     stufe: "30",
+    immoAnteil: "5",
   });
   const [bereiche, setBereiche] = useState<Bereich[]>(["immobilien", "vv"]);
   const [rolle, setRolleState] = useState<"berater" | "backoffice">("berater");
@@ -381,6 +382,7 @@ export function NeuerBeraterForm() {
         email: v.email,
         passwort: v.passwort,
         stufe: Number(v.stufe.replace(",", ".")),
+        immoAnteil: Number(v.immoAnteil.replace(",", ".")),
         bereiche,
         rolle,
       });
@@ -391,7 +393,14 @@ export function NeuerBeraterForm() {
       toast.success(
         `${rolle === "backoffice" ? "Backoffice" : "Berater"} ${v.vorname} ${v.nachname} angelegt`,
       );
-      setV({ vorname: "", nachname: "", email: "", passwort: "", stufe: "30" });
+      setV({
+        vorname: "",
+        nachname: "",
+        email: "",
+        passwort: "",
+        stufe: "30",
+        immoAnteil: "5",
+      });
       setBereiche(["immobilien", "vv"]);
       setRolleState("berater");
       router.refresh();
@@ -471,7 +480,7 @@ export function NeuerBeraterForm() {
           </Select>
         </div>
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="nb-stufe">Vertriebler-Stufe (%)</Label>
+          <Label htmlFor="nb-stufe">Vertriebler-Stufe (%) — VV</Label>
           <Input
             id="nb-stufe"
             type="number"
@@ -481,6 +490,26 @@ export function NeuerBeraterForm() {
             value={v.stufe}
             onChange={(e) => set("stufe", e.target.value)}
           />
+        </div>
+        {/* Immo-Anteil-Regler 1–10 (Call SJ F3): persönlicher Anteil bei
+            Immobilien-Deals, vom Kaufpreis. */}
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="nb-immo">
+            Immo-Anteil — {v.immoAnteil} %
+          </Label>
+          <input
+            id="nb-immo"
+            type="range"
+            min={1}
+            max={10}
+            step={0.5}
+            value={v.immoAnteil}
+            onChange={(e) => set("immoAnteil", e.target.value)}
+            className="h-9 w-full cursor-pointer accent-primary"
+          />
+          <p className="text-xs text-muted-foreground">
+            Regler 1–10 % · Anteil vom Kaufpreis bei Immobilien-Deals.
+          </p>
         </div>
         <div className="flex flex-col gap-1.5">
           <Label>Sichtbare Sparten *</Label>

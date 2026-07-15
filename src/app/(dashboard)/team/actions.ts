@@ -229,6 +229,8 @@ export type NeuerBeraterInput = {
   email: string;
   passwort: string;
   stufe: number;
+  /** Immo-Anteil-Default (%) — persönlicher Anteil bei Immobilien-Deals (F3). */
+  immoAnteil: number;
   bereiche: Bereich[];
   rolle: Rolle;
 };
@@ -268,6 +270,10 @@ export async function createBerater(
     return { error: "Das Startpasswort braucht mindestens 8 Zeichen." };
   if (Number.isNaN(input.stufe) || input.stufe < 0 || input.stufe > 100)
     return { error: "Stufe muss zwischen 0 und 100 liegen." };
+  const immoAnteil =
+    Number.isNaN(input.immoAnteil) || input.immoAnteil < 0
+      ? null
+      : Math.min(input.immoAnteil, 100);
   if (input.bereiche.length < 1)
     return { error: "Mindestens eine Sparte auswählen." };
 
@@ -304,6 +310,7 @@ export async function createBerater(
     rolle,
     aktiv: true,
     vertriebler_stufe: input.stufe,
+    immo_anteil_default: immoAnteil,
     bereich: input.bereiche,
   });
   if (profileError) {
