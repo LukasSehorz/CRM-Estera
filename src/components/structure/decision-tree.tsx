@@ -1,8 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import {
+  useCallback,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Crown, Handshake, Minus, Plus, User } from "lucide-react";
+import { Crown, Handshake, Maximize2, MousePointerClick, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatEUR } from "@/lib/format";
 
@@ -18,53 +24,65 @@ export type TreeNode = {
   children: TreeNode[];
 };
 
-// Layout-Konstanten (Top-Down-Baum wie Entscheidungsbaum).
-const LEVEL_H = 138; // vertikaler Abstand je Ebene
-const X_GAP = 158; // horizontaler Abstand je Blatt
+// Layout-Konstanten (Top-Down-Entscheidungsbaum).
+const LEVEL_H = 152; // vertikaler Abstand je Ebene
+const X_GAP = 150; // horizontaler Abstand je Blatt
 const NODE_R = 30; // Andock-Radius für Konnektoren
-const PAD = 92; // Rand (genug für die zentrierten Labels)
+const PADX = 100;
+const PADY = 92;
 
 type Pos = { x: number; y: number; depth: number };
 
 /**
- * Entscheidungsbaum der Struktur (Call SJ): GF ganz oben (Raute), darunter die
- * Berater (Kreise), Tippgeber als Blätter (Pillen), verbunden mit Linien.
- * Hover hebt den Pfad hervor (Lichtimpuls) und graut den Rest aus; Knoten mit
- * Downline lassen sich auf-/zuklappen (mehrere Ebenen, aufgeräumt).
+ * Entscheidungsbaum der Struktur (Call SJ): GF oben (Raute/Krone), Berater als
+ * Kreise, Tippgeber als Pillen. Der komplette Baum wird ausgelegt; eine „Kamera"
+ * (ein einziger GPU-Transform) zoomt beim Klick flüssig auf einen Ast, der Rest
+ * tritt zurück. Hover hebt den Pfad hervor (Lichtimpuls); die Infos erscheinen
+ * in einem festen Panel, das keine Knoten verdeckt.
  */
 export function DecisionTree({ root }: { root: TreeNode }) {
-  const [collapsed, setCollapsed] = useState<Set<string>>(
-    // Standard: nur die ersten zwei Ebenen offen (Rest eingeklappt).
-    () => {
-      const s = new Set<string>();
-      const walk = (n: TreeNode, depth: number) => {
-        if (depth >= 1 && n.children.length > 0) s.add(n.id);
-        n.children.forEach((c) => walk(c, depth + 1));
-      };
-      walk(root, 0);
-      return s;
-    },
-  );
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const [cw, setCw] = useState(960);
+  const [ch, setCh] = useState(460);
+  const [focusId, setFocusId] = useState<string | null>(null);
   const [hovered, setHovered] = useState<string | null>(null);
 
-  // Sichtbaren Baum (unter Berücksichtigung eingeklappter Knoten) auslegen.
-  const { pos, edges, parentOf, width, height, visible } = useMemo(() => {
+  // Viewport messen (vor dem Paint → kein Flackern).
+  useLayoutEffect(() => {
+    const el = viewportRef.current;
+    if (!el) return;
+    const measure = () => {
+      setCw(el.clientWidth);
+      setCh(el.clientHeight);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // Vollständiges Layout — alle Knoten (Zoom statt Einklappen).
+  const { pos, edges, parentOf, byId, childrenOf, treeW, treeH } = useMemo(() => {
     const pos = new Map<string, Pos>();
     const parentOf = new Map<string, string>();
+    const byId = new Map<string, TreeNode>();
+    const childrenOf = new Map<string, string[]>();
     const edges: { from: string; to: string }[] = [];
-    const visible = new Set<string>();
     let leaf = 0;
 
     const layout = (n: TreeNode, depth: number, parent?: string): number => {
-      visible.add(n.id);
+      byId.set(n.id, n);
       if (parent) parentOf.set(n.id, parent);
-      const kids = collapsed.has(n.id) ? [] : n.children;
+      childrenOf.set(
+        n.id,
+        n.children.map((c) => c.id),
+      );
       let x: number;
-      if (kids.length === 0) {
+      if (n.children.length === 0) {
         x = leaf * X_GAP;
         leaf += 1;
       } else {
-        const xs = kids.map((c) => {
+        const xs = n.children.map((c) => {
           edges.push({ from: n.id, to: c.id });
           return layout(c, depth + 1, n.id);
         });
@@ -85,186 +103,334 @@ export function DecisionTree({ root }: { root: TreeNode }) {
       pos,
       edges,
       parentOf,
-      visible,
-      width: maxX + PAD * 2,
-      height: maxY + PAD * 2 + NODE_R,
+      byId,
+      childrenOf,
+      treeW: maxX + PADX * 2,
+      treeH: maxY + PADY * 2,
     };
-  }, [root, collapsed]);
-
-  // Node-Index für schnellen Zugriff.
-  const byId = useMemo(() => {
-    const m = new Map<string, TreeNode>();
-    const walk = (n: TreeNode) => {
-      m.set(n.id, n);
-      n.children.forEach(walk);
-    };
-    walk(root);
-    return m;
   }, [root]);
 
-  // Aktiver Pfad = Wurzel → gehoverter Knoten.
-  const activePath = useMemo(() => {
-    const s = new Set<string>();
-    let cur = hovered;
-    while (cur) {
-      s.add(cur);
-      cur = parentOf.get(cur) ?? null;
+  const px = useCallback((id: string) => (pos.get(id)?.x ?? 0) + PADX, [pos]);
+  const py = useCallback((id: string) => (pos.get(id)?.y ?? 0) + PADY, [pos]);
+
+  const ancestors = useCallback(
+    (id: string) => {
+      const s: string[] = [];
+      let cur: string | undefined = id;
+      while (cur) {
+        s.push(cur);
+        cur = parentOf.get(cur);
+      }
+      return s;
+    },
+    [parentOf],
+  );
+  const descendants = useCallback(
+    (id: string) => {
+      const out: string[] = [];
+      const stack = [...(childrenOf.get(id) ?? [])];
+      while (stack.length) {
+        const c = stack.pop()!;
+        out.push(c);
+        stack.push(...(childrenOf.get(c) ?? []));
+      }
+      return out;
+    },
+    [childrenOf],
+  );
+
+  // Fokus-Menge (bei Zoom sichtbar): Vorfahren + Knoten + gesamte Downline.
+  const focusSet = useMemo(() => {
+    if (!focusId) return null;
+    return new Set<string>([
+      ...ancestors(focusId),
+      focusId,
+      ...descendants(focusId),
+    ]);
+  }, [focusId, ancestors, descendants]);
+
+  // Kamera: fokussierte Menge (oder ganzer Baum) mittig in den Viewport einpassen.
+  const cam = useMemo(() => {
+    const ids = focusSet ? [...focusSet] : [...pos.keys()];
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    for (const id of ids) {
+      minX = Math.min(minX, px(id));
+      maxX = Math.max(maxX, px(id));
+      minY = Math.min(minY, py(id));
+      maxY = Math.max(maxY, py(id));
     }
-    return s;
-  }, [hovered, parentOf]);
+    const mX = 84;
+    const mY = 74;
+    const bw = maxX - minX + mX * 2;
+    const bh = maxY - minY + mY * 2;
+    const scale = Math.min(cw / bw, ch / bh, focusId ? 1.75 : 1.12);
+    const cx = (minX + maxX) / 2;
+    const cy = (minY + maxY) / 2;
+    return { scale, x: cw / 2 - scale * cx, y: ch / 2 - scale * cy };
+  }, [focusSet, focusId, pos, px, py, cw, ch]);
 
-  const px = (id: string) => (pos.get(id)?.x ?? 0) + PAD;
-  const py = (id: string) => (pos.get(id)?.y ?? 0) + PAD;
+  // Aktiver Pfad (Hover) = Wurzel → gehoverter Knoten.
+  const activePath = useMemo(
+    () => new Set(hovered ? ancestors(hovered) : []),
+    [hovered, ancestors],
+  );
 
-  function toggle(id: string) {
-    setCollapsed((prev) => {
-      const n = new Set(prev);
-      if (n.has(id)) n.delete(id);
-      else n.add(id);
-      return n;
-    });
+  const isVisible = (id: string) => !focusSet || focusSet.has(id);
+  const hoveredNode = hovered ? (byId.get(hovered) ?? null) : null;
+  // Info-Panel auf die Gegenseite des gehoverten Knotens legen (verdeckt so nie
+  // die aktive Spalte).
+  const panelLeft = hovered ? cam.x + cam.scale * px(hovered) > cw * 0.52 : false;
+
+  function focusNode(node: TreeNode) {
+    const target = node.children.length
+      ? node.id
+      : (parentOf.get(node.id) ?? node.id);
+    setFocusId((cur) => (cur === target ? null : target));
   }
 
   return (
-    <div className="overflow-x-auto">
+    <div className="relative">
+      {/* Steuerleiste */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-2 p-3">
+        <AnimatePresence>
+          {focusId && (
+            <motion.button
+              type="button"
+              initial={{ opacity: 0, x: -8 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -8 }}
+              onClick={() => setFocusId(null)}
+              className="pointer-events-auto inline-flex items-center gap-1.5 rounded-full border border-border bg-surface/90 px-3 py-1.5 text-xs font-medium text-foreground shadow-sm backdrop-blur transition-colors hover:border-primary hover:text-primary"
+            >
+              <Maximize2 className="h-3.5 w-3.5" />
+              Gesamtansicht
+            </motion.button>
+          )}
+        </AnimatePresence>
+        <div className="pointer-events-none ml-auto inline-flex items-center gap-1.5 rounded-full bg-background/60 px-2.5 py-1 text-[11px] text-muted-foreground backdrop-blur">
+          <MousePointerClick className="h-3.5 w-3.5" />
+          Knoten anklicken zum Zoomen
+        </div>
+      </div>
+
+      {/* Viewport (Kamera) */}
       <div
-        className="relative mx-auto"
-        style={{ width, height }}
+        ref={viewportRef}
+        onClick={() => setFocusId(null)}
         onMouseLeave={() => setHovered(null)}
+        className="relative h-[440px] overflow-hidden rounded-xl border border-border/70 bg-[radial-gradient(circle_at_1px_1px,var(--tree-dot)_1px,transparent_0)] [background-size:22px_22px] sm:h-[500px] lg:h-[560px]"
       >
-        {/* Konnektoren */}
-        <svg
-          className="pointer-events-none absolute inset-0"
-          width={width}
-          height={height}
+        <motion.div
+          className="absolute left-0 top-0 origin-top-left [will-change:transform]"
+          style={{ width: treeW, height: treeH }}
+          initial={false}
+          animate={{ x: cam.x, y: cam.y, scale: cam.scale }}
+          transition={{ duration: 0.72, ease: [0.22, 1, 0.36, 1] }}
         >
-          {edges.map((e) => {
-            const x1 = px(e.from);
-            const y1 = py(e.from) + NODE_R;
-            const x2 = px(e.to);
-            const y2 = py(e.to) - NODE_R;
-            const midY = (y1 + y2) / 2;
-            const dir = x2 > x1 ? 1 : x2 < x1 ? -1 : 0;
-            const cr = 12;
-            const d =
-              dir === 0
-                ? `M ${x1} ${y1} L ${x2} ${y2}`
-                : `M ${x1} ${y1} L ${x1} ${midY - cr} Q ${x1} ${midY} ${x1 + dir * cr} ${midY} L ${x2 - dir * cr} ${midY} Q ${x2} ${midY} ${x2} ${midY + cr} L ${x2} ${y2}`;
-            const active =
-              activePath.has(e.from) && activePath.has(e.to);
-            const dim = hovered !== null && !active;
-            return (
-              <g key={`${e.from}-${e.to}`}>
-                <path
-                  d={d}
-                  fill="none"
-                  className={cn(
-                    "transition-[stroke,opacity] duration-300",
-                    active ? "stroke-primary" : "stroke-border",
-                  )}
-                  strokeWidth={active ? 2.5 : 1.5}
-                  style={{ opacity: dim ? 0.25 : 1 }}
-                />
-                {active && (
+          {/* Konnektoren */}
+          <svg
+            className="pointer-events-none absolute inset-0"
+            width={treeW}
+            height={treeH}
+          >
+            {edges.map((e) => {
+              const x1 = px(e.from);
+              const y1 = py(e.from) + NODE_R;
+              const x2 = px(e.to);
+              const y2 = py(e.to) - NODE_R;
+              const midY = (y1 + y2) / 2;
+              const dir = x2 > x1 ? 1 : x2 < x1 ? -1 : 0;
+              const cr = 14;
+              const d =
+                dir === 0
+                  ? `M ${x1} ${y1} L ${x2} ${y2}`
+                  : `M ${x1} ${y1} L ${x1} ${midY - cr} Q ${x1} ${midY} ${x1 + dir * cr} ${midY} L ${x2 - dir * cr} ${midY} Q ${x2} ${midY} ${x2} ${midY + cr} L ${x2} ${y2}`;
+              const bothVisible = isVisible(e.from) && isVisible(e.to);
+              const active = activePath.has(e.from) && activePath.has(e.to);
+              const dim = hovered !== null && !active;
+              const opacity = !bothVisible ? 0.05 : dim ? 0.2 : 1;
+              return (
+                <g key={`${e.from}-${e.to}`}>
                   <path
                     d={d}
                     fill="none"
-                    className="decision-pulse stroke-primary"
-                    strokeWidth={2.5}
-                    strokeLinecap="round"
-                  />
-                )}
-              </g>
-            );
-          })}
-        </svg>
-
-        {/* Knoten */}
-        {[...visible].map((id, i) => {
-          const node = byId.get(id);
-          if (!node) return null;
-          const active = activePath.has(id);
-          const dim = hovered !== null && !active;
-          const kids = node.children.length;
-          const isCollapsed = collapsed.has(id);
-          return (
-            <motion.div
-              key={id}
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: dim ? 0.35 : 1, scale: 1 }}
-              transition={{ duration: 0.28, delay: Math.min(i * 0.02, 0.3) }}
-              className="absolute -translate-x-1/2 -translate-y-1/2"
-              style={{ left: px(id), top: py(id) }}
-              onMouseEnter={() => setHovered(id)}
-            >
-              <div className="flex flex-col items-center gap-1.5">
-                <NodeShape node={node} active={active} />
-                <div className="whitespace-nowrap text-center">
-                  <div
                     className={cn(
-                      "text-xs font-semibold",
-                      active ? "text-foreground" : "text-foreground/90",
+                      "transition-[stroke,opacity] duration-300",
+                      active ? "stroke-primary" : "stroke-border",
                     )}
-                  >
-                    {node.name}
-                  </div>
-                  <div className="text-[10px] text-muted-foreground">
-                    {node.kind === "tippgeber"
-                      ? `Tippgeber${node.provisionSatz ? ` · ${node.provisionSatz} %` : ""}`
-                      : node.kind === "gf"
-                        ? "Geschäftsführung"
-                        : node.perf
-                          ? `${node.perf.abschluesse} Abschl. · ${formatEUR(node.perf.umsatz)}`
-                          : "Berater"}
+                    strokeWidth={active ? 2.5 : 1.5}
+                    style={{ opacity }}
+                  />
+                  {active && bothVisible && (
+                    <path
+                      d={d}
+                      fill="none"
+                      className="decision-pulse stroke-primary"
+                      strokeWidth={2.5}
+                      strokeLinecap="round"
+                    />
+                  )}
+                </g>
+              );
+            })}
+          </svg>
+
+          {/* Knoten */}
+          {[...pos.keys()].map((id) => {
+            const node = byId.get(id);
+            if (!node) return null;
+            const vis = isVisible(id);
+            const active = activePath.has(id);
+            const dim = hovered !== null && !active;
+            const canFocus = node.children.length > 0;
+            return (
+              <motion.div
+                key={id}
+                initial={false}
+                animate={{ opacity: !vis ? 0.06 : dim ? 0.3 : 1 }}
+                transition={{ duration: 0.3 }}
+                className="absolute -translate-x-1/2 -translate-y-1/2"
+                style={{
+                  left: px(id),
+                  top: py(id),
+                  pointerEvents: vis ? "auto" : "none",
+                }}
+                onMouseEnter={() => vis && setHovered(id)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  focusNode(node);
+                }}
+              >
+                <div
+                  className={cn(
+                    "flex flex-col items-center gap-1.5",
+                    canFocus
+                      ? focusId === id
+                        ? "cursor-zoom-out"
+                        : "cursor-zoom-in"
+                      : "cursor-default",
+                  )}
+                >
+                  <NodeShape node={node} active={active} />
+                  <div className="whitespace-nowrap text-center">
+                    <div
+                      className={cn(
+                        "text-xs font-semibold",
+                        active ? "text-foreground" : "text-foreground/90",
+                      )}
+                    >
+                      {node.name}
+                    </div>
+                    <div className="text-[10px] text-muted-foreground">
+                      {node.kind === "tippgeber"
+                        ? `Tippgeber${node.provisionSatz ? ` · ${node.provisionSatz} %` : ""}`
+                        : node.kind === "gf"
+                          ? "Geschäftsführung"
+                          : node.perf
+                            ? `${node.perf.abschluesse} Abschl. · ${formatEUR(node.perf.umsatz)}`
+                            : "Berater"}
+                    </div>
                   </div>
                 </div>
+              </motion.div>
+            );
+          })}
+        </motion.div>
 
-                {/* Auf-/Zuklappen, wenn Downline vorhanden */}
-                {kids > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => toggle(id)}
-                    className="grid h-5 w-5 place-items-center rounded-full border border-border bg-surface text-muted-foreground shadow-sm transition-colors hover:border-primary hover:text-primary"
-                    aria-label={isCollapsed ? "Aufklappen" : "Zuklappen"}
-                  >
-                    {isCollapsed ? (
-                      <Plus className="h-3 w-3" />
-                    ) : (
-                      <Minus className="h-3 w-3" />
-                    )}
-                  </button>
+        {/* Festes Info-Panel — verdeckt keine Knoten */}
+        <AnimatePresence>
+          {hoveredNode && (
+            <motion.div
+              key={hoveredNode.id}
+              initial={{ opacity: 0, y: -6, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -6, scale: 0.98 }}
+              transition={{ duration: 0.18 }}
+              className={cn(
+                "pointer-events-none absolute top-14 z-20 w-60 rounded-xl border border-border bg-surface/95 p-3.5 shadow-xl backdrop-blur",
+                panelLeft ? "left-3" : "right-3",
+              )}
+            >
+              <div className="mb-2.5 flex items-center gap-2.5">
+                <PanelBadge kind={hoveredNode.kind} />
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-semibold">
+                    {hoveredNode.name}
+                  </div>
+                  <div className="text-[11px] text-muted-foreground">
+                    {hoveredNode.kind === "gf"
+                      ? "Geschäftsführung"
+                      : hoveredNode.kind === "tippgeber"
+                        ? "Tippgeber"
+                        : "Berater"}
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                {hoveredNode.kind === "tippgeber" ? (
+                  <Detail
+                    label="Provision"
+                    value={hoveredNode.provisionSatz ? `${hoveredNode.provisionSatz} %` : "—"}
+                  />
+                ) : (
+                  <>
+                    <Detail
+                      label="Abschlüsse"
+                      value={String(hoveredNode.perf?.abschluesse ?? 0)}
+                    />
+                    <Detail
+                      label="Umsatz"
+                      value={formatEUR(hoveredNode.perf?.umsatz ?? 0)}
+                    />
+                    <Detail
+                      label="Offene Pipeline"
+                      value={formatEUR(hoveredNode.perf?.pipeline ?? 0)}
+                    />
+                    {hoveredNode.stufe ? (
+                      <Detail label="Stufe VV" value={`${hoveredNode.stufe} %`} />
+                    ) : null}
+                    {hoveredNode.immoAnteil ? (
+                      <Detail
+                        label="Immo-Anteil"
+                        value={`${hoveredNode.immoAnteil} %`}
+                      />
+                    ) : null}
+                  </>
                 )}
               </div>
-
-              {/* Hover-Detail */}
-              <AnimatePresence>
-                {hovered === id && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -4 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -4 }}
-                    className="absolute left-1/2 top-full z-30 mt-2 w-56 -translate-x-1/2 rounded-lg border border-border bg-surface p-3 text-xs shadow-xl"
-                  >
-                    <div className="mb-1.5 font-semibold">{node.name}</div>
-                    {node.kind === "tippgeber" ? (
-                      <Detail label="Provision" value={node.provisionSatz ? `${node.provisionSatz} %` : "—"} />
-                    ) : (
-                      <>
-                        <Detail label="Abschlüsse" value={String(node.perf?.abschluesse ?? 0)} />
-                        <Detail label="Umsatz" value={formatEUR(node.perf?.umsatz ?? 0)} />
-                        <Detail label="Offene Pipeline" value={formatEUR(node.perf?.pipeline ?? 0)} />
-                        {node.stufe ? <Detail label="Stufe VV" value={`${node.stufe} %`} /> : null}
-                        {node.immoAnteil ? <Detail label="Immo-Anteil" value={`${node.immoAnteil} %`} /> : null}
-                      </>
-                    )}
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              {hoveredNode.children.length > 0 && (
+                <div className="mt-2.5 border-t border-border pt-2 text-[11px] text-muted-foreground">
+                  {hoveredNode.children.length} direkt darunter · Klick zum Zoomen
+                </div>
+              )}
             </motion.div>
-          );
-        })}
+          )}
+        </AnimatePresence>
       </div>
     </div>
+  );
+}
+
+function PanelBadge({ kind }: { kind: TreeNode["kind"] }) {
+  if (kind === "gf")
+    return (
+      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground">
+        <Crown className="h-4 w-4" />
+      </span>
+    );
+  if (kind === "tippgeber")
+    return (
+      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-border bg-surface text-muted-foreground">
+        <Handshake className="h-4 w-4" />
+      </span>
+    );
+  return (
+    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-amber-500 text-white">
+      <User className="h-4 w-4" />
+    </span>
   );
 }
 
@@ -314,7 +480,7 @@ function NodeShape({ node, active }: { node: TreeNode; active: boolean }) {
 
 function Detail({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between gap-3">
+    <div className="flex justify-between gap-3 text-xs">
       <span className="text-muted-foreground">{label}</span>
       <span className="font-medium tabular-nums">{value}</span>
     </div>

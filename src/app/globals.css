@@ -31,6 +31,7 @@
   --surface: hsl(0 0% 100%); /* #FFFFFF  Karten, Sidebar, Panels */
   --surface-2: hsl(240 23% 95%); /* #F1F1F7  Hover-Zeilen, Inputs */
   --border: hsl(240 23% 92%); /* #E6E6EF  Ränder, Trennlinien */
+  --tree-dot: hsl(240 23% 88%); /* Punkteraster im Organigramm-Viewport (Light) */
   --text-secondary: hsl(218 17% 35%); /* #4A5568  Slate */
   --text-muted: hsl(218 14% 45%); /* #626E82  Platzhalter, Hilfetext */
 
@@ -101,6 +102,7 @@
   --surface: hsl(216 50% 12%); /* #0F1B2D  Navy — Karten, Sidebar, Panels */
   --surface-2: hsl(214 47% 16%); /* #16273D  erhöhte Flächen, Hover-Zeilen, Inputs */
   --border: hsl(215 35% 22%); /* #24344B  Kartenränder, Trennlinien (dezent) */
+  --tree-dot: hsl(215 35% 26%); /* Punkteraster im Organigramm-Viewport (Dark) */
   --text-secondary: hsl(216 19% 72%); /* #A9B4C4  Labels, sekundärer Text (~8:1) */
   --text-muted: hsl(215 15% 56%); /* #7E8CA0  Platzhalter, Hilfetext (~4.8:1) */
 
