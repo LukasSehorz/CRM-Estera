@@ -10,6 +10,15 @@ import { BarSeries } from "@/components/charts/bar-series";
 
 type Period = "monat" | "quartal" | "jahr" | "gesamt";
 
+/** Einzelner realisierter Deal hinter der Umsatz-Zahl (Feedback SJ). */
+export type PerfDealDetail = {
+  dealId: string;
+  dealname: string;
+  bereich: "immobilien" | "vv";
+  betrag: number;
+  periode: { monat: boolean; quartal: boolean; jahr: boolean };
+};
+
 export type PerfRow = {
   id: string;
   name: string;
@@ -22,6 +31,7 @@ export type PerfRow = {
   umsatzImmo: Record<Period, number>;
   umsatzVv: Record<Period, number>;
   provision: Record<Period, number>;
+  deals: PerfDealDetail[];
 };
 
 const PERIODS: { k: Period; label: string }[] = [
@@ -155,6 +165,9 @@ function RowGroup({
   const immo = r.umsatzImmo[period];
   const vv = r.umsatzVv[period];
   const prov = r.provision[period];
+  const periodenDeals = r.deals.filter((d) =>
+    period === "gesamt" ? true : d.periode[period],
+  );
   return (
     <>
       <tr
@@ -218,6 +231,35 @@ function RowGroup({
                 tone="success"
               />
             </div>
+            {/* Die einzelnen Deals hinter der Zahl (Feedback SJ) */}
+            {periodenDeals.length > 0 && (
+              <div className="ml-1 mt-2 rounded-lg border border-border bg-surface p-3">
+                <p className="mb-1.5 text-[11px] font-medium text-muted-foreground">
+                  {periodenDeals.length} Abschl
+                  {periodenDeals.length === 1 ? "uss" : "üsse"} in diesem
+                  Zeitraum
+                </p>
+                <ul className="space-y-1">
+                  {periodenDeals.map((d) => (
+                    <li
+                      key={d.dealId}
+                      className="flex items-center justify-between gap-3 text-xs"
+                    >
+                      <span className="min-w-0 flex-1 truncate">
+                        {d.dealname}
+                        <span className="text-muted-foreground">
+                          {" "}
+                          · {d.bereich === "immobilien" ? "Immobilien" : "VV"}
+                        </span>
+                      </span>
+                      <span className="shrink-0 font-semibold tabular-nums">
+                        {formatEUR(d.betrag)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </td>
         </tr>
       )}

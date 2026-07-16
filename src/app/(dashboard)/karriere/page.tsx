@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Check, Lock, Trophy } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
@@ -64,7 +65,15 @@ export default async function KarrierePage() {
               <tbody>
                 {rows.map((r) => (
                   <tr key={r.id} className="border-b border-border last:border-0">
-                    <td className="px-4 py-3 font-medium">{r.name}</td>
+                    <td className="px-4 py-3 font-medium">
+                      {/* Interaktiv (Feedback SJ): Name öffnet den Drilldown */}
+                      <Link
+                        href={`/dashboard/berater/${r.id}`}
+                        className="text-primary hover:underline"
+                      >
+                        {r.name}
+                      </Link>
+                    </td>
                     <td className="px-4 py-3">
                       <span
                         className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium text-gold-contrast"

@@ -5,7 +5,11 @@ import { KpiCard } from "@/components/charts/kpi-card";
 import { ExpandableStat } from "@/components/charts/expandable-stat";
 import { DashboardTabs } from "../dashboard-tabs";
 import { BereichSwitcher } from "../bereich-switcher";
-import { PerformanceView, type PerfRow } from "./performance-view";
+import {
+  PerformanceView,
+  type PerfRow,
+  type PerfDealDetail,
+} from "./performance-view";
 import { GfSignale } from "./gf-signale";
 import { SummenSkalaBlock } from "./summen-skala";
 import {
@@ -72,6 +76,7 @@ export default async function PerformanceDashboardPage({
       if (c.getMonth() === now.getMonth()) x.monat += val;
     }
   };
+  const byDeals = new Map<string, PerfDealDetail[]>();
   for (const d of a.deals) {
     const am = a.realisiertAm(d);
     if (!am) continue;
@@ -81,6 +86,21 @@ export default async function PerformanceDashboardPage({
     addTo(byPeriod, id, c, amt);
     addTo(d.bereich === "immobilien" ? byImmo : byVv, id, c, amt);
     addTo(byProv, id, c, dealBeraterProvision(d, a.stufeOf(id), a.immoModus));
+    // Einzelne Deals hinter der Zahl (Feedback SJ: „welche zwei Deals hat
+    // Julia gemacht?") — mit Perioden-Flags für den Umschalter.
+    const imJahr = c.getFullYear() === now.getFullYear();
+    const imQuartal =
+      imJahr && Math.floor(c.getMonth() / 3) === Math.floor(now.getMonth() / 3);
+    const imMonat = imJahr && c.getMonth() === now.getMonth();
+    const liste = byDeals.get(id) ?? [];
+    liste.push({
+      dealId: d.id,
+      dealname: d.dealname,
+      bereich: d.bereich,
+      betrag: amt,
+      periode: { monat: imMonat, quartal: imQuartal, jahr: imJahr },
+    });
+    byDeals.set(id, liste);
   }
 
   const rows: PerfRow[] = perf.map((p) => ({
@@ -95,6 +115,7 @@ export default async function PerformanceDashboardPage({
     umsatzImmo: byImmo.get(p.id) ?? mk(),
     umsatzVv: byVv.get(p.id) ?? mk(),
     provision: byProv.get(p.id) ?? mk(),
+    deals: (byDeals.get(p.id) ?? []).sort((x, y) => y.betrag - x.betrag),
   }));
 
   const umsatz = umsatzGesamt(a);

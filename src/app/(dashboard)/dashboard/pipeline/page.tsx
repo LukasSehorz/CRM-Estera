@@ -1,7 +1,6 @@
-import { CheckCircle2, Percent, Timer, TrendingUp } from "lucide-react";
 import { Topbar } from "@/components/layout/topbar";
 import { formatEUR, formatProzent } from "@/lib/format";
-import { KpiCard } from "@/components/charts/kpi-card";
+import { ExpandableStat } from "@/components/charts/expandable-stat";
 import { ChartCard } from "@/components/charts/chart-card";
 import { PipelineFunnel } from "@/components/charts/pipeline-funnel";
 import { BarSeries } from "@/components/charts/bar-series";
@@ -111,6 +110,42 @@ export default async function PipelineDashboardPage({
         return v != null ? formatProzent(v, 0) : "—";
       })();
 
+  // Aufschlüsselungen für die klickbaren KPIs (Feedback SJ: so interaktiv
+  // wie möglich — jede Zahl zeigt auf Klick, woraus sie entsteht).
+  const offeneD = a.deals.filter((d) => isOpen(d, a.sMap));
+  const volumenDetails = [
+    ...funnelScopes.map((b) => {
+      const teil = offeneD.filter((d) => d.bereich === b);
+      return {
+        label: `${bereichLabel(b)} (${teil.length} offen)`,
+        value: formatEUR(teil.reduce((s, d) => s + betragOf(d), 0)),
+        tone: b === "immobilien" ? "primary" : "info",
+      };
+    }),
+    { label: "Offene Deals gesamt", value: String(offeneD.length) },
+  ];
+  const dealTimeDetails = funnelScopes.map((b) => {
+    const v = dealTimeTage(scopeToBereich(aFull, b));
+    return {
+      label: bereichLabel(b),
+      value: v != null ? `${Math.round(v)} Tage` : "— (noch kein Abschluss)",
+    };
+  });
+  const closingDetails = funnelScopes.map((b) => {
+    const v = closingRate(scopeToBereich(aFull, b));
+    return {
+      label: bereichLabel(b),
+      value: v != null ? formatProzent(v, 0) : "— (noch kein erster Termin)",
+    };
+  });
+  const gewonneneDeals = a.deals
+    .filter((d) => isWon(d, a.sMap))
+    .sort((x, y) => betragOf(y) - betragOf(x));
+  const gewonnenDetails = gewonneneDeals.map((d) => ({
+    label: `${d.dealname} · ${bereichLabel(d.bereich)}`,
+    value: formatEUR(betragOf(d)),
+  }));
+
   const perBerater = new Map<string, number>();
   for (const d of a.deals) {
     if (isOpen(d, a.sMap))
@@ -139,29 +174,41 @@ export default async function PipelineDashboardPage({
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <KpiCard
+          <ExpandableStat
             label={a.isGf ? "Pipeline-Volumen" : "Meine Pipeline (Volumen)"}
             value={formatEUR(volWert)}
-            icon={TrendingUp}
+            iconKey="trend"
             tone="accent"
+            details={volumenDetails}
+            info="Summe aller offenen Deals: Immobilien zählen mit dem Kaufpreis, VV mit der Bewertungssumme (BWS). Gewonnene und verlorene Deals zählen nicht mehr mit."
+            linkHref="/listen/deals?preset=offen&from=%2Fdashboard%2Fpipeline"
+            linkLabel="Alle offenen Deals ansehen"
           />
-          <KpiCard
+          <ExpandableStat
             label={gemischt ? "Ø Deal-Time (Immo / VV)" : "Ø Deal-Time"}
             value={dealTimeWert}
-            icon={Timer}
+            iconKey="timer"
             tone="info"
+            details={dealTimeDetails}
+            info="Ø Zeit vom ersten Termin (Immobilien: T1 Konzept, VV: Termin vereinbart) bis zum gewonnenen Abschluss — nur gewonnene Deals zählen, je Sparte getrennt."
           />
-          <KpiCard
+          <ExpandableStat
             label={gemischt ? "Closing Rate (Immo / VV)" : "Closing Rate"}
             value={closingWert}
-            icon={Percent}
+            iconKey="percent"
             tone="success"
+            details={closingDetails}
+            info="Gewonnene Deals ÷ Deals, die mindestens den ersten Termin erreicht haben — je Sparte getrennt, damit sich die Quoten nicht vermischen."
           />
-          <KpiCard
+          <ExpandableStat
             label="Gewonnene Deals"
             value={String(gewonnen)}
-            icon={CheckCircle2}
+            iconKey="check"
             tone="success"
+            details={gewonnenDetails}
+            info="Alle gewonnenen Abschlüsse im gewählten Bereich — aufklappen zeigt jeden Deal einzeln mit seinem Volumen."
+            linkHref="/listen/deals?preset=verkauft&from=%2Fdashboard%2Fpipeline"
+            linkLabel="Zur Verkaufs-Liste"
           />
         </div>
 

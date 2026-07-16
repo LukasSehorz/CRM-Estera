@@ -1,14 +1,19 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import {
   ArrowDownRight,
+  ArrowRight,
   ArrowUpRight,
   CalendarClock,
+  CheckCircle2,
   ChevronDown,
+  Layers,
   Percent,
   Ruler,
   Timer,
+  TrendingUp,
   Undo2,
   Wallet,
   type LucideIcon,
@@ -35,6 +40,9 @@ const ICONS: Record<string, LucideIcon> = {
   timer: Timer,
   percent: Percent,
   undo: Undo2,
+  trend: TrendingUp,
+  check: CheckCircle2,
+  layers: Layers,
 };
 
 const DETAIL_TONE: Record<string, string> = {
@@ -60,6 +68,8 @@ export function ExpandableStat({
   tone = "accent",
   details,
   info,
+  linkHref,
+  linkLabel,
 }: {
   label: string;
   value: string;
@@ -69,6 +79,9 @@ export function ExpandableStat({
   tone?: Tone;
   details?: StatDetail[];
   info?: string;
+  /** Optionaler Link im aufgeklappten Zustand (z. B. „Zur Liste"). */
+  linkHref?: string;
+  linkLabel?: string;
 }) {
   const [open, setOpen] = useState(false);
   const Icon = ICONS[iconKey] ?? Wallet;
@@ -139,10 +152,12 @@ export function ExpandableStat({
               key={d.label}
               className="flex items-center justify-between gap-3 text-sm"
             >
-              <span className="text-muted-foreground">{d.label}</span>
+              <span className="min-w-0 truncate text-muted-foreground">
+                {d.label}
+              </span>
               <span
                 className={cn(
-                  "font-semibold tabular-nums",
+                  "shrink-0 font-semibold tabular-nums",
                   DETAIL_TONE[d.tone ?? "muted"],
                 )}
               >
@@ -150,6 +165,15 @@ export function ExpandableStat({
               </span>
             </div>
           ))}
+          {linkHref && (
+            <Link
+              href={linkHref}
+              className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+            >
+              {linkLabel ?? "Zur Liste"}
+              <ArrowRight className="h-3 w-3" />
+            </Link>
+          )}
         </div>
       )}
     </div>

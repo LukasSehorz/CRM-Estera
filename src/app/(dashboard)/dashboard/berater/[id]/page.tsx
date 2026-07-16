@@ -2,20 +2,15 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import {
   ArrowLeft,
-  Layers,
-  Percent,
   Ruler,
-  Timer,
   Trophy,
-  Undo2,
   Users,
-  Wallet,
   type LucideIcon,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Topbar } from "@/components/layout/topbar";
 import { Pill } from "@/components/ui/pill";
-import { KpiCard } from "@/components/charts/kpi-card";
+import { ExpandableStat } from "@/components/charts/expandable-stat";
 import { ChartCard } from "@/components/charts/chart-card";
 import { AreaTrend } from "@/components/charts/area-trend";
 import { PipelineFunnel } from "@/components/charts/pipeline-funnel";
@@ -96,6 +91,23 @@ export default async function BeraterDrilldownPage({
       ? (["immobilien", "vv"] as const)
       : ([scope] as ("immobilien" | "vv")[]);
 
+  // Aufschlüsselungen (Feedback SJ): Welche Deals stecken hinter den Zahlen?
+  const realisierte = a.deals
+    .filter((d) => a.istRealisiert(d))
+    .sort((x, y) => a.umsatzOf(y) - a.umsatzOf(x));
+  const umsatzDetails = realisierte.map((d) => ({
+    label: `${d.dealname} · ${bereichLabel(d.bereich)}`,
+    value: formatEUR(a.umsatzOf(d)),
+  }));
+  const volumenDetails = funnelScopes.map((b) => {
+    const teil = a.deals.filter((d) => d.bereich === b && isOpen(d, a.sMap));
+    return {
+      label: `${bereichLabel(b)} (${teil.length} offen)`,
+      value: formatEUR(teil.reduce((s, d) => s + betragOf(d), 0)),
+      tone: b === "immobilien" ? "primary" : "info",
+    };
+  });
+
   // Offene Deals mit Tagen in der Phase (Frist-Überschreitung markiert)
   const offeneDeals = a.deals.filter((d) => isOpen(d, a.sMap));
   const { data: verlauf } = offeneDeals.length
@@ -171,36 +183,45 @@ export default async function BeraterDrilldownPage({
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-          <KpiCard
+          <ExpandableStat
             label="Umsatz (Estera-Provision)"
             value={formatEUR(umsatz)}
-            icon={Wallet}
+            iconKey="wallet"
             tone="accent"
+            details={umsatzDetails}
+            info="Realisierte Estera-Provision dieses Beraters — Immobilien zählen ab Notartermin, VV ab Policierung. Aufklappen zeigt jeden Deal mit seinem Beitrag."
           />
-          <KpiCard
+          <ExpandableStat
             label="Pipeline-Volumen (offen)"
             value={formatEUR(volWert)}
-            sub={`${offene} offene Deals`}
-            icon={Layers}
+            iconKey="layers"
             tone="info"
+            details={[
+              ...volumenDetails,
+              { label: "Offene Deals gesamt", value: String(offene) },
+            ]}
+            info="Summe der offenen Deals dieses Beraters: Immobilien mit Kaufpreis, VV mit BWS. Die einzelnen Deals stehen unten in der Karte „Offene Deals“."
           />
-          <KpiCard
+          <ExpandableStat
             label="Closing Rate"
             value={closing != null ? formatProzent(closing, 0) : "—"}
-            icon={Percent}
+            iconKey="percent"
             tone="success"
+            info="Gewonnene Deals ÷ Deals, die mindestens den ersten Termin erreicht haben (Immobilien: T1 Konzept, VV: Termin vereinbart)."
           />
-          <KpiCard
+          <ExpandableStat
             label="Ø Deal-Time"
             value={dealTime != null ? `${Math.round(dealTime)} Tage` : "—"}
-            icon={Timer}
+            iconKey="timer"
             tone="warning"
+            info="Ø Zeit vom ersten Termin bis zum gewonnenen Abschluss — nur gewonnene Deals zählen."
           />
-          <KpiCard
+          <ExpandableStat
             label="Stornoquote"
             value={storno != null ? formatProzent(storno, 0) : "—"}
-            icon={Undo2}
+            iconKey="undo"
             tone="danger"
+            info="Verlorene Deals ÷ entschiedene Deals (gewonnen + verloren). Offene Deals zählen nicht mit."
           />
         </div>
 
