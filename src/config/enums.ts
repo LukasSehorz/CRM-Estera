@@ -152,8 +152,9 @@ export function bereichLabel(value: string): string {
 
 // Kunden-Segmentierung (Call SJ 4.2) — BERECHNET, nicht gespeichert:
 // „bestand" = mind. 1 gewonnener Deal · „pipeline" = mind. 1 offener Deal ·
-// sonst „interessent". (Die VV-Pipeline-Phase „Interessent" bleibt unberührt —
-// Phase ≠ Segment.)
+// sonst „interessent". Die VV-Pipeline-Phase 1 heißt seit Migration 0020
+// „Neuer Lead" (wie Immobilien) — „Interessent" ist exklusiv das Segment:
+// wer in der Pipeline steht, ist bereits Kunde in einem frühen Stadium.
 export type KundenSegment = "interessent" | "pipeline" | "bestand";
 
 export const KUNDEN_SEGMENTE: { value: KundenSegment; label: string }[] = [

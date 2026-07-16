@@ -40,6 +40,7 @@ const X_GAP = 150; // horizontaler Abstand je Blatt
 const NODE_R = 30; // Andock-Radius für Konnektoren
 const PADX = 100;
 const PADY = 92;
+const PANEL_W = 248; // Breite des Hover-Info-Panels
 
 type Pos = { x: number; y: number; depth: number };
 
@@ -197,9 +198,92 @@ export function DecisionTree({ root }: { root: TreeNode }) {
 
   const isVisible = (id: string) => !focusSet || focusSet.has(id);
   const hoveredNode = hovered ? (byId.get(hovered) ?? null) : null;
-  // Info-Panel auf die Gegenseite des gehoverten Knotens legen (verdeckt so nie
-  // die aktive Spalte).
-  const panelLeft = hovered ? cam.x + cam.scale * px(hovered) > cw * 0.52 : false;
+
+  // Info-Panel NAHE am Knoten, aber kollisionsfrei (Feedback SJ): vier
+  // Kandidaten (rechts · links · unterhalb · oberhalb), gewählt wird die
+  // Position, die keine sichtbaren Knoten verdeckt und im Viewport bleibt.
+  // Geister (ausgeblendete Äste) zählen nicht als Kollision.
+  const panelPos = useMemo(() => {
+    if (!hovered) return null;
+    const node = byId.get(hovered);
+    if (!node) return null;
+    const sc = cam.scale;
+    const sx = cam.x + sc * px(hovered);
+    const sy = cam.y + sc * py(hovered);
+
+    // Höhe des Panels grob aus dem Inhalt schätzen (Zeilen + Fußnoten).
+    const rows =
+      node.kind === "tippgeber"
+        ? 1 + (node.perf ? 2 : 0)
+        : 3 + (node.stufe ? 1 : 0) + (node.immoAnteil ? 1 : 0);
+    const footer = (node.children.length > 0 ? 1 : 0) + (node.href ? 1 : 0);
+    const h = 76 + rows * 21 + (footer ? 12 + footer * 20 : 0);
+
+    const sideOff = 88 * sc + 12; // Kreis + zentriertes Label freihalten
+    const rechts = sx + sideOff;
+    const links = sx - sideOff - PANEL_W;
+    const unten = sy + 92 * sc + 10;
+    const oben = sy - 42 * sc - 10 - h;
+    // Seiten-Kandidaten in drei vertikalen Lagen (zentriert · nach oben ·
+    // nach unten ausgerichtet), damit das Panel z. B. der Kinder-Reihe
+    // darunter ausweichen kann.
+    const cand = [
+      { x: rechts, y: sy - h / 2 },
+      { x: links, y: sy - h / 2 },
+      { x: rechts, y: sy + 88 * sc - h }, // Unterkante am Label → ragt nach oben
+      { x: links, y: sy + 88 * sc - h },
+      { x: rechts, y: sy - 36 * sc }, // Oberkante am Kreis → ragt nach unten
+      { x: links, y: sy - 36 * sc },
+      { x: sx - PANEL_W / 2, y: unten }, // unter dem Label, zentriert
+      { x: sx + 10, y: unten }, // unten, nach rechts versetzt
+      { x: sx - PANEL_W - 10, y: unten }, // unten, nach links versetzt
+      { x: sx - PANEL_W / 2, y: oben }, // über dem Knoten, zentriert
+      { x: sx + 10, y: oben }, // oben rechts versetzt
+      { x: sx - PANEL_W - 10, y: oben }, // oben links versetzt
+    ];
+
+    // Belegte Flächen: sichtbare Knoten (Kreis + Label) + Steuerleiste oben.
+    const rects: { l: number; t: number; r: number; b: number }[] = [];
+    for (const id of pos.keys()) {
+      if (id === hovered) continue;
+      if (focusSet && !focusSet.has(id)) continue;
+      const nx = cam.x + sc * px(id);
+      const ny = cam.y + sc * py(id);
+      rects.push({
+        l: nx - 76 * sc,
+        t: ny - 36 * sc,
+        r: nx + 76 * sc,
+        b: ny + 88 * sc,
+      });
+    }
+    rects.push({ l: 0, t: 0, r: cw, b: 48 });
+
+    const score = (x: number, y: number) => {
+      let sum = 0;
+      for (const r of rects) {
+        const w = Math.min(x + PANEL_W, r.r) - Math.max(x, r.l);
+        const hh = Math.min(y + h, r.b) - Math.max(y, r.t);
+        if (w > 0 && hh > 0) sum += w * hh;
+      }
+      return sum;
+    };
+
+    let best = { x: 0, y: 0 };
+    let bestScore = Infinity;
+    for (const c of cand) {
+      // In den Viewport klemmen, dann bewerten; nötiges Verschieben
+      // (Klemmen) zählt als leichte Strafe, damit die natürliche
+      // Position gewinnt, wenn beide frei sind.
+      const x = Math.min(Math.max(c.x, 8), cw - PANEL_W - 8);
+      const y = Math.min(Math.max(c.y, 8), ch - h - 8);
+      const s = score(x, y) + (Math.abs(x - c.x) + Math.abs(y - c.y)) * 4;
+      if (s < bestScore - 0.5) {
+        bestScore = s;
+        best = { x, y };
+      }
+    }
+    return best;
+  }, [hovered, byId, cam, px, py, pos, focusSet, cw, ch]);
 
   function focusNode(node: TreeNode) {
     const target = node.children.length
@@ -378,19 +462,17 @@ export function DecisionTree({ root }: { root: TreeNode }) {
           })}
         </motion.div>
 
-        {/* Festes Info-Panel — verdeckt keine Knoten */}
+        {/* Info-Panel nahe am Knoten — kollisionsfrei platziert */}
         <AnimatePresence>
-          {hoveredNode && (
+          {hoveredNode && panelPos && (
             <motion.div
               key={hoveredNode.id}
               initial={{ opacity: 0, y: -6, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -6, scale: 0.98 }}
               transition={{ duration: 0.18 }}
-              className={cn(
-                "pointer-events-none absolute top-14 z-20 w-60 rounded-xl border border-border bg-surface/95 p-3.5 shadow-xl backdrop-blur",
-                panelLeft ? "left-3" : "right-3",
-              )}
+              style={{ left: panelPos.x, top: panelPos.y, width: PANEL_W }}
+              className="pointer-events-none absolute z-20 rounded-xl border border-border bg-surface/95 p-3.5 shadow-xl backdrop-blur"
             >
               <div className="mb-2.5 flex items-center gap-2.5">
                 <PanelBadge kind={hoveredNode.kind} />

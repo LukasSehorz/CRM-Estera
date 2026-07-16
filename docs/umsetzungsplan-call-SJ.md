@@ -223,9 +223,11 @@ Netto-Pool nach Factoring = 6.739,20 €. Berater 70 % = 4.717,44 €. Tippgeber
 - **4.1:** Nur sichtbare UI-Texte umbenannt; Route `/kontakte`, DB `contacts`
   und Code-Bezeichner bleiben (Konvention: Code englisch).
 - **4.2:** Segment-Namen wie im Plan (Interessent / In Pipeline / Bestandskunde),
-  BERECHNET aus Deals (kein DB-Feld). Die VV-Pipeline-Phase „Interessent (10 %)"
-  bleibt unverändert — Phase ≠ Segment (Anhang B damit entschieden; bei
-  Bedarf Phase später umbenennen).
+  BERECHNET aus Deals (kein DB-Feld). **Nachtrag (Feedback 16.07.):** Die
+  VV-Pipeline-Phase 1 wurde per Migration 0020 in **„Neuer Lead"** umbenannt
+  (konsistent zur Immobilien-Pipeline) — „Interessent" ist exklusiv das
+  Kunden-Segment, denn wer in der Pipeline steht, ist bereits Kunde in einem
+  frühen Stadium (Anhang B damit final entschieden).
 - **5.6:** 7-Tage-Forecast = offene Deals mit Phasen-Wahrscheinlichkeit ≥ 90 %
   (Heuristik analog 30/60/90); 7-Tage-Rückblick via `umsatzRollierend(…, 7)`.
 - **5.5:** Berater ohne Downline: Sektion ausgeblendet; mit Downline heißt sie
