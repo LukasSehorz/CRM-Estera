@@ -168,11 +168,13 @@ export function stornoQuote(a: AnalyticsData, beraterId?: string): number | null
 
 /**
  * Forecast (Kap. 6): gewichtete PROVISION der offenen Pipeline über
- * 30/60/90 Tage. Ohne geplantes Abschlussdatum je Deal nähern wir über die
- * Phasen-Wahrscheinlichkeit an: späte Phasen (≥ 80 %) schließen typisch in
- * ~30 Tagen, mittlere (≥ 40 %) in ~60, der Rest in ~90 (kumulativ).
+ * 7/30/60/90 Tage. Ohne geplantes Abschlussdatum je Deal nähern wir über die
+ * Phasen-Wahrscheinlichkeit an: sehr späte Phasen (≥ 90 %) schließen typisch
+ * binnen ~7 Tagen (5.6, Wochenforecast), späte (≥ 80 %) in ~30 Tagen,
+ * mittlere (≥ 40 %) in ~60, der Rest in ~90 (kumulativ).
  */
 export function forecastGewichtet(a: AnalyticsData) {
+  let t7 = 0;
   let t30 = 0;
   let t60 = 0;
   let t90 = 0;
@@ -183,8 +185,9 @@ export function forecastGewichtet(a: AnalyticsData) {
     t90 += gewichtet;
     if (prob >= 0.4) t60 += gewichtet;
     if (prob >= 0.8) t30 += gewichtet;
+    if (prob >= 0.9) t7 += gewichtet;
   }
-  return { t30, t60, t90 };
+  return { t7, t30, t60, t90 };
 }
 
 /**

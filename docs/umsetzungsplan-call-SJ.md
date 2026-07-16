@@ -95,36 +95,36 @@ Immo immer vom Kaufpreis.
 sehen dessen Performance; motivierend dargestellt.
 
 **Berater/Tippgeber anlegen**
-- [ ] **3.1** „Neuen Berater anlegen": **Immo-Anteil (%) als Regler 1–10** ergänzen. (F3/SC5)
+- [x] **3.1** „Neuen Berater anlegen": **Immo-Anteil (%) als Regler 1–10** ergänzen. (F3/SC5)
   → `team/stufe-table.tsx` (NeuerBeraterForm), `team/actions.ts` (createBerater)
-- [ ] **3.2** **„Neuen Tippgeber anlegen"** (GF-Ansicht) — wie Berater, mit **individueller
+- [x] **3.2** **„Neuen Tippgeber anlegen"** (GF-Ansicht) — wie Berater, mit **individueller
   Provision** (10/15/40 %). (F6/58:00)
-- [ ] **3.3** Team-Liste **nach Berater / Tippgeber filterbar**. (F6)
-- [ ] **3.4** Partner/Tippgeber **Sparten frei wählbar** — nicht automatisch VV, wenn nur
+- [x] **3.3** Team-Liste **nach Berater / Tippgeber filterbar**. (F6)
+- [x] **3.4** Partner/Tippgeber **Sparten frei wählbar** — nicht automatisch VV, wenn nur
   Immobilien (25:08).
 
 **Struktur / Organigramm**
-- [ ] **3.5** Struktur als **Baum/Organigramm**, **mehrstufig** (Eva → Lukas → dessen
+- [x] **3.5** Struktur als **Baum/Organigramm**, **mehrstufig** (Eva → Lukas → dessen
   Berater), **Berater vs. Tippgeber unterscheidbar**, schön dargestellt. (F5)
-- [ ] **3.6** **Hover** über einen Knoten → Performance (Umsätze) des Berater/Tippgeber — in
+- [x] **3.6** **Hover** über einen Knoten → Performance (Umsätze) des Berater/Tippgeber — in
   **GF-Team-Verwaltung** (SC9) **und** Berater-Ansicht. (F5)
-- [ ] **3.7** **Mehrebenen freischalten**: DB-Constraint „nur eine Ebene" aufheben,
+- [x] **3.7** **Mehrebenen freischalten**: DB-Constraint „nur eine Ebene" aufheben,
   Rekursion in `downlineOf`/Overhead. 🔁 (F5) → `supabase/migrations/*`, `lib/analytics.ts`
-- [ ] **3.8** **Berater-Self-Service**: Berater legt eigene Berater/Tippgeber an & setzt deren
+- [x] **3.8** **Berater-Self-Service**: Berater legt eigene Berater/Tippgeber an & setzt deren
   Provision — **nur für die eigenen Leute** (RLS/SECURITY DEFINER). (F5/F6/40:07)
-- [ ] **3.9** **Berater-„Team-Verwaltung"** analog GF, für die eigene Downline. (F5)
-- [ ] **3.10** **Overhead ausweisen**: Berater verdient an Downline/Tippgeber mit — in
+- [x] **3.9** **Berater-„Team-Verwaltung"** analog GF, für die eigene Downline. (F5)
+- [x] **3.10** **Overhead ausweisen**: Berater verdient an Downline/Tippgeber mit — in
   Performance/Struktur sichtbar. (F5)
-- [ ] **3.11** Gamifizierte **„Partner"-Seite** (eigener Nav-Punkt): Anzahl Partner, bester
+- [x] **3.11** Gamifizierte **„Partner"-Seite** (eigener Nav-Punkt): Anzahl Partner, bester
   Tippgeber, wer wie viel Umsatz — motivierend & einfach lesbar. (56:29)
 
 ---
 
 ## Phase 4 — „Kunden" statt „Kontakte" + Segmentierung
 
-- [ ] **4.1** **„Kontakte" → „Kunden"** umbenennen (Nav, Titel, Buttons; ~20–25 Labels).
+- [x] **4.1** **„Kontakte" → „Kunden"** umbenennen (Nav, Titel, Buttons; ~20–25 Labels).
   (F4/SC7)
-- [ ] **4.2** **Segmentierung** (F4):
+- [x] **4.2** **Segmentierung** (F4):
   - **Interessent** — eingetragen, aber **noch nicht in der Pipeline** (kein Deal/kein
     Erstgespräch).
   - **In Pipeline** — hat einen aktiven Deal (die VV-Pipeline beginnt mit Phase
@@ -138,27 +138,27 @@ sehen dessen Performance; motivierend dargestellt.
 
 ## Phase 5 — Dashboard-Feinschliff & Signale
 
-- [ ] **5.1** „Gewichtet (realistisch)" → **„Forecast"** + **Info-`?`-Tooltip** (erklärt die
+- [x] **5.1** „Gewichtet (realistisch)" → **„Forecast"** + **Info-`?`-Tooltip** (erklärt die
   Gewichtung nach Phasen-Wahrscheinlichkeit). (F4/SC6) → `dashboard/midnight-cards.tsx`
-- [ ] **5.2** **Umsatzentwicklungs-Chart größer**. (2:35) → `dashboard/overview-card.tsx`
-- [ ] **5.3** **Pipeline-Volumen** bei Immobilien: leere rechte Hälfte → volle Breite.
+- [x] **5.2** **Umsatzentwicklungs-Chart größer**. (2:35) → `dashboard/overview-card.tsx`
+- [x] **5.3** **Pipeline-Volumen** bei Immobilien: leere rechte Hälfte → volle Breite.
   (11:14) → `dashboard/pipeline/page.tsx`
-- [ ] **5.4** **Berater-Performance (GF):** Berater-Liste weiter nach oben. (23:57)
-- [ ] **5.5** **Berater-Performance (Berater-Ansicht):** „Umsatz pro Berater" macht keinen
+- [x] **5.4** **Berater-Performance (GF):** Berater-Liste weiter nach oben. (23:57)
+- [x] **5.5** **Berater-Performance (Berater-Ansicht):** „Umsatz pro Berater" macht keinen
   Sinn (nur man selbst) → durch **eigene Downline-Performance** ersetzen. (F5/SC8)
-- [ ] **5.6** **7-Tage-Rückblick + 7-Tage-Forecast** — Berater- **und** GF-Ansicht (zusätzlich
+- [x] **5.6** **7-Tage-Rückblick + 7-Tage-Forecast** — Berater- **und** GF-Ansicht (zusätzlich
   zu 30/60/90). (F5/F7)
-- [ ] **5.7** **GF-Signal „Einbehalte fällig" entfernen** (wird automatisch ausgezahlt).
+- [x] **5.7** **GF-Signal „Einbehalte fällig" entfernen** (wird automatisch ausgezahlt).
   (F11/SC11) → `dashboard/performance/gf-signale.tsx`
-- [ ] **5.8** **GF-Signal „fehlende Dokumente"** ergänzen (unvollständige Kundenakte; 13:31).
-- [ ] **5.9** **Eingeschätzte Kunden:** Spalte **„Objekt (frei)" entfernen/ersetzen**.
+- [x] **5.8** **GF-Signal „fehlende Dokumente"** ergänzen (unvollständige Kundenakte; 13:31).
+- [x] **5.9** **Eingeschätzte Kunden:** Spalte **„Objekt (frei)" entfernen/ersetzen**.
   (F10/SC10)
-- [ ] **5.10** **To-Dos bei Beratern präsenter** (oben / eigener Bereich). (41:46)
-- [ ] **5.11** **„Listen" → „Übersichten"** umbenennen. (26:04) → `app-sidebar.tsx`
-- [ ] **5.12** **Weißes/Light-Mode-Dashboard entbuggen**. (40:50)
-- [ ] **5.13** **„Karriere" als eigener Nav-Punkt**: alle Stufen + Fortschritt; **GF-Übersicht
+- [x] **5.10** **To-Dos bei Beratern präsenter** (oben / eigener Bereich). (41:46)
+- [x] **5.11** **„Listen" → „Übersichten"** umbenennen. (26:04) → `app-sidebar.tsx`
+- [x] **5.12** **Weißes/Light-Mode-Dashboard entbuggen**. (40:50)
+- [x] **5.13** **„Karriere" als eigener Nav-Punkt**: alle Stufen + Fortschritt; **GF-Übersicht
   aller Berater-Stufen**. (52:09)
-- [ ] **5.14** „Kugel"/Sphere: optional behalten, ggf. als „Live-Tracking" labeln. (53:29)
+- [x] **5.14** „Kugel"/Sphere: optional behalten, ggf. als „Live-Tracking" labeln. (53:29)
 
 ---
 
@@ -205,3 +205,34 @@ Netto-Pool nach Factoring = 6.739,20 €. Berater 70 % = 4.717,44 €. Tippgeber
   Estera-Zeilen (Berater sieht „Deine Provision/Gewinn")?
 - **4.2:** Bezeichnungen der Kunden-Segmente final (Interessent / In Pipeline /
   Bestandskunde) — Vorschlag kommt im Umsetzungsschritt.
+
+---
+
+## Anhang C — Entscheidungen bei der Umsetzung (16.07.2026, Phase 3–5)
+
+- **Overhead = Kaskade (3.7/3.10):** Differenzmodell über ALLE Ebenen — jede
+  Upline-Ebene erhält je Deal die Differenz zwischen der eigenen Anbindung und
+  der Anbindung ihres DIREKTEN Kindes auf dem Pfad zum Abschluss-Berater
+  (VV: Stufe; Immo: Immo-Anteil). Umgesetzt in `provision.ts`
+  (`branchChildTowards`, `dealOverheadFuerUpline` + `partnerImmoAnteil`),
+  `partner.ts`, `gehalt.ts`, Partner-Seite. **Kaskade-Prinzip laut Kunde:**
+  Wer einen Berater anlegt, wird dessen Upline (`createBerater` setzt
+  `parent_berater_id` = Anleger; in der Team-Verwaltung änderbar).
+  Hinweis: Die GF hat keinen eigenen Immo-Anteil → ihr Immo-Overhead ist per
+  Formel 0 (Estera-Marge deckt Immobilien bereits ab); VV-Overhead greift voll.
+- **4.1:** Nur sichtbare UI-Texte umbenannt; Route `/kontakte`, DB `contacts`
+  und Code-Bezeichner bleiben (Konvention: Code englisch).
+- **4.2:** Segment-Namen wie im Plan (Interessent / In Pipeline / Bestandskunde),
+  BERECHNET aus Deals (kein DB-Feld). Die VV-Pipeline-Phase „Interessent (10 %)"
+  bleibt unverändert — Phase ≠ Segment (Anhang B damit entschieden; bei
+  Bedarf Phase später umbenennen).
+- **5.6:** 7-Tage-Forecast = offene Deals mit Phasen-Wahrscheinlichkeit ≥ 90 %
+  (Heuristik analog 30/60/90); 7-Tage-Rückblick via `umsatzRollierend(…, 7)`.
+- **5.5:** Berater ohne Downline: Sektion ausgeblendet; mit Downline heißt sie
+  „Meine Struktur — Umsatz pro Berater" (RLS liefert selbst + Downline).
+- **5.13:** Eigene Route `/karriere` (Nav nur mit VV-Sparte): Berater = alle
+  5 Stufen + Fortschritt im Fenster; GF = Tabelle aller Berater mit Rang,
+  BWS im Fenster und Fortschritt. Aufstieg bleibt manuelle GF-Entscheidung.
+- **5.12:** Sidebar-Hover-Schatten theme-fähig (Light weich). Verwaiste Tokens
+  (`--graphite`, `.card-vivid-blue`) bleiben vorerst (Whitelabel-Themes),
+  Kandidat für Aufräum-Runde.

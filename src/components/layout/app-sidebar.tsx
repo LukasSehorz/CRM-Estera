@@ -13,6 +13,7 @@ import {
   Menu,
   Network,
   PiggyBank,
+  Trophy,
   UserCog,
   Users,
   X,
@@ -42,6 +43,8 @@ const NAV: NavSection[] = [
       { href: "/dokumente", label: "Dokumente", icon: FolderOpen },
       { href: "/listen", label: "Übersichten", icon: ListChecks },
       { href: "/partner", label: "Partner", icon: Network },
+      // Karriere (5.13): VV-Karriereleiter — nur mit VV-Sparte sinnvoll.
+      { href: "/karriere", label: "Karriere", icon: Trophy, bereich: "vv" },
     ],
   },
   {
@@ -254,7 +257,8 @@ export function DesktopSidebar({
     // Schmale Icon-Rail; fährt beim Überfahren mit der Maus über den Inhalt
     // aus (Overlay statt Reflow — der Content springt nicht).
     <aside className="sticky top-0 z-40 hidden h-screen w-[72px] shrink-0 lg:block">
-      <div className="group/sidebar absolute inset-y-0 left-0 flex w-[72px] flex-col overflow-hidden border-r border-border bg-sidebar transition-[width,box-shadow] duration-300 ease-out hover:w-64 hover:shadow-[8px_0_40px_rgba(0,0,0,0.55)]">
+      {/* 5.12: Schatten theme-fähig — im Light weich statt schwerem Dark-Schatten. */}
+      <div className="group/sidebar absolute inset-y-0 left-0 flex w-[72px] flex-col overflow-hidden border-r border-border bg-sidebar transition-[width,box-shadow] duration-300 ease-out hover:w-64 hover:shadow-[8px_0_32px_rgba(15,27,45,0.14)] dark:hover:shadow-[8px_0_40px_rgba(0,0,0,0.55)]">
         <Brand rail />
         <NavLinks isGf={isGf} isBackoffice={isBackoffice} bereiche={bereiche} rail />
         <Footer name={name} rolle={rolle} rail fotoUrl={fotoUrl} />

@@ -165,7 +165,15 @@ export default async function PipelineDashboardPage({
           />
         </div>
 
-        <div className="grid items-start gap-4 lg:grid-cols-2">
+        {/* 5.3: Bei Einzel-Bereich füllt die Karte die volle Breite —
+            keine leere rechte Hälfte (Muster wie Haupt-Dashboard). */}
+        <div
+          className={
+            funnelScopes.length === 1
+              ? "grid items-start gap-4"
+              : "grid items-start gap-4 lg:grid-cols-2"
+          }
+        >
           {funnelScopes.map((b) => (
             <ChartCard
               key={b}
@@ -177,7 +185,13 @@ export default async function PipelineDashboardPage({
           ))}
         </div>
 
-        <div className="grid items-start gap-4 lg:grid-cols-2">
+        <div
+          className={
+            funnelScopes.length === 1
+              ? "grid items-start gap-4"
+              : "grid items-start gap-4 lg:grid-cols-2"
+          }
+        >
           {funnelScopes.map((b) => (
             <KonversionCard
               key={b}

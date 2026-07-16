@@ -37,7 +37,7 @@ function TrendTooltip({
 /** Flächen-/Linien-Trend mit weichem Akzent-Verlauf (z. B. Umsatzentwicklung). */
 export function AreaTrend({
   data,
-  height = 260,
+  height = 300,
 }: {
   data: Point[];
   height?: number;

@@ -192,13 +192,15 @@ export function EingeschaetztView({
                       : "—"}
                   </td>
                   <td className="px-4 py-3">
+                    {/* 5.9: „frei" als Fließtext war verwirrend — belegt
+                        bleibt als Pill, sonst neutraler Strich. */}
                     {r.belegt ? (
                       <Pill tone="warning">
                         <Home className="mr-1 h-3 w-3" />
-                        belegt
+                        Auf Objekt belegt
                       </Pill>
                     ) : (
-                      <span className="text-muted-foreground">frei</span>
+                      <span className="text-muted-foreground">—</span>
                     )}
                   </td>
                 </tr>

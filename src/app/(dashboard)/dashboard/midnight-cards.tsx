@@ -44,6 +44,30 @@ function DeltaPill({ value }: { value: number | null }) {
   );
 }
 
+/**
+ * ?-Tooltip (5.1): CSS-only, per Hover UND Tastatur-Fokus sichtbar —
+ * kein zusätzliches Paket, keine Portal-Logik nötig.
+ */
+function InfoHint({ text }: { text: string }) {
+  return (
+    <span className="group/info relative inline-flex">
+      <button
+        type="button"
+        aria-label="Erklärung anzeigen"
+        className="grid h-4 w-4 place-items-center rounded-full border border-current text-[9px] font-bold leading-none opacity-60 transition-opacity hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        ?
+      </button>
+      <span
+        role="tooltip"
+        className="pointer-events-none absolute left-1/2 top-full z-30 mt-2 w-60 -translate-x-1/2 rounded-lg border border-border bg-surface p-2.5 text-left text-[11px] font-normal leading-relaxed text-foreground opacity-0 shadow-xl transition-opacity duration-150 group-focus-within/info:opacity-100 group-hover/info:opacity-100"
+      >
+        {text}
+      </span>
+    </span>
+  );
+}
+
 /** Karte 2 — Total Balance: Umsatz, Wachstum, gewonnene Deals + 3D-Muster. */
 export function BalanceCard({
   umsatz30,
@@ -187,7 +211,8 @@ export function ForecastCard({
           )}
         >
           <Scale className="h-3.5 w-3.5" aria-hidden />
-          Gewichtet (realistisch)
+          Forecast
+          <InfoHint text="Jeder offene Deal zählt mit der Wahrscheinlichkeit seiner Phase: 500.000 € in einer 60-%-Phase fließen mit 300.000 € ein. Die Summe ist der realistische Forecast." />
         </p>
         <p className="mt-2 bg-cyan-pink-gradient bg-clip-text text-3xl font-bold tabular-nums tracking-tight text-transparent">
           {formatEUR(werte.gewichtet)}

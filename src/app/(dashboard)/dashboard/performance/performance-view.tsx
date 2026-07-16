@@ -43,10 +43,15 @@ export function PerformanceView({
     (a, b) => b.umsatz[period] - a.umsatz[period],
   );
 
+  // 5.5: Für einen Berater OHNE Downline zeigt „Umsatz pro Berater" nur ihn
+  // selbst — ohne Mehrwert, also ausblenden. Mit Downline (RLS liefert
+  // sich + Struktur) wird es die eigene Struktur-Ansicht.
+  if (!isGf && rows.length <= 1) return null;
+
   return (
     <div className="space-y-4">
       <ChartCard
-        title="Umsatz pro Berater"
+        title={isGf ? "Umsatz pro Berater" : "Meine Struktur — Umsatz pro Berater"}
         subtitle="Gewonnene Deals"
         action={
           <div className="flex gap-1 rounded-lg border border-border bg-surface-2 p-0.5">

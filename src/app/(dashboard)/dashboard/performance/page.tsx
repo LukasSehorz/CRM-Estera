@@ -90,6 +90,13 @@ export default async function PerformanceDashboardPage({
     roll.previous > 0 && roll.current > 0
       ? ((roll.current - roll.previous) / roll.previous) * 100
       : null;
+  // Wochenrückblick (5.6): letzte 7 Tage vs. die 7 Tage davor — Grundlage des
+  // wöchentlichen Team-Plans („wie ist die letzte Woche gelaufen?").
+  const woche = umsatzRollierend(a, now, 7);
+  const wocheDelta =
+    woche.previous > 0 && woche.current > 0
+      ? ((woche.current - woche.previous) / woche.previous) * 100
+      : null;
 
   return (
     <>
@@ -104,6 +111,15 @@ export default async function PerformanceDashboardPage({
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {/* Wochenrückblick (5.6): das wichtigste Steuerungsintervall */}
+          <KpiCard
+            label={a.isGf ? "Umsatz (7 Tage)" : "Mein Umsatz (7 Tage)"}
+            value={formatEUR(woche.current)}
+            delta={wocheDelta}
+            deltaLabel="vs. Vorwoche"
+            icon={CalendarClock}
+            tone="success"
+          />
           <KpiCard
             label={a.isGf ? "Umsatz (30 Tage)" : "Mein Umsatz (30 Tage)"}
             value={formatEUR(roll.current)}
@@ -152,7 +168,12 @@ export default async function PerformanceDashboardPage({
           />
         </div>
 
-        {/* Forecast (Kap. 6): gewichtete Provision, nicht Volumen */}
+        {/* Berater-Liste direkt nach den KPIs (5.4): „Berater-Performance"
+            zeigt die Berater ohne Scroll-Weg. */}
+        <PerformanceView rows={rows} isGf={aFull.isGf} />
+
+        {/* Forecast (Kap. 6): gewichtete Provision, nicht Volumen —
+            inkl. Wochenforecast (5.6). */}
         <section>
           <div className="mb-3">
             <h2 className="text-base font-semibold">Forecast</h2>
@@ -161,7 +182,13 @@ export default async function PerformanceDashboardPage({
               offenen Pipeline — Näherung über die Phasen-Wahrscheinlichkeit.
             </p>
           </div>
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <KpiCard
+              label="Nächste 7 Tage"
+              value={formatEUR(forecast.t7)}
+              icon={CalendarClock}
+              tone="success"
+            />
             <KpiCard
               label="Nächste 30 Tage"
               value={formatEUR(forecast.t30)}
@@ -185,8 +212,6 @@ export default async function PerformanceDashboardPage({
 
         {/* Steuerungssignale — nur GF */}
         {aFull.isGf && <GfSignale a={aFull} />}
-
-        <PerformanceView rows={rows} isGf={aFull.isGf} />
 
         {/* Summen-Skala (6.2) — nur GF, je Bereich + gesamt */}
         <SummenSkalaBlock a={aFull} />

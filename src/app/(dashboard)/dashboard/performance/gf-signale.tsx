@@ -1,8 +1,7 @@
 import Link from "next/link";
-import { AlarmClockOff, GraduationCap, Hourglass } from "lucide-react";
+import { AlarmClockOff, FileWarning, GraduationCap } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { formatDate, formatEUR } from "@/lib/format";
-import { einbehaltFaelligAm } from "@/lib/provision";
+import { formatEUR } from "@/lib/format";
 import {
   betragOf,
   isOpen,
@@ -11,15 +10,15 @@ import {
 } from "@/lib/analytics";
 
 /**
- * GF-Signale (Kap. 6): Coaching-Hinweise, bald fällige Einbehalte und
- * Deals über der Phasen-Frist — reine Sichtbarkeit, keine Eskalation (4.7).
+ * GF-Signale (Kap. 6): Coaching-Hinweise, unvollständige Kundenakten (5.8)
+ * und Deals über der Phasen-Frist — reine Sichtbarkeit, keine Eskalation
+ * (4.7). „Einbehalte fällig" wurde entfernt (5.7): die Auszahlung läuft
+ * automatisch, das Signal hatte keinen Steuerungswert.
  * Wird nur für die Geschäftsführung gerendert.
  */
 export async function GfSignale({ a }: { a: AnalyticsData }) {
   const supabase = await createClient();
   const now = new Date();
-  const in30 = new Date(now.getTime() + 30 * 86_400_000).toISOString();
-  const jetzt = now.toISOString();
 
   // (a) Coaching: hohe offene Pipeline, aber 0 Abschlüsse
   const coaching = a.beraterIds
@@ -37,20 +36,52 @@ export async function GfSignale({ a }: { a: AnalyticsData }) {
     .sort((x, y) => y.pipeline - x.pipeline)
     .slice(0, 4);
 
-  // (b) Einbehalte, die in den nächsten 30 Tagen fällig werden —
-  // Einbehalt gibt es nur mit Factoring (7.1); einbehaltOf liefert sonst 0.
-  const faellige = a.deals
-    .filter((d) => d.bereich === "vv" && isWon(d, a.sMap))
-    .map((d) => ({
-      deal: d,
-      faellig: einbehaltFaelligAm(d.closed_at ?? d.created_at),
-      betrag: a.einbehaltOf(d),
-    }))
-    .filter(
-      (x) =>
-        x.faellig != null && x.faellig > jetzt && x.faellig <= in30 && x.betrag > 0,
-    )
-    .sort((x, y) => (x.faellig! < y.faellig! ? -1 : 1))
+  // (b) Fehlende Dokumente (5.8): Immobilien-Kunden mit unvollständiger
+  // Checklisten-Akte. Quelle ist das granulare Checklisten-System
+  // (document_types + Status + hochgeladene Dateien), nicht das alte
+  // Freitext-Flag. RLS: GF sieht alle Kunden.
+  const [
+    { data: aktenKunden },
+    { data: docTypes },
+    { data: docStatus },
+    { data: docFiles },
+  ] = await Promise.all([
+    supabase
+      .from("contacts")
+      .select("id, vorname, nachname, interesse, ist_selbststaendig, ist_immobilienbesitzer"),
+    supabase.from("document_types").select("id, gruppe").eq("aktiv", true),
+    supabase
+      .from("contact_document_status")
+      .select("contact_id, document_type_id, vorhanden"),
+    supabase.from("contact_documents").select("contact_id, document_type_id"),
+  ]);
+  const vorhandenSet = new Set<string>();
+  for (const s of docStatus ?? [])
+    if (s.vorhanden) vorhandenSet.add(`${s.contact_id}:${s.document_type_id}`);
+  for (const f of docFiles ?? [])
+    if (f.document_type_id)
+      vorhandenSet.add(`${f.contact_id}:${f.document_type_id}`);
+  const fehlendeAkten = (aktenKunden ?? [])
+    .filter((k) => (k.interesse ?? []).includes("immobilien"))
+    .map((k) => {
+      const anwendbar = (docTypes ?? []).filter(
+        (t) =>
+          t.gruppe === "allgemein" ||
+          (t.gruppe === "selbststaendig" && k.ist_selbststaendig) ||
+          (t.gruppe === "immobilienbesitzer" && k.ist_immobilienbesitzer),
+      );
+      const fehlt = anwendbar.filter(
+        (t) => !vorhandenSet.has(`${k.id}:${t.id}`),
+      ).length;
+      return {
+        id: k.id,
+        name: `${k.vorname} ${k.nachname}`,
+        fehlt,
+        gesamt: anwendbar.length,
+      };
+    })
+    .filter((r) => r.fehlt > 0)
+    .sort((x, y) => y.fehlt - x.fehlt)
     .slice(0, 4);
 
   // (c) Deals über der Phasen-Frist (SLA aus 4.4)
@@ -85,7 +116,9 @@ export async function GfSignale({ a }: { a: AnalyticsData }) {
     .slice(0, 4);
 
   const leer =
-    coaching.length === 0 && faellige.length === 0 && ueberfaellig.length === 0;
+    coaching.length === 0 &&
+    fehlendeAkten.length === 0 &&
+    ueberfaellig.length === 0;
   if (leer) return null;
 
   return (
@@ -114,21 +147,21 @@ export async function GfSignale({ a }: { a: AnalyticsData }) {
           ))}
         </SignalPanel>
 
-        {/* Einbehalte: zeitkritisch -> Warn-Ton */}
+        {/* Fehlende Dokumente (5.8): unvollständige Kundenakte -> Warn-Ton */}
         <SignalPanel
-          icon={Hourglass}
-          title="Einbehalte fällig"
-          subtitle="in den nächsten 30 Tagen"
+          icon={FileWarning}
+          title="Fehlende Dokumente"
+          subtitle="unvollständige Kundenakte"
           tone="var(--warning)"
-          count={faellige.length}
-          leerText="Nichts fällig."
+          count={fehlendeAkten.length}
+          leerText="Alle Akten vollständig."
         >
-          {faellige.map((f) => (
+          {fehlendeAkten.map((k) => (
             <SignalRow
-              key={f.deal.id}
-              href={`/deals/${f.deal.id}`}
-              label={f.deal.dealname}
-              meta={`${formatEUR(f.betrag)} · fällig ${formatDate(f.faellig!)}`}
+              key={k.id}
+              href={`/kontakte/${k.id}`}
+              label={k.name}
+              meta={`${k.fehlt} von ${k.gesamt} Unterlagen fehlen`}
             />
           ))}
         </SignalPanel>

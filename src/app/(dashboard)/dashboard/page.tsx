@@ -196,16 +196,16 @@ export default async function DashboardPage({
         {/* Ziel-Box (Schleife 3, Ber. 2): einloggen -> sofort motiviert */}
         {zielDaten && <ZielBlock daten={zielDaten} />}
 
-        {/* Hero-Reihe: Graph · Total Balance · Blick nach vorn */}
+        {/* Hero-Reihe: Graph (5.2: größer) · Total Balance · Blick nach vorn */}
         <div className="grid items-stretch gap-4 xl:grid-cols-12">
-          <OverviewCard ranges={umsatzRanges} mom={mom} className="xl:col-span-4" />
+          <OverviewCard ranges={umsatzRanges} mom={mom} className="xl:col-span-5" />
           <BalanceCard
             umsatz30={umsatz30}
             mom={mom}
             gewonnen={gewonnen}
             umsatzGesamt={umsatz}
             isGf={a.isGf}
-            className="xl:col-span-5"
+            className="xl:col-span-4"
           />
           <ForecastCard
             werte={forecast}
@@ -214,11 +214,11 @@ export default async function DashboardPage({
             className="xl:col-span-3"
           />
 
-          {/* Reihe 2: Heute-Handlungsliste · Aktuelle Deals */}
-          <div className="xl:col-span-4">
+          {/* Reihe 2 (5.10): To-dos präsenter — Heute-Block breiter und zuerst */}
+          <div className="xl:col-span-5">
             <HeuteBlock />
           </div>
-          <DealsCard deals={recent} className="xl:col-span-8" />
+          <DealsCard deals={recent} className="xl:col-span-7" />
 
           {/* Reihe 3: Funnels je Sparte */}
           {funnelScopes.map((b) => (
