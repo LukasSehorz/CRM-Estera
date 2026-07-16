@@ -16,9 +16,9 @@ const META: Record<string, { title: string; subtitle: string; datumLabel: string
   finanzierung: { title: "Deals in Finanzierung", subtitle: "Immobilien-Deals in der Phase „Finanzierung in Prüfung“", datumLabel: "Nächster Termin" },
   verkauft: { title: "Verkaufte Deals", subtitle: "Gewonnene Abschlüsse (Reporting)", datumLabel: "Abgeschlossen" },
   offen: { title: "Offene Deals", subtitle: "Alle Deals, die weder gewonnen noch verloren sind", datumLabel: "Nächster Termin" },
-  "mit-einbehalt": { title: "Deals mit Einbehalt", subtitle: "VV-Deals mit Factoring (85 % sofort, 15 % Einbehalt nach 12 Mon.)", datumLabel: "Nächster Termin" },
-  "ohne-einbehalt": { title: "Deals ohne Einbehalt", subtitle: "VV-Deals ohne Factoring bzw. ratierlich (voll sofort)", datumLabel: "Nächster Termin" },
-  "einbehalt-offen": { title: "Offener Einbehalt je Kunde", subtitle: "Einbehaltene 15 % (Factoring-Deals) und deren Fälligkeit", datumLabel: "" },
+  "mit-einbehalt": { title: "Deals mit Einbehalt", subtitle: "VV-Deals mit & ohne Factoring (85 % sofort, 15 % Einbehalt nach 12 Mon.)", datumLabel: "Nächster Termin" },
+  "ohne-einbehalt": { title: "Deals ohne Einbehalt", subtitle: "Ratierliche VV-Deals (Auszahlung über 60 Monatsraten)", datumLabel: "Nächster Termin" },
+  "einbehalt-offen": { title: "Offener Einbehalt je Kunde", subtitle: "Einbehaltene 15 % (alle nicht-ratierlichen VV-Deals) und deren Fälligkeit", datumLabel: "" },
 };
 
 function startOfDay(d: Date) {
@@ -122,21 +122,22 @@ export default async function DealListenPage({
       .sort((a, b) => a.stagePos - b.stagePos)
       .map((d) => std(d, d.naechsterTermin));
   } else if (preset === "mit-einbehalt") {
-    // Einbehalt gibt es NUR mit Factoring (7.1).
+    // Einbehalt gilt bei Factoring UND ohne Factoring (F1.4) —
+    // nur ratierlich hat keinen.
     list = rows
-      .filter((d) => d.bereich === "vv" && zahlartOf(d) === "factoring")
+      .filter((d) => d.bereich === "vv" && zahlartOf(d) !== "ratierlich")
       .map((d) => std(d, d.naechsterTermin));
   } else if (preset === "ohne-einbehalt") {
     list = rows
-      .filter((d) => d.bereich === "vv" && zahlartOf(d) !== "factoring")
+      .filter((d) => d.bereich === "vv" && zahlartOf(d) === "ratierlich")
       .map((d) => std(d, d.naechsterTermin));
   } else if (preset === "einbehalt-offen") {
     list = rows
-      .filter((d) => d.bereich === "vv" && zahlartOf(d) === "factoring")
+      .filter((d) => d.bereich === "vv" && zahlartOf(d) !== "ratierlich")
       .map((d) => {
         const prov = computeProvision({
           bws: d.bws,
-          zahlart: "factoring",
+          zahlart: zahlartOf(d),
           vertrieblerStufe: d.vertrieblerStufe,
           tippgeberSatz: d.tippgeber_satz,
         });

@@ -232,14 +232,19 @@ function StufeRow({
           ) : (
             <span className="inline-block w-5" />
           )}
-          {/* Name -> Berater-Akte (Drilldown/Übersichten) */}
-          <Link
-            href={`/dashboard/berater/${row.id}`}
-            className="group inline-flex items-center gap-1 hover:text-primary hover:underline"
-          >
-            {row.name}
-            <ArrowUpRight className="h-3 w-3 opacity-0 transition-opacity group-hover:opacity-100" />
-          </Link>
+          {/* Name -> Berater-Akte — die Drilldown-Route ist GF-only, daher
+              in der Berater-Sicht (readOnly) kein Link (kein toter Klick). */}
+          {readOnly ? (
+            <span>{row.name}</span>
+          ) : (
+            <Link
+              href={`/dashboard/berater/${row.id}`}
+              className="group inline-flex items-center gap-1 hover:text-primary hover:underline"
+            >
+              {row.name}
+              <ArrowUpRight className="h-3 w-3 opacity-0 transition-opacity group-hover:opacity-100" />
+            </Link>
+          )}
           {!row.aktiv && (
             <span className="ml-1 text-xs text-muted-foreground">(inaktiv)</span>
           )}
@@ -409,19 +414,36 @@ function StufeRow({
       <tr className="border-b border-border bg-surface-2/40">
         <td colSpan={COL_COUNT} className="px-4 py-3">
           <div className="ml-6 flex flex-wrap gap-2">
-            {downline!.berater.map((b) => (
-              <Link
-                key={b.id}
-                href={`/dashboard/berater/${b.id}`}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-1.5 text-xs font-medium transition-colors hover:border-primary hover:text-primary"
-              >
-                <span className="grid h-5 w-5 place-items-center rounded-full bg-amber-500/15 text-amber-600">
-                  <User className="h-3 w-3" />
+            {downline!.berater.map((b) => {
+              const inhalt = (
+                <>
+                  <span className="grid h-5 w-5 place-items-center rounded-full bg-amber-500/15 text-amber-600">
+                    <User className="h-3 w-3" />
+                  </span>
+                  {b.name}
+                  <span className="text-muted-foreground">
+                    · Stufe {b.stufe || "—"} %
+                  </span>
+                </>
+              );
+              // Drilldown ist GF-only — Berater-Sicht ohne toten Link.
+              return readOnly ? (
+                <span
+                  key={b.id}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-1.5 text-xs font-medium"
+                >
+                  {inhalt}
                 </span>
-                {b.name}
-                <span className="text-muted-foreground">· Stufe {b.stufe || "—"} %</span>
-              </Link>
-            ))}
+              ) : (
+                <Link
+                  key={b.id}
+                  href={`/dashboard/berater/${b.id}`}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-1.5 text-xs font-medium transition-colors hover:border-primary hover:text-primary"
+                >
+                  {inhalt}
+                </Link>
+              );
+            })}
             {downline!.tippgeber.map((t) => (
               <span
                 key={t.id}

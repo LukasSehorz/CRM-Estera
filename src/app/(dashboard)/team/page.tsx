@@ -174,10 +174,12 @@ export default async function TeamPage() {
           ? undefined
           : String(Number(p.immo_anteil_default)),
       perf: perfMap.get(p.id),
+      // Drilldown-Route ist GF-only — Berater bekommen keinen Link
+      // (sonst tote Links mit Redirect, Feedback SJ).
       href:
-        p.rolle === "geschaeftsfuehrung"
-          ? undefined
-          : `/dashboard/berater/${p.id}`,
+        isGf && p.rolle !== "geschaeftsfuehrung"
+          ? `/dashboard/berater/${p.id}`
+          : undefined,
       children: [],
     });
   }

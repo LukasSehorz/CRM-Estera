@@ -79,8 +79,8 @@ function sofortBetrag(d: Deal, stufe: number, modus: ImmoProvisionModus): number
   if (d.bereich === "immobilien") return dealBeraterProvision(d, stufe, modus);
   const z = zahlartOf(d);
   if (z === "ratierlich") return 0; // läuft über die Monatsraten
-  const gewinn = dealBeraterGewinn(d, stufe);
-  return z === "factoring" ? gewinn * (1 - EINBEHALT_REST) : gewinn; // 85 % bzw. voll
+  // F1.4: 85 % sofort — Einbehalt gilt mit UND ohne Factoring.
+  return dealBeraterGewinn(d, stufe) * (1 - EINBEHALT_REST);
 }
 
 export function computeGehalt(
@@ -132,8 +132,9 @@ export function computeGehalt(
       // Karriere-Fenster: BWS der im Fenster policierten VV-Deals.
       if (am.getTime() >= fensterStart) bwsImFenster += d.bws ?? 0;
 
-      if (z === "factoring") {
-        // 15 % Einbehalt, fällig 12 Monate nach Abschluss.
+      if (z !== "ratierlich") {
+        // 15 % Einbehalt (Factoring UND ohne Factoring, F1.4), fällig
+        // 12 Monate nach Abschluss.
         const betragEinb = dealBeraterGewinn(d, stufe) * EINBEHALT_REST;
         if (betragEinb > 0)
           einbehaltKalender.push({

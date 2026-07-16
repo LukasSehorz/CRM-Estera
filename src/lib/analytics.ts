@@ -100,7 +100,8 @@ export type AnalyticsData = {
   /** Umsatz eines Deals gemäß Rolle: GF = Estera-Umsatz, Berater = eigene Provision. */
   umsatzOf: (d: Deal) => number;
   /**
-   * Einbehalt (15 %) — gibt es NUR MIT Factoring (V4.1, 7.1 GEKLÄRT).
+   * Einbehalt (15 %) — bei Factoring UND ohne Factoring (F1.4); nur
+   * ratierlich hat keinen.
    * Basis ist der Auszahlungsanspruch des Beraters (Stufe − Tippgeber);
    * der Topf ist für GF und Berater derselbe Betrag (bei Estera geparkt).
    */
@@ -196,7 +197,7 @@ export function forecastGewichtet(a: AnalyticsData) {
  * Summen-Skala (6.2, NUR GF): realisierte Provision als Zerlegung von
  * „Summe X nach Factoring" in DISJUNKTE Teile (V4.1, 7.1 + Modell Lukas):
  *   brutto = esteraNetto + beraterProvision (Auszahlung) + einbehalt + tippgeber
- * Einbehalt (15 %) gibt es nur mit Factoring und ist der geparkte Teil des
+ * Einbehalt (15 %) gilt für alle nicht-ratierlichen VV-Deals (F1.4) und ist der geparkte Teil des
  * Berater-Anspruchs; der Tippgeber wird aus dem Berater-Anteil bedient.
  * Realisiert = Immobilien ab Notartermin, VV bei Policierung (1.1).
  */
@@ -235,7 +236,9 @@ export function summenSkala(
       brutto += netto;
       const tipp = dealTippgeberAnteil(d);
       const gewinn = dealBeraterGewinn(d, a.stufeOf(d.berater_id), a.immoModus);
-      const einb = zahlartOf(d) === "factoring" ? gewinn * EINBEHALT_REST : 0;
+      // F1.4: Einbehalt bei Factoring UND ohne Factoring (nur ratierlich nicht).
+      const einb =
+        zahlartOf(d) !== "ratierlich" ? gewinn * EINBEHALT_REST : 0;
       tippgeber += tipp;
       einbehalt += einb;
       beraterProvision += gewinn - einb; // Auszahlungsanteil (sofort/ratierlich)
@@ -330,10 +333,11 @@ export async function loadAnalytics(): Promise<AnalyticsData> {
       ? dealEsteraUmsatz(d, stufeMap.get(d.berater_id), immoModus)
       : dealBeraterProvision(d, stufeMap.get(d.berater_id), immoModus);
 
-  // Einbehalt NUR MIT Factoring (7.1) — 15 % des Auszahlungsanspruchs
-  // (Stufe − Tippgeber). Der geparkte Topf ist für GF und Berater identisch.
+  // Einbehalt (F1.4, Call SJ): 15 % des Auszahlungsanspruchs (Stufe −
+  // Tippgeber) bei Factoring UND ohne Factoring — nur ratierlich hat keinen
+  // Einbehalt (analog provision.ts: einbehalt = !ratierlich).
   const einbehaltOf = (d: Deal) => {
-    if (d.bereich !== "vv" || zahlartOf(d) !== "factoring") return 0;
+    if (d.bereich !== "vv" || zahlartOf(d) === "ratierlich") return 0;
     return (
       dealBeraterGewinn(d, stufeMap.get(d.berater_id), immoModus) * EINBEHALT_REST
     );

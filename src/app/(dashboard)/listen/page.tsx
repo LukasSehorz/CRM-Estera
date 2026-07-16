@@ -339,12 +339,13 @@ export default async function ListenHubPage() {
   );
   const dVerkauft = deals.filter((d) => d.isWon);
   const dOffen = deals.filter(isOffen);
-  // Einbehalt gibt es NUR mit Factoring (7.1).
+  // Einbehalt gilt bei Factoring UND ohne Factoring (F1.4) — nur
+  // ratierliche Deals haben keinen.
   const dMitEinbehalt = deals.filter(
-    (d) => d.bereich === "vv" && zahlartOf(d) === "factoring",
+    (d) => d.bereich === "vv" && zahlartOf(d) !== "ratierlich",
   );
   const dOhneEinbehalt = deals.filter(
-    (d) => d.bereich === "vv" && zahlartOf(d) !== "factoring",
+    (d) => d.bereich === "vv" && zahlartOf(d) === "ratierlich",
   );
   const dEinbehaltOffen = dMitEinbehalt.filter((d) => {
     const faelligISO = einbehaltFaelligAm(d.closedAt ?? d.createdAt);
@@ -393,8 +394,8 @@ export default async function ListenHubPage() {
       tone: "var(--gold-contrast)",
       bereich: "vv",
       items: [
-        { href: "/listen/deals?preset=mit-einbehalt", label: "Deals mit Einbehalt (mit Factoring)", count: dMitEinbehalt.length },
-        { href: "/listen/deals?preset=ohne-einbehalt", label: "Deals ohne Einbehalt (voll sofort)", count: dOhneEinbehalt.length },
+        { href: "/listen/deals?preset=mit-einbehalt", label: "Deals mit Einbehalt (mit & ohne Factoring)", count: dMitEinbehalt.length },
+        { href: "/listen/deals?preset=ohne-einbehalt", label: "Deals ohne Einbehalt (ratierlich)", count: dOhneEinbehalt.length },
         { href: "/listen/deals?preset=einbehalt-offen", label: "Offener Einbehalt je Kunde", count: dEinbehaltOffen.length },
       ],
     },

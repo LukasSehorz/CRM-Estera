@@ -122,20 +122,22 @@ export function DealCardContent({
               )}
             </div>
           )}
-          {/* Zahlart-Tags (7.1): bei Factoring greifen BEIDE — Factoring
-              (90 %) UND Einbehalt (15 %). Ohne Factoring: voll sofort. */}
+          {/* Zahlart-Tags (7.1/F1.4): Einbehalt 15 % gilt mit UND ohne
+              Factoring — nur ratierlich läuft über Monatsraten. */}
           <div className="flex flex-wrap gap-1">
             {(() => {
               const z = zahlartOf(deal);
               if (z === "ratierlich") return <Pill tone="info">ratierlich</Pill>;
-              if (z === "factoring")
-                return (
-                  <>
+              return (
+                <>
+                  {z === "factoring" ? (
                     <Pill tone="success">Factoring</Pill>
-                    <Pill tone="warning">Einbehalt 15 %</Pill>
-                  </>
-                );
-              return <Pill tone="muted">voll sofort</Pill>;
+                  ) : (
+                    <Pill tone="muted">ohne Factoring</Pill>
+                  )}
+                  <Pill tone="warning">Einbehalt 15 %</Pill>
+                </>
+              );
             })()}
             {deal.tippgeber && <Pill tone="muted">Tipp: {deal.tippgeber}</Pill>}
           </div>

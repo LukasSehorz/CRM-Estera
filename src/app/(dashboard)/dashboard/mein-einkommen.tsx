@@ -148,7 +148,7 @@ export function MeinEinkommen({
           titel="Einbehalt gesammelt"
           betrag={gehalt.einbehaltSumme}
           leer={gehalt.einbehaltKalender.length === 0}
-          leerText="Kein offener Einbehalt (nur bei Factoring-Deals)."
+          leerText="Kein offener Einbehalt (nur ratierliche Deals haben keinen)."
           anzahl={gehalt.einbehaltKalender.length}
           info="Bei Factoring-Deals werden 15 % deiner Provision einbehalten und erst 12 Monate nach Abschluss ausgezahlt (Storno-Sicherheit). Hier stehen alle noch offenen Einbehalte mit ihrem Auszahlungsdatum — das Geld ist dir sicher, nur noch nicht geflossen."
         >
