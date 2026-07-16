@@ -50,9 +50,12 @@ const betragOf = (d: DealRow) =>
 export default async function DealListenPage({
   searchParams,
 }: {
-  searchParams: Promise<{ preset?: string }>;
+  searchParams: Promise<{ preset?: string; from?: string }>;
 }) {
-  const { preset = "verkauft" } = await searchParams;
+  const { preset = "verkauft", from } = await searchParams;
+  // Zurück zur Herkunft (Feedback SJ): kommt man vom Dashboard, führt „Zurück"
+  // auch dorthin — nicht immer auf die Übersichten-Seite.
+  const backHref = from && from.startsWith("/") ? from : "/listen";
   const meta = META[preset] ?? META.verkauft;
 
   const supabase = await createClient();
@@ -164,7 +167,7 @@ export default async function DealListenPage({
 
   return (
     <>
-      <Topbar title={meta.title} subtitle={meta.subtitle} backHref="/listen" />
+      <Topbar title={meta.title} subtitle={meta.subtitle} backHref={backHref} />
       <div className="px-6 py-6">
         <DealsTable
           rows={list}

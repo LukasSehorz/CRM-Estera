@@ -59,15 +59,13 @@ export function OverviewCard({
         <h2 className="text-base font-semibold">Umsatzentwicklung</h2>
         <Info className="h-4 w-4 text-muted-foreground" aria-hidden />
       </div>
-      <div className="mt-3 space-y-1.5 text-xs">
-        <div className="flex items-center justify-between text-muted-foreground">
-          <span>{range.statLabel}</span>
-          <span className="font-semibold tabular-nums text-foreground">
+      {/* Umsatz-Zahl prominent: ausgeschrieben in €, ohne Cent (Feedback SJ) */}
+      <div className="mt-3">
+        <p className="text-xs text-muted-foreground">{range.statLabel}</p>
+        <div className="mt-0.5 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <span className="text-[2rem] font-bold leading-none tracking-tight tabular-nums text-foreground">
             {range.statValue}
           </span>
-        </div>
-        <div className="flex items-center justify-between text-muted-foreground">
-          <span>30 Tage vs. davor</span>
           <DeltaPill value={mom} />
         </div>
       </div>
@@ -104,18 +102,20 @@ export function OverviewCard({
         <AreaTrend data={range.points} />
       </div>
 
-      <div className="mt-4">
-        <p className="bg-cyan-pink-gradient bg-clip-text text-4xl font-bold tabular-nums tracking-tight text-transparent">
-          {mom == null
-            ? range.statValue
-            : `${mom >= 0 ? "+" : ""}${mom.toFixed(2).replace(".", ",")} %`}
+      {mom != null && (
+        <p className="mt-3 text-xs text-muted-foreground">
+          <span
+            className={cn(
+              "font-semibold tabular-nums",
+              mom >= 0 ? "text-success" : "text-danger",
+            )}
+          >
+            {mom >= 0 ? "+" : ""}
+            {mom.toFixed(2).replace(".", ",")} %
+          </span>{" "}
+          Wachstum: letzte 30 Tage vs. die 30 Tage davor
         </p>
-        <p className="mt-1 text-xs text-muted-foreground">
-          {mom == null
-            ? range.statLabel
-            : "Wachstum: letzte 30 Tage vs. die 30 Tage davor"}
-        </p>
-      </div>
+      )}
     </section>
   );
 }

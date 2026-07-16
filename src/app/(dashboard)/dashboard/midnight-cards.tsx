@@ -53,6 +53,7 @@ export function BalanceCard({
   umsatzGesamt,
   isGf,
   className,
+  fromHref = "/dashboard",
 }: {
   umsatz30: number;
   mom: number | null;
@@ -60,7 +61,10 @@ export function BalanceCard({
   umsatzGesamt: number;
   isGf: boolean;
   className?: string;
+  /** Zurück-Ziel für Drill-downs (Feedback SJ): führt aufs Dashboard zurück. */
+  fromHref?: string;
 }) {
+  const from = `&from=${encodeURIComponent(fromHref)}`;
   return (
     <section
       className={cn(
@@ -97,7 +101,7 @@ export function BalanceCard({
       </div>
 
       <Link
-        href="/listen/deals?preset=verkauft"
+        href={`/listen/deals?preset=verkauft${from}`}
         className="mt-3 inline-flex w-fit items-center gap-2 rounded-full border border-accent-500/30 bg-accent-500/10 px-3 py-1.5 text-xs font-semibold text-accent-400 transition-colors hover:bg-accent-500/20"
       >
         <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
@@ -128,22 +132,27 @@ export function ForecastCard({
   offeneDeals,
   isGf,
   className,
+  fromHref = "/dashboard",
 }: {
   werte: Werte;
   offeneDeals: number;
   isGf: boolean;
   className?: string;
+  fromHref?: string;
 }) {
+  const from = `&from=${encodeURIComponent(fromHref)}`;
   const rows = [
     {
       icon: TrendingUp,
       label: "Pipeline-Volumen (offen)",
       value: formatEUR(werte.volumen),
+      href: `/listen/deals?preset=offen${from}`,
     },
     {
       icon: HandCoins,
       label: isGf ? "Erwartete Provision (Estera)" : "Erwartete Provision",
       value: formatEUR(werte.erwartet),
+      href: `/listen/deals?preset=offen${from}`,
     },
     {
       icon: Hourglass,
@@ -152,11 +161,13 @@ export function ForecastCard({
       sub: werte.naechsteFaelligkeit
         ? `nächste Auszahlung ${formatDate(werte.naechsteFaelligkeit)}`
         : undefined,
+      href: `/listen/deals?preset=einbehalt-offen${from}`,
     },
     {
       icon: Layers,
       label: "Offene Deals",
       value: String(offeneDeals),
+      href: `/listen/deals?preset=offen${from}`,
     },
   ];
   return (
@@ -199,29 +210,34 @@ export function ForecastCard({
         </p>
       </div>
 
-      <ul className="mt-4 flex-1 space-y-3">
+      <ul className="mt-4 flex-1 space-y-1">
         {rows.map((r) => (
-          <li key={r.label} className="flex items-start justify-between gap-2">
-            <span className="flex items-center gap-2 text-xs text-muted-foreground">
-              <r.icon className="h-3.5 w-3.5 shrink-0 text-accent-500" aria-hidden />
-              {r.label}
-            </span>
-            <span className="text-right">
-              <span className="block text-sm font-semibold tabular-nums">
-                {r.value}
+          <li key={r.label}>
+            <Link
+              href={r.href}
+              className="-mx-2 flex items-start justify-between gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-surface-2"
+            >
+              <span className="flex items-center gap-2 text-xs text-muted-foreground">
+                <r.icon className="h-3.5 w-3.5 shrink-0 text-accent-500" aria-hidden />
+                {r.label}
               </span>
-              {r.sub && (
-                <span className="block text-[10px] text-muted-foreground">
-                  {r.sub}
+              <span className="text-right">
+                <span className="block text-sm font-semibold tabular-nums">
+                  {r.value}
                 </span>
-              )}
-            </span>
+                {r.sub && (
+                  <span className="block text-[10px] text-muted-foreground">
+                    {r.sub}
+                  </span>
+                )}
+              </span>
+            </Link>
           </li>
         ))}
       </ul>
 
       <Link
-        href="/listen/deals?preset=offen"
+        href={`/listen/deals?preset=offen${from}`}
         className="mt-4 block rounded-lg bg-accent-500 px-4 py-2.5 text-center text-sm font-semibold text-background transition-colors hover:bg-accent-400"
       >
         Zur offenen Pipeline

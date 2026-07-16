@@ -170,8 +170,8 @@ export default async function PipelineDashboardPage({
         <div
           className={
             funnelScopes.length === 1
-              ? "grid items-start gap-4"
-              : "grid items-start gap-4 lg:grid-cols-2"
+              ? "grid items-stretch gap-4"
+              : "grid items-stretch gap-4 lg:grid-cols-2"
           }
         >
           {funnelScopes.map((b) => (
@@ -188,8 +188,8 @@ export default async function PipelineDashboardPage({
         <div
           className={
             funnelScopes.length === 1
-              ? "grid items-start gap-4"
-              : "grid items-start gap-4 lg:grid-cols-2"
+              ? "grid items-stretch gap-4"
+              : "grid items-stretch gap-4 lg:grid-cols-2"
           }
         >
           {funnelScopes.map((b) => (

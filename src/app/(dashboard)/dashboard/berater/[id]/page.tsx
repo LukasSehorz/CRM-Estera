@@ -2,13 +2,15 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import {
   ArrowLeft,
-  Hourglass,
   Layers,
   Percent,
+  Ruler,
   Timer,
+  Trophy,
   Undo2,
   Users,
   Wallet,
+  type LucideIcon,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Topbar } from "@/components/layout/topbar";
@@ -18,8 +20,7 @@ import { ChartCard } from "@/components/charts/chart-card";
 import { AreaTrend } from "@/components/charts/area-trend";
 import { PipelineFunnel } from "@/components/charts/pipeline-funnel";
 import { bereichLabel } from "@/config/enums";
-import { formatDate, formatEUR, formatProzent } from "@/lib/format";
-import { einbehaltFaelligAm, zahlartOf } from "@/lib/provision";
+import { formatEUR, formatProzent } from "@/lib/format";
 import { BereichSwitcher } from "../../bereich-switcher";
 import { MeinEinkommenBlock } from "../../mein-einkommen-block";
 import { PartnerBlock } from "../../partner-block";
@@ -133,21 +134,13 @@ export default async function BeraterDrilldownPage({
     })
     .sort((x, y) => (y.tage ?? 0) - (x.tage ?? 0));
 
-  // Offene Einbehalte des Beraters — Einbehalt gibt es NUR mit Factoring (7.1).
-  const jetzt = now.toISOString();
-  let einbehalt = 0;
-  let naechsteFaelligkeit: string | null = null;
-  for (const d of aBerater.deals.filter(
-    (x) =>
-      x.bereich === "vv" &&
-      isWon(x, aBerater.sMap) &&
-      zahlartOf(x) === "factoring",
-  )) {
-    const f = einbehaltFaelligAm(d.closed_at ?? d.created_at);
-    if (!f || f <= jetzt) continue;
-    einbehalt += aBerater.einbehaltOf(d);
-    if (!naechsteFaelligkeit || f < naechsteFaelligkeit) naechsteFaelligkeit = f;
-  }
+  // Seiten-KPIs (Feedback SJ 2.9): „Offene Einbehalte" raus (steht bereits in
+  // „Mein Einkommen"), stattdessen zwei aussagekräftige Kennzahlen.
+  const gewonneneDeals = aBerater.deals.filter((x) => isWon(x, aBerater.sMap));
+  const abschluesse = gewonneneDeals.length;
+  const avgGroesse = abschluesse
+    ? gewonneneDeals.reduce((s, d) => s + betragOf(d), 0) / abschluesse
+    : 0;
 
   const sparten = (berater.bereich?.length ? berater.bereich : ["immobilien", "vv"])
     .map((b) => bereichLabel(b))
@@ -211,7 +204,7 @@ export default async function BeraterDrilldownPage({
           />
         </div>
 
-        <div className="grid items-start gap-4 lg:grid-cols-3">
+        <div className="grid items-stretch gap-4 lg:grid-cols-3">
           <ChartCard
             title="Umsatzentwicklung"
             subtitle="Estera-Provision aus gewonnenen Deals, 12 Monate"
@@ -219,36 +212,25 @@ export default async function BeraterDrilldownPage({
           >
             <AreaTrend data={trend} />
           </ChartCard>
-          <div className="space-y-4">
-            <div className="rounded-xl border border-border bg-surface p-5">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">
-                  Offene Einbehalte (VV)
-                </span>
-                <span className="grid h-9 w-9 place-items-center rounded-lg bg-warning/10 text-warning">
-                  <Hourglass className="h-4 w-4" />
-                </span>
-              </div>
-              <div className="mt-3 text-3xl font-bold tracking-tight tabular-nums">
-                {einbehalt > 0 ? formatEUR(einbehalt) : "—"}
-              </div>
-              {naechsteFaelligkeit && (
-                <p className="mt-2 text-xs text-muted-foreground">
-                  nächste Auszahlung {formatDate(naechsteFaelligkeit)}
-                </p>
-              )}
-            </div>
-            <div className="rounded-xl border border-border bg-surface p-5">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Kunden</span>
-                <span className="grid h-9 w-9 place-items-center rounded-lg bg-primary/10 text-primary">
-                  <Users className="h-4 w-4" />
-                </span>
-              </div>
-              <div className="mt-3 text-3xl font-bold tracking-tight tabular-nums">
-                {aBerater.contacts.length}
-              </div>
-            </div>
+          <div className="grid gap-4">
+            <SideStat
+              label="Gewonnene Abschlüsse"
+              value={String(abschluesse)}
+              icon={Trophy}
+              tone="success"
+            />
+            <SideStat
+              label="Ø Deal-Größe (Volumen)"
+              value={avgGroesse ? formatEUR(avgGroesse) : "—"}
+              icon={Ruler}
+              tone="info"
+            />
+            <SideStat
+              label="Kunden"
+              value={String(aBerater.contacts.length)}
+              icon={Users}
+              tone="primary"
+            />
           </div>
         </div>
 
@@ -346,5 +328,38 @@ export default async function BeraterDrilldownPage({
         </ChartCard>
       </div>
     </>
+  );
+}
+
+const SIDE_TONE = {
+  success: "bg-success/10 text-success",
+  info: "bg-info/10 text-info",
+  primary: "bg-primary/10 text-primary",
+} as const;
+
+/** Kompakte Kennzahl-Karte für die Seitenspalte neben der Umsatzentwicklung. */
+function SideStat({
+  label,
+  value,
+  icon: Icon,
+  tone,
+}: {
+  label: string;
+  value: string;
+  icon: LucideIcon;
+  tone: keyof typeof SIDE_TONE;
+}) {
+  return (
+    <div className="flex flex-col justify-center rounded-xl border border-border bg-surface p-5">
+      <div className="flex items-center justify-between">
+        <span className="text-sm text-muted-foreground">{label}</span>
+        <span className={`grid h-9 w-9 place-items-center rounded-lg ${SIDE_TONE[tone]}`}>
+          <Icon className="h-4 w-4" />
+        </span>
+      </div>
+      <div className="mt-3 text-3xl font-bold tracking-tight tabular-nums">
+        {value}
+      </div>
+    </div>
   );
 }

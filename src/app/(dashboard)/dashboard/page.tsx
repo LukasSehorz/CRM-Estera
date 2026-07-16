@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { MidnightHeader } from "@/components/layout/midnight-header";
 import { bereichLabel } from "@/config/enums";
-import { formatKompakt } from "@/lib/format";
+import { formatEUR, formatKompakt } from "@/lib/format";
 import { ChartCard } from "@/components/charts/chart-card";
 import { PipelineFunnel } from "@/components/charts/pipeline-funnel";
 import { DonutBreakdown } from "@/components/charts/donut-breakdown";
@@ -108,7 +108,7 @@ export default async function DashboardPage({
     label,
     points,
     statLabel: "Ø Umsatz pro Monat",
-    statValue: formatKompakt(
+    statValue: formatEUR(
       points.length ? points.reduce((s, p) => s + p.value, 0) / points.length : 0,
     ),
   });
@@ -118,7 +118,7 @@ export default async function DashboardPage({
       label: "30 Tage",
       points: daily30,
       statLabel: "Summe 30 Tage",
-      statValue: formatKompakt(daily30.reduce((s, p) => s + p.value, 0)),
+      statValue: formatEUR(daily30.reduce((s, p) => s + p.value, 0)),
     },
     mkMonatsRange("3m", "3 Monate", trend.slice(-3)),
     mkMonatsRange("6m", "6 Monate", trend.slice(-6)),
@@ -184,6 +184,10 @@ export default async function DashboardPage({
       betrag: betragOf(d),
     }));
 
+  // Zurück-Ziel für Drill-downs (Feedback SJ): das Dashboard mit aktuellem Scope.
+  const dashHref =
+    scope === "gesamt" ? "/dashboard" : `/dashboard?bereich=${scope}`;
+
   return (
     <>
       <MidnightHeader name={name} rolle={rolleLabel} fotoUrl={fotoUrl} />
@@ -196,6 +200,11 @@ export default async function DashboardPage({
         {/* Ziel-Box (Schleife 3, Ber. 2): einloggen -> sofort motiviert */}
         {zielDaten && <ZielBlock daten={zielDaten} />}
 
+        {/* To-dos sind für Berater der wichtigste Punkt (5.10, Transkript
+            41:46) — daher ganz oben, breit und mit Akzentrahmen. Die GF hat
+            sie weiter unten in der Seitenspalte. */}
+        {!a.isGf && <HeuteBlock wide />}
+
         {/* Hero-Reihe: Graph (5.2: größer) · Total Balance · Blick nach vorn */}
         <div className="grid items-stretch gap-4 xl:grid-cols-12">
           <OverviewCard ranges={umsatzRanges} mom={mom} className="xl:col-span-5" />
@@ -206,19 +215,27 @@ export default async function DashboardPage({
             umsatzGesamt={umsatz}
             isGf={a.isGf}
             className="xl:col-span-4"
+            fromHref={dashHref}
           />
           <ForecastCard
             werte={forecast}
             offeneDeals={offene}
             isGf={a.isGf}
             className="xl:col-span-3"
+            fromHref={dashHref}
           />
 
-          {/* Reihe 2 (5.10): To-dos präsenter — Heute-Block breiter und zuerst */}
-          <div className="xl:col-span-5">
-            <HeuteBlock />
-          </div>
-          <DealsCard deals={recent} className="xl:col-span-7" />
+          {/* Reihe 2: GF sieht „Heute" hier in der Seitenspalte; für Berater
+              sitzt es bereits oben, daher hier nur die Deals über volle Breite. */}
+          {a.isGf && (
+            <div className="xl:col-span-5">
+              <HeuteBlock />
+            </div>
+          )}
+          <DealsCard
+            deals={recent}
+            className={a.isGf ? "xl:col-span-7" : "xl:col-span-12"}
+          />
 
           {/* Reihe 3: Funnels je Sparte */}
           {funnelScopes.map((b) => (

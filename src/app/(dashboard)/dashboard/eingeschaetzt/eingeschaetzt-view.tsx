@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { Calculator, Home, Users, Wallet } from "lucide-react";
+import { Calculator, Users, Wallet } from "lucide-react";
 import { formatEUR } from "@/lib/format";
 import { einschaetzungLabel, einschaetzungTone } from "@/config/enums";
 import { KpiCard } from "@/components/charts/kpi-card";
@@ -152,14 +152,13 @@ export function EingeschaetztView({
               {isGf && <th className="px-4 py-3 font-medium">Berater</th>}
               <th className="px-4 py-3 font-medium">Einschätzung</th>
               <th className="px-4 py-3 font-medium">Finanzierbar bis</th>
-              <th className="px-4 py-3 font-medium">Objekt</th>
             </tr>
           </thead>
           <tbody>
             {tableRows.length === 0 ? (
               <tr>
                 <td
-                  colSpan={isGf ? 5 : 4}
+                  colSpan={isGf ? 4 : 3}
                   className="px-4 py-10 text-center text-muted-foreground"
                 >
                   Keine eingeschätzten Kunden für diese Filter.
@@ -190,18 +189,6 @@ export function EingeschaetztView({
                     {r.einschaetzung === "eingeschaetzt"
                       ? formatEUR(r.betrag)
                       : "—"}
-                  </td>
-                  <td className="px-4 py-3">
-                    {/* 5.9: „frei" als Fließtext war verwirrend — belegt
-                        bleibt als Pill, sonst neutraler Strich. */}
-                    {r.belegt ? (
-                      <Pill tone="warning">
-                        <Home className="mr-1 h-3 w-3" />
-                        Auf Objekt belegt
-                      </Pill>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
                   </td>
                 </tr>
               ))

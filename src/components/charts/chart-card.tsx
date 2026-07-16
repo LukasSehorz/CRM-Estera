@@ -16,7 +16,7 @@ export function ChartCard({
 }) {
   return (
     <section
-      className={cn("rounded-xl border border-border bg-surface p-5 transition-[border-color,box-shadow] duration-300 hover:border-accent-500/40 hover:shadow-[0_0_36px_-10px_color-mix(in_srgb,var(--accent-500)_45%,transparent)]", className)}
+      className={cn("flex h-full flex-col rounded-xl border border-border bg-surface p-5 transition-[border-color,box-shadow] duration-300 hover:border-accent-500/40 hover:shadow-[0_0_36px_-10px_color-mix(in_srgb,var(--accent-500)_45%,transparent)]", className)}
     >
       <div className="mb-4 flex items-start justify-between gap-3">
         <div className="min-w-0">
@@ -27,7 +27,9 @@ export function ChartCard({
         </div>
         {action}
       </div>
-      {children}
+      {/* Inhalt wächst mit — so werden nebeneinander liegende Karten gleich
+          hoch (Funnel VV = Funnel Immo), Inhalt vertikal zentriert. */}
+      <div className="flex flex-1 flex-col justify-center">{children}</div>
     </section>
   );
 }

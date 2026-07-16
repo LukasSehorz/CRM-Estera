@@ -10,7 +10,7 @@ import { HeuteTaskItem } from "./heute-task-item";
  * morgens sofort seine Handlungsliste. Bewusst unabhängig vom
  * Bereichs-Umschalter (das Tagesgeschäft kennt keine Sparten-Filter).
  */
-export async function HeuteBlock() {
+export async function HeuteBlock({ wide = false }: { wide?: boolean }) {
   const supabase = await createClient();
   const heute = new Date().toISOString().slice(0, 10);
   const now = new Date();
@@ -87,14 +87,29 @@ export async function HeuteBlock() {
     (faellig ?? []).length === 0 && termine.length === 0 && stale.length === 0;
 
   return (
-    <div className="overflow-hidden rounded-xl border border-border bg-surface p-5 transition-[border-color,box-shadow] duration-300 hover:border-accent-500/40 hover:shadow-[0_0_36px_-10px_color-mix(in_srgb,var(--accent-500)_45%,transparent)]">
+    <div
+      className={
+        wide
+          ? "overflow-hidden rounded-2xl border-2 border-accent-500/40 bg-gradient-to-br from-accent-500/5 via-surface to-surface p-5 shadow-[0_0_40px_-16px_color-mix(in_srgb,var(--accent-500)_55%,transparent)]"
+          : "overflow-hidden rounded-xl border border-border bg-surface p-5 transition-[border-color,box-shadow] duration-300 hover:border-accent-500/40 hover:shadow-[0_0_36px_-10px_color-mix(in_srgb,var(--accent-500)_45%,transparent)]"
+      }
+    >
       <div className="flex items-center justify-between gap-2">
-        <div>
-          <h2 className="text-base font-semibold">Heute</h2>
-          <p className="text-xs text-muted-foreground">
-            Deine Handlungsliste — fällige Aufgaben, Termine, festhängende
-            Deals.
-          </p>
+        <div className="flex items-center gap-2.5">
+          {wide && (
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-accent-500/15 text-accent-500">
+              <AlarmClock className="h-5 w-5" />
+            </span>
+          )}
+          <div>
+            <h2 className={wide ? "text-lg font-semibold" : "text-base font-semibold"}>
+              Heute zu tun
+            </h2>
+            <p className="text-xs text-muted-foreground">
+              Deine Handlungsliste — fällige Aufgaben, Termine, festhängende
+              Deals.
+            </p>
+          </div>
         </div>
         <Link
           href="/aufgaben"
@@ -110,9 +125,8 @@ export async function HeuteBlock() {
           Deals. 🎉
         </p>
       ) : (
-        // Vertikal gestapelt: der Block sitzt im Midnight-Grid in einer
-        // schmalen Spalte — drei Spalten wären zu eng.
-        <div className="mt-4 grid gap-5">
+        // Schmal (GF, Seitenspalte) vertikal; breit (Berater-Fokus) dreispaltig.
+        <div className={wide ? "mt-4 grid gap-5 lg:grid-cols-3" : "mt-4 grid gap-5"}>
           {/* Aufgaben heute + überfällig */}
           <div>
             <p className="mb-2 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">

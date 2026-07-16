@@ -292,6 +292,19 @@ export function DecisionTree({ root }: { root: TreeNode }) {
     setFocusId((cur) => (cur === target ? null : target));
   }
 
+  // Hover-Panel schnell schließen, sobald die Maus den Knoten verlässt —
+  // kurze Entprellung (Wechsel zwischen Knoten flackert nicht, leerer Raum
+  // schließt in ~60 ms).
+  const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const enterNode = useCallback((id: string) => {
+    if (hoverTimer.current) clearTimeout(hoverTimer.current);
+    setHovered(id);
+  }, []);
+  const leaveNode = useCallback(() => {
+    if (hoverTimer.current) clearTimeout(hoverTimer.current);
+    hoverTimer.current = setTimeout(() => setHovered(null), 60);
+  }, []);
+
   return (
     <div className="relative">
       {/* Steuerleiste */}
@@ -321,7 +334,7 @@ export function DecisionTree({ root }: { root: TreeNode }) {
       <div
         ref={viewportRef}
         onClick={() => setFocusId(null)}
-        onMouseLeave={() => setHovered(null)}
+        onMouseLeave={leaveNode}
         className="relative h-[440px] overflow-hidden rounded-xl border border-border/70 bg-[radial-gradient(circle_at_1px_1px,var(--tree-dot)_1px,transparent_0)] [background-size:22px_22px] sm:h-[500px] lg:h-[560px]"
       >
         <motion.div
@@ -401,7 +414,8 @@ export function DecisionTree({ root }: { root: TreeNode }) {
                   top: py(id),
                   pointerEvents: vis ? "auto" : "none",
                 }}
-                onMouseEnter={() => vis && setHovered(id)}
+                onMouseEnter={() => vis && enterNode(id)}
+                onMouseLeave={leaveNode}
                 onClick={(e) => {
                   e.stopPropagation();
                   focusNode(node);
