@@ -34,21 +34,21 @@ Gebautes.
 **Ziel:** Kundenunterlagen überall sichtbar, öffenbar, pro Kunde gebündelt; auch am Deal und
 schon beim Anlegen.
 
-- [ ] **1.1** Dokument-Sektion für **alle** Kontakte anzeigen (heute an „interesse =
+- [x] **1.1** Dokument-Sektion für **alle** Kontakte anzeigen (heute an „interesse =
   Immobilien" gekoppelt → bei VV-/neutralen Kunden erscheint nichts). **Behebt das
   „wird nicht angezeigt / kann nicht öffnen"** aus dem Call (1:29). → `kontakte/[id]/page.tsx`
-- [ ] **1.2** Freier Uploader: **mehrere Dateien** erlauben (`multiple`); Checkliste kann es
+- [x] **1.2** Freier Uploader: **mehrere Dateien** erlauben (`multiple`); Checkliste kann es
   bereits. → `kontakte/contact-documents.tsx`
-- [ ] **1.3** Upload **schon im Kunden-Anlegen-Formular** (18:40). → `kontakte/neu`,
+- [x] **1.3** Upload **schon im Kunden-Anlegen-Formular** (18:40). → `kontakte/neu`,
   `contact-form.tsx`
-- [ ] **1.4** **Dokumente/Unterlagen auf der Deal-Detailseite** (Immo **und** VV), mit
+- [x] **1.4** **Dokumente/Unterlagen auf der Deal-Detailseite** (Immo **und** VV), mit
   Vorlage/Checkliste „was hochzuladen ist" (1:14, 27:49, 46:34). → `deals/[id]`
-- [ ] **1.5** **Kundenname überall als Link** zur Akte („Unterlink", 22:50) — Dashboard,
+- [x] **1.5** **Kundenname überall als Link** zur Akte („Unterlink", 22:50) — Dashboard,
   Deals, Performance, Signale, Eingeschätzte Kunden.
-- [ ] **1.6** Kategorie **„Reservierungen"** (Reservierungsformular +
+- [x] **1.6** Kategorie **„Reservierungen"** (Reservierungsformular +
   Reservierungsvereinbarung) als eigener Bereich **und** in den Kundenunterlagen (20:32,
   44:16). → `config/enums.ts`, Migration + `portal-view.tsx`
-- [ ] **1.7** Vorlagen je Sparte: feste Kategorien vorbenennen (Immo: Selbstauskunft/
+- [x] **1.7** Vorlagen je Sparte: feste Kategorien vorbenennen (Immo: Selbstauskunft/
   Reservierung; VV: Anbindungsformular) — Spiegelung zu Beratern besteht schon (20:00).
 - [x] **1.8** Trennung: Berater sieht nur eigene Kundendokumente — **per RLS bereits erzwingt
   & verifiziert** (20:59). Nichts zu tun.
@@ -61,27 +61,27 @@ schon beim Anlegen.
 **Ziel:** Berater sehen niemals Estera-interne Zahlen; VV-Rechnung sauber & verständlich;
 Immo immer vom Kaufpreis.
 
-- [ ] **2.1** **„Hausanteil (Estera)"-Zeile entfernen** aus der Provisionsvorschau (Immo +
+- [x] **2.1** **„Hausanteil (Estera)"-Zeile entfernen** aus der Provisionsvorschau (Immo +
   VV). (F1.1) → `deals/deal-form.tsx`
-- [ ] **2.2** **Vorschau übersichtlicher**: klar machen, dass der **Tippgeber von derselben
+- [x] **2.2** **Vorschau übersichtlicher**: klar machen, dass der **Tippgeber von derselben
   Basis wie die 70 %** abgeht (nicht von „Deine Provision") — Trennlinien, Gruppierung,
   Beschriftung „Tippgeber (20 % der Provision nach Factoring)". Rechnung bleibt gleich
   (ist korrekt). (F1.3)
-- [ ] **2.3** **„Ohne Factoring" MIT Einbehalt** rechnen (85 % sofort / 15 % Einbehalt nach
+- [x] **2.3** **„Ohne Factoring" MIT Einbehalt** rechnen (85 % sofort / 15 % Einbehalt nach
   12 Mon.); Hinweistext & Zahlart-Label anpassen. (F1.4) 🔁 → `lib/provision.ts`,
   `deal-form.tsx`
-- [ ] **2.4** **„negative Bonität"** aus dem Ratierlich-Label entfernen (Auslandspass ⇒
+- [x] **2.4** **„negative Bonität"** aus dem Ratierlich-Label entfernen (Auslandspass ⇒
   ratierlich, aber nicht negativ; 27:49–29:35). → `lib/provision.ts`
-- [ ] **2.5** **Provisionssatz-Feld** in der Berater-Ansicht **komplett ausblenden** (nur GF).
+- [x] **2.5** **Provisionssatz-Feld** in der Berater-Ansicht **komplett ausblenden** (nur GF).
   (F2/SC4) → `deal-form.tsx`
-- [ ] **2.6** **Berater-Anteil-Feld** in der Berater-Ansicht **komplett ausblenden** (nur GF).
+- [x] **2.6** **Berater-Anteil-Feld** in der Berater-Ansicht **komplett ausblenden** (nur GF).
   (F2/SC4)
-- [ ] **2.7** **Provisionsvorschau** in der Berater-Ansicht: Estera-interne Zeilen aus.
+- [x] **2.7** **Provisionsvorschau** in der Berater-Ansicht: Estera-interne Zeilen aus.
   *Empfehlung:* ganze Vorschau für Berater ausblenden (Einkommen sieht er unter „Mein
   Einkommen"), wie im Call gesagt („Provisionsvorschau weglassen bei Beratern", 29:25).
   → **Kurz bestätigen:** ganz ausblenden, oder nur die Estera-Zeilen (Berater sieht „Deine
   Provision/Gewinn")?
-- [ ] **2.8** **Immo-Provisions-Modus fest „vom Kaufpreis"**, die zwei Auswahl-Karten
+- [x] **2.8** **Immo-Provisions-Modus fest „vom Kaufpreis"**, die zwei Auswahl-Karten
   (`ImmoProvisionCard`) **entfernen**. 🔁 (F3/SC5) → `team/page.tsx`,
   `team/einstellungen-card.tsx`, `lib/provision.ts`
 - [x] **2.9** Tippgeber-Rechnung (20 % von der nach-Factoring-Basis) — **bereits korrekt**,
