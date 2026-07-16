@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Topbar } from "@/components/layout/topbar";
 import { getImmoModus } from "@/lib/einstellungen";
 import {
+  branchChildTowards,
   dealBeraterProvision,
   dealOverheadFuerUpline,
   type DealFinanz,
@@ -230,31 +231,47 @@ export default async function PartnerPage() {
     })
     .sort((a, b) => b.umsatz - a.umsatz);
 
-  // Overhead aus DIREKTEN Partnern — je Person aufgeschlüsselt (KPI-Klick).
-  const directChildren = (profiles ?? []).filter(
-    (p) => p.parent_berater_id === me.id,
+  // Overhead-KASKADE (8.2 + 3.7, Kundenantwort): Differenzmodell über ALLE
+  // Ebenen. Für jeden gewonnenen Deal in meiner Downline zählt die Differenz
+  // zwischen meiner Anbindung und der meines DIREKTEN Kindes auf dem Pfad
+  // (Branch-Anker); ausgewiesen je direktem Partner-Ast.
+  const parentIdMap = new Map(
+    (profiles ?? []).map((p) => [p.id, p.parent_berater_id ?? null]),
   );
+  const profMap = new Map((profiles ?? []).map((p) => [p.id, p]));
+  const parentLookup = (id: string) => parentIdMap.get(id) ?? null;
   const meStufe = Number(me.vertriebler_stufe ?? 0);
   const meImmo =
     me.immo_anteil_default == null ? null : Number(me.immo_anteil_default);
   let overheadGesamt = 0;
-  const overheadBreakdown: OverheadPosten[] = directChildren
-    .map((child) => {
-      let betrag = 0;
-      for (const d of deals) {
-        if (d.berater_id !== child.id || !won(d)) continue;
-        betrag += dealOverheadFuerUpline(
-          d as unknown as DealFinanz,
-          meStufe,
-          meImmo,
-          Number(child.vertriebler_stufe ?? 0),
-          immoModus,
-        );
-      }
-      overheadGesamt += betrag;
-      return { name: `${child.vorname} ${child.nachname}`, betrag };
-    })
-    .filter((r) => r.betrag > 0)
+  const ohMap = new Map<string, number>();
+  for (const d of deals) {
+    if (!won(d) || d.berater_id === me.id) continue;
+    const ankerId = branchChildTowards(parentLookup, me.id, d.berater_id);
+    const anker = ankerId ? profMap.get(ankerId) : undefined;
+    if (!anker) continue;
+    const eigenerDeal = d.berater_id === anker.id;
+    const betrag = dealOverheadFuerUpline(
+      d as unknown as DealFinanz,
+      meStufe,
+      meImmo,
+      Number(anker.vertriebler_stufe ?? 0),
+      immoModus,
+      eigenerDeal
+        ? undefined
+        : anker.immo_anteil_default == null
+          ? null
+          : Number(anker.immo_anteil_default),
+    );
+    if (betrag <= 0) continue;
+    overheadGesamt += betrag;
+    ohMap.set(anker.id, (ohMap.get(anker.id) ?? 0) + betrag);
+  }
+  const overheadBreakdown: OverheadPosten[] = [...ohMap.entries()]
+    .map(([id, betrag]) => ({
+      name: profNameMap.get(id) ?? "—",
+      betrag,
+    }))
     .sort((a, b) => b.betrag - a.betrag);
 
   // Bester Partner = wer bislang am meisten Umsatz eingebracht hat.

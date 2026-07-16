@@ -9,6 +9,7 @@
 import type { AnalyticsData } from "@/lib/analytics";
 import { isOpen, betragOf } from "@/lib/analytics";
 import {
+  branchChildTowards,
   dealBeraterProvision,
   dealOverheadFuerUpline,
   dealTippgeberAnteil,
@@ -25,42 +26,49 @@ export type PartnerRow = {
 };
 
 export function meinePartner(a: AnalyticsData, beraterId: string): PartnerRow[] {
-  const rows: PartnerRow[] = [];
-  for (const partnerId of a.downlineOf(beraterId)) {
-    const deals = a.deals.filter((d) => d.berater_id === partnerId);
-    let abschluesse = 0;
-    let pipelineVolumen = 0;
-    let provision = 0;
-    let overhead = 0;
-    let aktiv = false;
-    for (const d of deals) {
-      if (isOpen(d, a.sMap)) {
-        pipelineVolumen += betragOf(d);
-        aktiv = true;
-      }
-      if (a.istRealisiert(d)) {
-        abschluesse += 1;
-        provision += dealBeraterProvision(d, a.stufeOf(partnerId), a.immoModus);
-        overhead += dealOverheadFuerUpline(
-          d,
-          a.stufeOf(beraterId),
-          a.immoDefaultOf(beraterId),
-          a.stufeOf(partnerId),
-          a.immoModus,
-        );
-      }
-    }
-    rows.push({
+  // Eigene Kennzahlen des Partners (Abschlüsse/Pipeline/Provision) bleiben
+  // dessen eigene Deals; der Overhead kaskadiert über den GESAMTEN Ast
+  // (Differenzmodell: meine Stufe − Stufe des direkten Kindes am Pfad).
+  const rows = new Map<string, PartnerRow>(
+    a.downlineOf(beraterId).map((partnerId) => [
       partnerId,
-      name: a.nameOf(partnerId),
-      aktiv,
-      abschluesse,
-      pipelineVolumen,
-      provision,
-      overhead,
-    });
+      {
+        partnerId,
+        name: a.nameOf(partnerId),
+        aktiv: false,
+        abschluesse: 0,
+        pipelineVolumen: 0,
+        provision: 0,
+        overhead: 0,
+      },
+    ]),
+  );
+  for (const d of a.deals) {
+    const anker = branchChildTowards(a.parentOf, beraterId, d.berater_id);
+    if (!anker) continue;
+    const row = rows.get(anker);
+    if (!row) continue;
+    const eigenerDeal = d.berater_id === anker;
+    if (eigenerDeal && isOpen(d, a.sMap)) {
+      row.pipelineVolumen += betragOf(d);
+      row.aktiv = true;
+    }
+    if (a.istRealisiert(d)) {
+      if (eigenerDeal) {
+        row.abschluesse += 1;
+        row.provision += dealBeraterProvision(d, a.stufeOf(anker), a.immoModus);
+      }
+      row.overhead += dealOverheadFuerUpline(
+        d,
+        a.stufeOf(beraterId),
+        a.immoDefaultOf(beraterId),
+        a.stufeOf(anker),
+        a.immoModus,
+        eigenerDeal ? undefined : a.immoDefaultOf(anker),
+      );
+    }
   }
-  return rows.sort((x, y) => y.overhead - x.overhead);
+  return [...rows.values()].sort((x, y) => y.overhead - x.overhead);
 }
 
 export type TippgeberRow = {

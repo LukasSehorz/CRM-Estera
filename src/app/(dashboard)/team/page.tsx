@@ -58,12 +58,15 @@ export default async function TeamPage() {
     (ziele ?? []).map((z) => [z.berater_id, z]),
   );
 
-  // Mögliche Upline-Partner: alle Berater, die selbst keinen übergeordneten
-  // Partner haben (eine Ebene, 8.2). Der Berater selbst wird pro Zeile
-  // zusätzlich ausgenommen.
+  // Mögliche Upline-Partner: ALLE aktiven Profile — mehrstufig erlaubt (3.7),
+  // auch die GF als Wurzel. Zyklen verhindert set_berater_anbindung
+  // serverseitig (is_ancestor); der Berater selbst wird pro Zeile ausgenommen.
   const partnerKandidaten = (profiles ?? [])
-    .filter((p) => p.rolle !== "geschaeftsfuehrung" && p.parent_berater_id == null)
-    .map((p) => ({ id: p.id, name: `${p.vorname} ${p.nachname}` }));
+    .filter((p) => p.aktiv && p.rolle !== "backoffice")
+    .map((p) => ({
+      id: p.id,
+      name: `${p.vorname} ${p.nachname}${p.rolle === "geschaeftsfuehrung" ? " (GF)" : ""}`,
+    }));
 
   const profNameMap = new Map(
     (profiles ?? []).map((p) => [p.id, `${p.vorname} ${p.nachname}`]),

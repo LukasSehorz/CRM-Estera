@@ -312,6 +312,10 @@ export async function createBerater(
     vertriebler_stufe: input.stufe,
     immo_anteil_default: immoAnteil,
     bereich: input.bereiche,
+    // Kaskade-Prinzip (Kundenantwort Call SJ): wer anlegt, wird Upline —
+    // neue Berater hängen als Downline unter dem Anleger (hier: der GF).
+    // In der Team-Verwaltung jederzeit änderbar (Übergeordneter Partner).
+    parent_berater_id: rolle === "berater" ? user.id : null,
   });
   if (profileError) {
     // Auth-Nutzer nicht verwaist zurücklassen.

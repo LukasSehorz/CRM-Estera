@@ -247,10 +247,17 @@ export function dealTippgeberAnteil(d: DealFinanz): number {
 // Overhead (Kap. 8, Modell Lukas 12.07.2026): Overhead = DIFFERENZ der
 // Anbindungen, auf derselben Basis wie der Anteil des Partners.
 //   VV:   (Upline-Stufe − Partner-Stufe) % × VV-Basis des Partner-Deals
-//   Immo: (Upline-Immo-Default − Partner-Anteil des Deals) % × Immo-Basis
+//   Immo: (Upline-Immo-Default − Partner-Anteil) % × Immo-Basis
 // Beispiel Fred: Immo 7 %/VV 50 %, Partner 5 %/40 % → 2 % bzw. 10 %.
 // Der Overhead kommt aus dem Hausanteil, dem Partner wird nichts abgezogen
 // (ANNAHME 8.2 — von Sebastian gegenzuprüfen).
+//
+// KASKADE (Kundenantwort Call SJ, 16.07.2026): das Modell gilt über ALLE
+// Ebenen (Differenzmodell). Für einen Deal irgendwo in der Downline zählt
+// für die Upline-Ebene X die Differenz zwischen X und X' DIREKTEM Kind auf
+// dem Pfad zum Abschluss-Berater ("Branch-Anker"). `partnerImmoAnteil`
+// übergibt dessen Immo-Anbindung; ohne Wert (direkter Partner) gilt wie
+// bisher der Anteil des Deals.
 // =====================================================================
 export function dealOverheadFuerUpline(
   d: DealFinanz,
@@ -258,6 +265,7 @@ export function dealOverheadFuerUpline(
   uplineImmoDefault: number | null | undefined,
   partnerVvStufe: number | null | undefined,
   modus: ImmoProvisionModus = IMMO_PROVISION_MODUS,
+  partnerImmoAnteil?: number | null,
 ): number {
   if (d.bereich === "vv") {
     const diff = Math.max(0, (uplineVvStufe ?? 0) - (partnerVvStufe ?? 0));
@@ -266,8 +274,29 @@ export function dealOverheadFuerUpline(
   const esteraProvision = (d.kaufpreis ?? 0) * ((d.provisionssatz ?? 0) / 100);
   const basis =
     modus === "anteil_von_kaufpreis" ? (d.kaufpreis ?? 0) : esteraProvision;
-  const diff = Math.max(0, (uplineImmoDefault ?? 0) - (d.berater_anteil ?? 0));
+  const unten = partnerImmoAnteil ?? d.berater_anteil;
+  const diff = Math.max(0, (uplineImmoDefault ?? 0) - (unten ?? 0));
   return basis * (diff / 100);
+}
+
+/**
+ * Branch-Anker der Kaskade: das DIREKTE Kind der Upline auf dem Pfad zum
+ * Abschluss-Berater — null, wenn der Berater nicht in der Downline liegt.
+ * (Zyklus-Guard, da parent-Ketten aus der DB kommen.)
+ */
+export function branchChildTowards(
+  parentOf: (id: string) => string | null,
+  uplineId: string,
+  dealerId: string,
+): string | null {
+  let cur: string | null = dealerId;
+  let guard = 0;
+  while (cur && guard++ < 100) {
+    const p = parentOf(cur);
+    if (p === uplineId) return cur;
+    cur = p;
+  }
+  return null;
 }
 
 /** Fälligkeit des Einbehalts = Basisdatum (Abschluss, sonst Anlage) + 12 Monate. */

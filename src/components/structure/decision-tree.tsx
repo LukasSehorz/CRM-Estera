@@ -160,9 +160,12 @@ export function DecisionTree({ root }: { root: TreeNode }) {
     ]);
   }, [focusId, ancestors, descendants]);
 
-  // Kamera: fokussierte Menge (oder ganzer Baum) mittig in den Viewport einpassen.
+  // Kamera („Weltkarten-Zoom"): beim Fokus wird NUR der Ast (Knoten + komplette
+  // Downline) eingepasst — kleiner Ast ⇒ starker Rein-Zoom. Die Vorfahren
+  // bleiben sichtbar und laufen oben aus dem Bild (Pfad-Kontext). Ohne Fokus
+  // wird der ganze Baum mittig eingepasst.
   const cam = useMemo(() => {
-    const ids = focusSet ? [...focusSet] : [...pos.keys()];
+    const ids = focusId ? [focusId, ...descendants(focusId)] : [...pos.keys()];
     let minX = Infinity;
     let minY = Infinity;
     let maxX = -Infinity;
@@ -173,15 +176,18 @@ export function DecisionTree({ root }: { root: TreeNode }) {
       minY = Math.min(minY, py(id));
       maxY = Math.max(maxY, py(id));
     }
-    const mX = 84;
-    const mY = 74;
+    // Reale Ausdehnung eines Knotens: oben ~Radius, unten Label + Untertitel.
+    const mX = focusId ? 78 : 84;
+    const mTop = focusId ? 54 : 74;
+    const mBot = focusId ? 96 : 74;
     const bw = maxX - minX + mX * 2;
-    const bh = maxY - minY + mY * 2;
-    const scale = Math.min(cw / bw, ch / bh, focusId ? 1.75 : 1.12);
+    const bh = maxY - minY + mTop + mBot;
+    const scale = Math.min(cw / bw, ch / bh, focusId ? 2.2 : 1.12);
     const cx = (minX + maxX) / 2;
-    const cy = (minY + maxY) / 2;
+    // Mittelpunkt inkl. asymmetrischer Ränder (Labels brauchen unten mehr Platz).
+    const cy = (minY - mTop + maxY + mBot) / 2;
     return { scale, x: cw / 2 - scale * cx, y: ch / 2 - scale * cy };
-  }, [focusSet, focusId, pos, px, py, cw, ch]);
+  }, [focusId, descendants, pos, px, py, cw, ch]);
 
   // Aktiver Pfad (Hover) = Wurzel → gehoverter Knoten.
   const activePath = useMemo(
@@ -239,7 +245,7 @@ export function DecisionTree({ root }: { root: TreeNode }) {
           style={{ width: treeW, height: treeH }}
           initial={false}
           animate={{ x: cam.x, y: cam.y, scale: cam.scale }}
-          transition={{ duration: 0.72, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 0.85, ease: [0.16, 1, 0.3, 1] }}
         >
           {/* Konnektoren */}
           <svg
@@ -261,7 +267,9 @@ export function DecisionTree({ root }: { root: TreeNode }) {
                   : `M ${x1} ${y1} L ${x1} ${midY - cr} Q ${x1} ${midY} ${x1 + dir * cr} ${midY} L ${x2 - dir * cr} ${midY} Q ${x2} ${midY} ${x2} ${midY + cr} L ${x2} ${y2}`;
               const bothVisible = isVisible(e.from) && isVisible(e.to);
               const active = activePath.has(e.from) && activePath.has(e.to);
-              const dim = hovered !== null && !active;
+              // Im Fokus-Modus dimmt Hover nicht zusätzlich — der Ast bleibt
+              // voll sichtbar, nur der Pfad leuchtet.
+              const dim = hovered !== null && !active && !focusId;
               const opacity = !bothVisible ? 0.05 : dim ? 0.2 : 1;
               return (
                 <g key={`${e.from}-${e.to}`}>
@@ -295,7 +303,7 @@ export function DecisionTree({ root }: { root: TreeNode }) {
             if (!node) return null;
             const vis = isVisible(id);
             const active = activePath.has(id);
-            const dim = hovered !== null && !active;
+            const dim = hovered !== null && !active && !focusId;
             const canFocus = node.children.length > 0;
             return (
               <motion.div

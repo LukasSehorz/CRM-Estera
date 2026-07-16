@@ -9,6 +9,7 @@
 // =====================================================================
 import type { AnalyticsData, Deal } from "@/lib/analytics";
 import {
+  branchChildTowards,
   computeProvision,
   dealBeraterProvision,
   dealBeraterGewinn,
@@ -137,35 +138,32 @@ export function computeGehalt(
     }
   }
 
-  // Overhead aus der Downline (8.2, Differenz-Modell): je direktem Partner
-  // die Summe über dessen realisierte Deals.
-  const overheadPosten: OverheadPosten[] = [];
-  for (const partnerId of a.downlineOf(beraterId)) {
-    let summe = 0;
-    let anzahl = 0;
-    for (const d of a.deals) {
-      if (d.berater_id !== partnerId || !a.istRealisiert(d)) continue;
-      const oh = dealOverheadFuerUpline(
-        d,
-        a.stufeOf(beraterId),
-        a.immoDefaultOf(beraterId),
-        a.stufeOf(partnerId),
-        a.immoModus,
-      );
-      if (oh > 0) {
-        summe += oh;
-        anzahl++;
-      }
-    }
-    if (summe > 0)
-      overheadPosten.push({
-        partnerId,
-        partnerName: a.nameOf(partnerId),
-        betrag: summe,
-        deals: anzahl,
-      });
+  // Overhead aus der Downline (8.2 + Kaskade 3.7): Differenzmodell über ALLE
+  // Ebenen — je Deal zählt das direkte Kind auf dem Pfad zum Abschluss-Berater
+  // (Branch-Anker); ausgewiesen wird je direktem Partner-Ast.
+  const posten = new Map<string, OverheadPosten>();
+  for (const d of a.deals) {
+    if (!a.istRealisiert(d)) continue;
+    const anker = branchChildTowards(a.parentOf, beraterId, d.berater_id);
+    if (!anker) continue;
+    const eigenerDeal = d.berater_id === anker;
+    const oh = dealOverheadFuerUpline(
+      d,
+      a.stufeOf(beraterId),
+      a.immoDefaultOf(beraterId),
+      a.stufeOf(anker),
+      a.immoModus,
+      eigenerDeal ? undefined : a.immoDefaultOf(anker),
+    );
+    if (oh <= 0) continue;
+    const row =
+      posten.get(anker) ??
+      { partnerId: anker, partnerName: a.nameOf(anker), betrag: 0, deals: 0 };
+    row.betrag += oh;
+    row.deals++;
+    posten.set(anker, row);
   }
-  overheadPosten.sort((x, y) => y.betrag - x.betrag);
+  const overheadPosten = [...posten.values()].sort((x, y) => y.betrag - x.betrag);
 
   einbehaltKalender.sort((x, y) =>
     (x.faelligISO ?? "").localeCompare(y.faelligISO ?? ""),
