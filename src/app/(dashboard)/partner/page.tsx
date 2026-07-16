@@ -300,8 +300,8 @@ export default async function PartnerPage() {
           <h2 className="text-base font-semibold">Mein Organigramm</h2>
           <p className="mb-3 text-xs text-muted-foreground">
             Deine Struktur als Baum. Fahre über einen Knoten — der Pfad leuchtet
-            auf, der Rest tritt zurück. Knoten mit Downline lassen sich
-            auf-/zuklappen.
+            auf, der Rest tritt zurück. Auf einen Knoten klicken zoomt auf den
+            Ast; ein Klick auf den Berater-Namen öffnet dessen Details.
           </p>
           {meNode ? (
             <DecisionTree root={meNode} />

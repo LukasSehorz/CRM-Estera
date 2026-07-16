@@ -270,7 +270,7 @@ export function DecisionTree({ root }: { root: TreeNode }) {
                     fill="none"
                     className={cn(
                       "transition-[stroke,opacity] duration-300",
-                      active ? "stroke-primary" : "stroke-border",
+                      active ? "stroke-accent-500" : "stroke-border",
                     )}
                     strokeWidth={active ? 2.5 : 1.5}
                     style={{ opacity }}
@@ -279,7 +279,7 @@ export function DecisionTree({ root }: { root: TreeNode }) {
                     <path
                       d={d}
                       fill="none"
-                      className="decision-pulse stroke-primary"
+                      className="decision-pulse stroke-accent-400"
                       strokeWidth={2.5}
                       strokeLinecap="round"
                     />
@@ -483,7 +483,7 @@ function PanelBadge({ kind }: { kind: TreeNode["kind"] }) {
       </span>
     );
   return (
-    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-amber-500 text-white">
+    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-gold-soft text-background">
       <User className="h-4 w-4" />
     </span>
   );
@@ -491,13 +491,14 @@ function PanelBadge({ kind }: { kind: TreeNode["kind"] }) {
 
 function NodeShape({ node, active }: { node: TreeNode; active: boolean }) {
   if (node.kind === "gf") {
+    // Apex: tiefe Akzentfarbe (Struktur-Anker), Krone in Kontrastfarbe.
     return (
       <motion.div
-        whileHover={{ scale: 1.08 }}
+        whileHover={{ scale: 1.06 }}
         className={cn(
           "grid h-14 w-14 rotate-45 place-items-center rounded-[14px] shadow-md ring-2 transition-shadow",
           "bg-primary text-primary-foreground",
-          active ? "ring-primary shadow-primary/40" : "ring-transparent",
+          active ? "ring-accent-400 shadow-lg shadow-accent-500/30" : "ring-transparent",
         )}
       >
         <Crown className="h-5 w-5 -rotate-45" />
@@ -511,7 +512,7 @@ function NodeShape({ node, active }: { node: TreeNode; active: boolean }) {
         className={cn(
           "flex h-11 items-center gap-1.5 rounded-full border-2 px-3 shadow-sm transition-colors",
           active
-            ? "border-amber-500 bg-amber-500/15 text-amber-600"
+            ? "border-accent-500 bg-accent-500/15 text-gold-contrast"
             : "border-border bg-surface text-muted-foreground",
         )}
       >
@@ -519,13 +520,14 @@ function NodeShape({ node, active }: { node: TreeNode; active: boolean }) {
       </motion.div>
     );
   }
+  // Berater: hellerer Akzentton — klar vom Apex unterschieden, gleiche Familie.
   return (
     <motion.div
       whileHover={{ scale: 1.08 }}
       className={cn(
-        "grid h-14 w-14 place-items-center rounded-full text-white shadow-md ring-2 transition-shadow",
-        "bg-amber-500",
-        active ? "ring-amber-500 shadow-amber-500/40" : "ring-transparent",
+        "grid h-14 w-14 place-items-center rounded-full shadow-md ring-2 transition-shadow",
+        "bg-gold-soft text-background",
+        active ? "ring-accent-500 shadow-lg shadow-accent-500/25" : "ring-transparent",
       )}
     >
       <User className="h-5 w-5" />

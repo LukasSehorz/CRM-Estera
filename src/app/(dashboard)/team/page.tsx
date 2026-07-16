@@ -222,7 +222,8 @@ export default async function TeamPage() {
           <h2 className="text-base font-semibold">Struktur / Organigramm</h2>
           <p className="mb-3 text-xs text-muted-foreground">
             Mehrstufige Partnerstruktur (Berater &amp; Tippgeber). Fahre über
-            einen Knoten für dessen Performance.
+            einen Knoten für dessen Performance, klicke zum Zoomen auf den Ast —
+            ein Klick auf den Berater-Namen öffnet dessen Details.
           </p>
           {structureRoot && <DecisionTree root={structureRoot} />}
         </div>

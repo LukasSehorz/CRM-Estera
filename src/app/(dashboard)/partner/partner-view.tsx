@@ -96,7 +96,10 @@ function StatCard({
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <span
           className="grid h-7 w-7 place-items-center rounded-md"
-          style={{ background: `${accent}22`, color: accent }}
+          style={{
+            background: `color-mix(in srgb, ${accent} 15%, transparent)`,
+            color: accent,
+          }}
         >
           <Icon className="h-4 w-4" />
         </span>
@@ -149,7 +152,7 @@ export function PartnerView({
           icon={Users}
           label="Berater in deiner Struktur"
           value={String(stats.partnerCount)}
-          accent="var(--color-primary, #2563eb)"
+          accent="var(--primary)"
           onClick={() => scrollTo(beraterRef)}
           hint="Zur Liste"
         />
@@ -158,7 +161,7 @@ export function PartnerView({
           icon={Handshake}
           label="Tippgeber"
           value={String(stats.tippgeberCount)}
-          accent="#f59e0b"
+          accent="var(--gold)"
           onClick={() => scrollTo(tippgeberRef)}
           hint="Zur Liste"
         />
@@ -167,7 +170,7 @@ export function PartnerView({
           icon={TrendingUp}
           label="Overhead verdient"
           value={formatEUR(stats.overhead)}
-          accent="#10b981"
+          accent="var(--success)"
           onClick={() => setShowOverhead((v) => !v)}
           active={showOverhead}
           hint="Aufschlüsseln"
@@ -177,7 +180,7 @@ export function PartnerView({
           icon={Trophy}
           label="Bester Partner"
           value={stats.bester || "—"}
-          accent="#eab308"
+          accent="var(--gold-soft)"
           onClick={() => scrollTo(beraterRef)}
           hint="Meiste Umsätze"
         />
@@ -269,7 +272,10 @@ export function PartnerView({
         className="scroll-mt-4 rounded-xl border border-border bg-surface p-5"
       >
         <div className="mb-4 flex items-center gap-2">
-          <span className="grid h-8 w-8 place-items-center rounded-md bg-amber-500/15 text-amber-600">
+          <span
+            className="grid h-8 w-8 place-items-center rounded-md text-gold-contrast"
+            style={{ background: "color-mix(in srgb, var(--gold) 15%, transparent)" }}
+          >
             <Handshake className="h-4 w-4" />
           </span>
           <div>
@@ -321,7 +327,10 @@ function TeamCard({ m, index }: { m: TeamMember; index: number }) {
         </span>
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm font-semibold">{m.name}</div>
-          <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-medium text-amber-600">
+          <span
+            className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium text-gold-contrast"
+            style={{ background: "color-mix(in srgb, var(--gold) 15%, transparent)" }}
+          >
             <Trophy className="h-3 w-3" />
             {m.level}
           </span>
@@ -370,11 +379,15 @@ function TippgeberCard({ t, index }: { t: TippgeberMember; index: number }) {
       className="rounded-lg border border-border bg-background/40 p-4"
     >
       <div className="flex items-center gap-3">
-        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-amber-500/15 text-amber-600">
+        <span
+          className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-gold-contrast"
+          style={{ background: "color-mix(in srgb, var(--gold) 15%, transparent)" }}
+        >
           <Handshake className="h-5 w-5" />
         </span>
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm font-semibold">{t.name}</div>
+
           <div className="truncate text-[11px] text-muted-foreground">
             über {t.ownerName}
             {t.satz > 0 ? ` · ${t.satz} % Provision` : ""}
