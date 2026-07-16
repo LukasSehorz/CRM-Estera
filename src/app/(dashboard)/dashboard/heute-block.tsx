@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { formatDate } from "@/lib/format";
 import { tageSeit } from "@/lib/health";
 import { loadAnalytics, heisseLeads } from "@/lib/analytics";
-import { HeuteTaskItem } from "./heute-task-item";
+import { AufgabenListe } from "./aufgaben-liste";
 
 /**
  * „Heute"-Ansicht (Schleife 2, 4.1) — der größte Hebel: der Berater sieht
@@ -17,20 +17,20 @@ export async function HeuteBlock({ wide = false }: { wide?: boolean }) {
   const now = new Date();
 
   const [
-    { data: faellig },
+    { data: alleOffenenTasks },
     { data: termineHeute },
     { data: notarHeute },
     { data: offeneDeals },
     { data: aktivitaeten },
     { data: kontakteNamen },
   ] = await Promise.all([
+    // Alle offenen Aufgaben (Feedback SJ: per Dropdown vollständig sichtbar,
+    // ohne Seitenwechsel). Fällige/überfällige stehen zuerst.
     supabase
       .from("tasks")
       .select("id, titel, faellig_am, contact_id")
       .eq("erledigt", false)
-      .lte("faellig_am", heute)
-      .order("faellig_am")
-      .limit(8),
+      .order("faellig_am", { nullsFirst: false }),
     supabase
       .from("deals")
       .select("id, dealname, naechster_termin")
@@ -80,9 +80,27 @@ export async function HeuteBlock({ wide = false }: { wide?: boolean }) {
     ...(notarHeute ?? []).map((d) => ({ ...d, art: "Notartermin" })),
   ];
 
-  const ueberfaellige = (faellig ?? []).filter(
-    (t) => t.faellig_am != null && t.faellig_am < heute,
-  ).length;
+  const toItem = (t: {
+    id: string;
+    titel: string;
+    faellig_am: string | null;
+    contact_id: string | null;
+  }) => ({
+    id: t.id,
+    titel: t.titel,
+    faelligAm: t.faellig_am,
+    ueberfaellig: t.faellig_am != null && t.faellig_am < heute,
+    kontaktName: t.contact_id ? (nameMap.get(t.contact_id) ?? null) : null,
+    kontaktId: t.contact_id,
+  });
+  // Fällig/überfällig (bis heute) vorne, alles Weitere ins Dropdown.
+  const faellig = (alleOffenenTasks ?? [])
+    .filter((t) => t.faellig_am == null || t.faellig_am <= heute)
+    .map(toItem);
+  const weitere = (alleOffenenTasks ?? [])
+    .filter((t) => t.faellig_am != null && t.faellig_am > heute)
+    .map(toItem);
+  const ueberfaellige = faellig.filter((t) => t.ueberfaellig).length;
 
   // Heiße Leads (15.2): verkaufsreif, aber noch kein Deal — die wichtigste
   // Handlungs-Kennzahl, daher direkt hier statt versteckt in den Übersichten.
@@ -90,7 +108,8 @@ export async function HeuteBlock({ wide = false }: { wide?: boolean }) {
 
   // „Alles erledigt" nur, wenn auch keine heißen Leads offen sind.
   const leer =
-    (faellig ?? []).length === 0 &&
+    faellig.length === 0 &&
+    weitere.length === 0 &&
     termine.length === 0 &&
     stale.length === 0 &&
     heiss === 0;
@@ -171,27 +190,7 @@ export async function HeuteBlock({ wide = false }: { wide?: boolean }) {
                 </span>
               )}
             </p>
-            {(faellig ?? []).length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                Nichts fällig. 👍
-              </p>
-            ) : (
-              <ul className="space-y-1">
-                {(faellig ?? []).map((t) => (
-                  <HeuteTaskItem
-                    key={t.id}
-                    id={t.id}
-                    titel={t.titel}
-                    faelligAm={t.faellig_am}
-                    ueberfaellig={t.faellig_am != null && t.faellig_am < heute}
-                    kontaktName={
-                      t.contact_id ? (nameMap.get(t.contact_id) ?? null) : null
-                    }
-                    kontaktId={t.contact_id}
-                  />
-                ))}
-              </ul>
-            )}
+            <AufgabenListe faellig={faellig} weitere={weitere} />
           </div>
 
           {/* Termine des Tages */}

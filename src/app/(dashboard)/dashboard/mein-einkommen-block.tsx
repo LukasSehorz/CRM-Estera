@@ -44,6 +44,7 @@ export function MeinEinkommenBlock({
       }}
       gehalt={{
         sofort: gehalt.sofort,
+        sofortPosten: gehalt.sofortPosten,
         einbehaltSumme: gehalt.einbehaltSumme,
         einbehaltKalender: gehalt.einbehaltKalender,
         ratierlichMonatlich: gehalt.ratierlichMonatlich,

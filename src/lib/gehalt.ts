@@ -40,9 +40,21 @@ export type OverheadPosten = {
   betrag: number;
   deals: number;
 };
+/** Einzelner sofort ausgezahlter Deal — für die Aufschlüsselung (Feedback SJ). */
+export type SofortPosten = {
+  dealId: string;
+  dealname: string;
+  bereich: "immobilien" | "vv";
+  betrag: number;
+  /** Buchungsdatum (Immo: Notartermin, VV: Policierung). */
+  amISO: string;
+  /** In welchen Perioden zählt der Posten? */
+  periode: { monat: boolean; quartal: boolean; jahr: boolean };
+};
 
 export type GehaltDaten = {
   sofort: { monat: number; quartal: number; jahr: number; gesamt: number };
+  sofortPosten: SofortPosten[];
   einbehaltSumme: number;
   einbehaltKalender: EinbehaltPosten[];
   ratierlichMonatlich: number;
@@ -81,6 +93,7 @@ export function computeGehalt(
   const meine = a.deals.filter((d) => d.berater_id === beraterId);
 
   const sofort = { monat: 0, quartal: 0, jahr: 0, gesamt: 0 };
+  const sofortPosten: SofortPosten[] = [];
   const einbehaltKalender: EinbehaltPosten[] = [];
   const ratierlichPosten: RatierlichPosten[] = [];
   let bwsImFenster = 0;
@@ -95,12 +108,24 @@ export function computeGehalt(
     // Sofort-Auszahlung nach Periode (Buchungsdatum).
     const betrag = sofortBetrag(d, stufe, a.immoModus);
     sofort.gesamt += betrag;
-    if (am.getFullYear() === now.getFullYear()) {
+    const imJahr = am.getFullYear() === now.getFullYear();
+    const imQuartal =
+      imJahr && Math.floor(am.getMonth() / 3) === Math.floor(now.getMonth() / 3);
+    const imMonat = imJahr && am.getMonth() === now.getMonth();
+    if (imJahr) {
       sofort.jahr += betrag;
-      if (Math.floor(am.getMonth() / 3) === Math.floor(now.getMonth() / 3))
-        sofort.quartal += betrag;
-      if (am.getMonth() === now.getMonth()) sofort.monat += betrag;
+      if (imQuartal) sofort.quartal += betrag;
+      if (imMonat) sofort.monat += betrag;
     }
+    if (betrag > 0)
+      sofortPosten.push({
+        dealId: d.id,
+        dealname: d.dealname,
+        bereich: d.bereich,
+        betrag,
+        amISO,
+        periode: { monat: imMonat, quartal: imQuartal, jahr: imJahr },
+      });
 
     if (d.bereich === "vv") {
       const z = zahlartOf(d);
@@ -169,8 +194,11 @@ export function computeGehalt(
     (x.faelligISO ?? "").localeCompare(y.faelligISO ?? ""),
   );
 
+  sofortPosten.sort((x, y) => y.amISO.localeCompare(x.amISO));
+
   return {
     sofort,
+    sofortPosten,
     einbehaltSumme: einbehaltKalender.reduce((s, e) => s + e.betrag, 0),
     einbehaltKalender,
     ratierlichMonatlich: ratierlichPosten.reduce(

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import {
   CalendarClock,
+  ChevronDown,
   Coins,
   Hourglass,
   Repeat,
@@ -11,11 +12,13 @@ import {
   Users,
 } from "lucide-react";
 import { formatEURCents, formatEUR, formatDate } from "@/lib/format";
+import { InfoHint } from "@/components/ui/info-hint";
 import { KARRIERE_RAENGE } from "@/config/karriere";
 import type {
   EinbehaltPosten,
   RatierlichPosten,
   OverheadPosten,
+  SofortPosten,
 } from "@/lib/gehalt";
 
 export type KarriereProps = {
@@ -33,6 +36,7 @@ export type KarriereProps = {
 
 export type GehaltProps = {
   sofort: { monat: number; quartal: number; jahr: number; gesamt: number };
+  sofortPosten: SofortPosten[];
   einbehaltSumme: number;
   einbehaltKalender: EinbehaltPosten[];
   ratierlichMonatlich: number;
@@ -65,6 +69,10 @@ export function MeinEinkommen({
 }) {
   const [periode, setPeriode] = useState<(typeof PERIODEN)[number]["k"]>("monat");
   const sofortWert = gehalt.sofort[periode];
+  // Posten passend zur gewählten Periode — „Gesamt" zeigt alle.
+  const sofortPostenPeriode = gehalt.sofortPosten.filter((s) =>
+    periode === "gesamt" ? true : s.periode[periode],
+  );
 
   return (
     <section className="space-y-4">
@@ -80,15 +88,17 @@ export function MeinEinkommen({
 
       {/* Gehalts-Bausteine (7.4) */}
       <div className="grid gap-4 lg:grid-cols-2">
-        {/* Sofort ausgezahlt — mit Perioden-Umschalter */}
-        <div className="rounded-xl border border-border bg-surface p-5">
-          <div className="mb-3 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="grid h-8 w-8 place-items-center rounded-md bg-success/10 text-success">
-                <Coins className="h-4 w-4" />
-              </span>
-              <span className="text-sm font-semibold">Sofort ausgezahlt</span>
-            </div>
+        {/* Sofort ausgezahlt — mit Perioden-Umschalter + Aufschlüsselung */}
+        <BausteinKarte
+          icon={Coins}
+          farbe="var(--success)"
+          titel="Sofort ausgezahlt"
+          betrag={sofortWert}
+          leer={sofortPostenPeriode.length === 0}
+          leerText={`Keine realisierte Auszahlung · ${PERIODEN.find((p) => p.k === periode)?.label}.`}
+          anzahl={sofortPostenPeriode.length}
+          info="Was bereits bei dir angekommen ist: bei Factoring-Deals die 85 % (die restlichen 15 % stehen im Einbehalt), sonst dein voller Anteil. Immobilien zählen ab Notartermin, VV ab Policierung. Ratierliche Deals stehen separat unter „Passiv“."
+          aktion={
             <div className="flex gap-0.5 rounded-md bg-surface-2 p-0.5">
               {PERIODEN.map((p) => (
                 <button
@@ -105,15 +115,31 @@ export function MeinEinkommen({
                 </button>
               ))}
             </div>
-          </div>
-          <div className="text-3xl font-bold tabular-nums">
-            {formatEURCents(sofortWert)}
-          </div>
+          }
+        >
           <p className="mt-1 text-xs text-muted-foreground">
             Realisierte Auszahlung ·{" "}
             {PERIODEN.find((p) => p.k === periode)?.label}
           </p>
-        </div>
+          <ul className="mt-3 space-y-1.5">
+            {sofortPostenPeriode.map((s) => (
+              <li
+                key={s.dealId}
+                className="flex items-center justify-between gap-2 text-xs"
+              >
+                <span className="min-w-0 flex-1 truncate text-muted-foreground">
+                  {s.dealname}
+                </span>
+                <span className="shrink-0 tabular-nums text-muted-foreground">
+                  {formatDate(s.amISO)}
+                </span>
+                <span className="shrink-0 tabular-nums font-medium">
+                  {formatEURCents(s.betrag)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </BausteinKarte>
 
         {/* Einbehalt gesammelt + Kalender */}
         <BausteinKarte
@@ -123,9 +149,11 @@ export function MeinEinkommen({
           betrag={gehalt.einbehaltSumme}
           leer={gehalt.einbehaltKalender.length === 0}
           leerText="Kein offener Einbehalt (nur bei Factoring-Deals)."
+          anzahl={gehalt.einbehaltKalender.length}
+          info="Bei Factoring-Deals werden 15 % deiner Provision einbehalten und erst 12 Monate nach Abschluss ausgezahlt (Storno-Sicherheit). Hier stehen alle noch offenen Einbehalte mit ihrem Auszahlungsdatum — das Geld ist dir sicher, nur noch nicht geflossen."
         >
           <ul className="mt-3 space-y-1.5">
-            {gehalt.einbehaltKalender.slice(0, 5).map((e) => (
+            {gehalt.einbehaltKalender.map((e) => (
               <li
                 key={e.dealId}
                 className="flex items-center justify-between gap-2 text-xs"
@@ -153,12 +181,14 @@ export function MeinEinkommen({
             betrag={gehalt.ratierlichMonatlich}
             betragSuffix="/ Monat"
             leer={false}
+            anzahl={gehalt.ratierlichPosten.length}
+            info={`Ratierliche Deals werden nicht auf einmal, sondern über 60 Monate ausgezahlt. Hier siehst du die Summe deiner laufenden Monatsraten. Restsumme insgesamt: ${formatEURCents(gehalt.ratierlichRestsumme)}.`}
           >
             <p className="mt-1 text-xs text-muted-foreground">
               Restsumme {formatEURCents(gehalt.ratierlichRestsumme)}
             </p>
             <ul className="mt-3 space-y-1.5">
-              {gehalt.ratierlichPosten.slice(0, 5).map((r) => (
+              {gehalt.ratierlichPosten.map((r) => (
                 <li
                   key={r.dealId}
                   className="flex items-center justify-between gap-2 text-xs"
@@ -186,9 +216,11 @@ export function MeinEinkommen({
             titel="Overhead aus Partnern"
             betrag={gehalt.overheadSumme}
             leer={false}
+            anzahl={gehalt.overheadPosten.length}
+            info="Differenzmodell: Schließt jemand aus deiner Downline ab, bekommst du die Differenz zwischen deiner Anbindung und der deines direkten Partners in diesem Ast — bei VV über die Stufe, bei Immobilien über den Immo-Anteil. Gilt über alle Ebenen, also auch für Abschlüsse unter deinen Partnern."
           >
             <ul className="mt-3 space-y-1.5">
-              {gehalt.overheadPosten.slice(0, 5).map((o) => (
+              {gehalt.overheadPosten.map((o) => (
                 <li
                   key={o.partnerId}
                   className="flex items-center justify-between gap-2 text-xs"
@@ -220,6 +252,9 @@ function BausteinKarte({
   betragSuffix,
   leer,
   leerText,
+  info,
+  anzahl,
+  aktion,
   children,
 }: {
   icon: React.ComponentType<{ className?: string }>;
@@ -229,34 +264,78 @@ function BausteinKarte({
   betragSuffix?: string;
   leer: boolean;
   leerText?: string;
+  /** Kurze Erklärung, wie die Zahl entsteht (?-Tooltip, Feedback SJ). */
+  info?: string;
+  /** Anzahl Posten — steuert den Aufklapp-Hinweis („3 Posten"). */
+  anzahl?: number;
+  /** Optionale Kopfzeilen-Aktion (z. B. Perioden-Umschalter). */
+  aktion?: React.ReactNode;
   children?: React.ReactNode;
 }) {
+  const [offen, setOffen] = useState(false);
+  const klappbar = !leer && !!children && (anzahl ?? 0) > 0;
+
   return (
     <div className="rounded-xl border border-border bg-surface p-5">
-      <div className="mb-3 flex items-center gap-2">
-        <span
-          className="grid h-8 w-8 place-items-center rounded-md"
-          style={{
-            background: `color-mix(in srgb, ${farbe} 14%, transparent)`,
-            color: farbe,
-          }}
-        >
-          <Icon className="h-4 w-4" />
-        </span>
-        <span className="text-sm font-semibold">{titel}</span>
-      </div>
-      <div className="text-3xl font-bold tabular-nums">
-        {formatEURCents(betrag)}
-        {betragSuffix && (
-          <span className="ml-1 text-sm font-normal text-muted-foreground">
-            {betragSuffix}
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <span
+            className="grid h-8 w-8 place-items-center rounded-md"
+            style={{
+              background: `color-mix(in srgb, ${farbe} 14%, transparent)`,
+              color: farbe,
+            }}
+          >
+            <Icon className="h-4 w-4" />
           </span>
-        )}
+          <span className="flex items-center gap-1.5 text-sm font-semibold">
+            {titel}
+            {info && <InfoHint text={info} align="right" />}
+          </span>
+        </div>
+        {aktion}
       </div>
+
+      {/* Zahl klickbar: zeigt, woraus sie sich zusammensetzt (Feedback SJ) */}
+      <button
+        type="button"
+        onClick={() => klappbar && setOffen((v) => !v)}
+        disabled={!klappbar}
+        aria-expanded={offen}
+        className={
+          klappbar
+            ? "-mx-1 flex w-[calc(100%+0.5rem)] items-center gap-2 rounded-md px-1 py-0.5 text-left transition-colors hover:bg-surface-2"
+            : "flex w-full items-center gap-2 text-left"
+        }
+      >
+        <span className="text-3xl font-bold tabular-nums">
+          {formatEURCents(betrag)}
+          {betragSuffix && (
+            <span className="ml-1 text-sm font-normal text-muted-foreground">
+              {betragSuffix}
+            </span>
+          )}
+        </span>
+        {klappbar && (
+          <ChevronDown
+            className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${
+              offen ? "rotate-180" : ""
+            }`}
+          />
+        )}
+      </button>
+
+      {klappbar && !offen && (
+        <p className="mt-1 text-xs text-muted-foreground">
+          {anzahl} {anzahl === 1 ? "Posten" : "Posten"} · anklicken zum
+          Aufschlüsseln
+        </p>
+      )}
+
       {leer ? (
         <p className="mt-2 text-xs text-muted-foreground">{leerText}</p>
       ) : (
-        children
+        offen && children
       )}
     </div>
   );
