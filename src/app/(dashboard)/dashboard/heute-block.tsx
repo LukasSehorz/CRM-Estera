@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { AlarmClock, CalendarDays, Flame } from "lucide-react";
+import { AlarmClock, ArrowRight, CalendarDays, Flame } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { formatDate } from "@/lib/format";
 import { tageSeit } from "@/lib/health";
+import { loadAnalytics, heisseLeads } from "@/lib/analytics";
 import { HeuteTaskItem } from "./heute-task-item";
 
 /**
@@ -83,8 +84,16 @@ export async function HeuteBlock({ wide = false }: { wide?: boolean }) {
     (t) => t.faellig_am != null && t.faellig_am < heute,
   ).length;
 
+  // Heiße Leads (15.2): verkaufsreif, aber noch kein Deal — die wichtigste
+  // Handlungs-Kennzahl, daher direkt hier statt versteckt in den Übersichten.
+  const heiss = heisseLeads(await loadAnalytics()).length;
+
+  // „Alles erledigt" nur, wenn auch keine heißen Leads offen sind.
   const leer =
-    (faellig ?? []).length === 0 && termine.length === 0 && stale.length === 0;
+    (faellig ?? []).length === 0 &&
+    termine.length === 0 &&
+    stale.length === 0 &&
+    heiss === 0;
 
   return (
     <div
@@ -118,6 +127,30 @@ export async function HeuteBlock({ wide = false }: { wide?: boolean }) {
           Alle Aufgaben →
         </Link>
       </div>
+
+      {/* Heiße Leads (15.2): reif, aber noch kein Deal — die Zahl, bei der
+          Umsatz liegen bleibt. Steht bewusst ganz oben und ist klickbar. */}
+      {heiss > 0 && (
+        <Link
+          href="/listen/kontakte?preset=heiss"
+          className="mt-4 flex items-center gap-3 rounded-xl border border-danger/30 bg-danger/5 px-4 py-3 transition-colors hover:border-danger/60 hover:bg-danger/10"
+        >
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-danger/15 text-danger">
+            <Flame className="h-5 w-5" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-semibold">
+              {heiss} heiße{heiss === 1 ? "r" : ""} Lead{heiss === 1 ? "" : "s"}{" "}
+              warte{heiss === 1 ? "t" : "n"} auf dich
+            </span>
+            <span className="block text-xs text-muted-foreground">
+              Qualifiziert, eingeschätzt, Erstgespräch gelaufen — aber noch kein
+              Deal (nur Immobilien).
+            </span>
+          </span>
+          <ArrowRight className="h-4 w-4 shrink-0 text-danger" />
+        </Link>
+      )}
 
       {leer ? (
         <p className="py-6 text-center text-sm text-muted-foreground">

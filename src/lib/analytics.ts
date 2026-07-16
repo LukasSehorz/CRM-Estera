@@ -25,6 +25,7 @@ import {
   type ImmoProvisionModus,
 } from "@/lib/provision";
 import { IMMO_MODUS_KEY, parseImmoModus } from "@/lib/einstellungen";
+import { istQualifiziert } from "@/config/enums";
 
 export type Stage = {
   id: string;
@@ -66,6 +67,7 @@ export type Contact = {
   belegt_deal_id: string | null;
   nettoverdienst_monatlich: number | null;
   eigenkapital: number | null;
+  termin_status: string;
   vorname: string;
   nachname: string;
 };
@@ -271,7 +273,7 @@ export async function loadAnalytics(): Promise<AnalyticsData> {
     supabase
       .from("contacts")
       .select(
-        "id, leadquelle, berater_id, interesse, einschaetzung, eingeschaetzter_betrag, belegt_deal_id, nettoverdienst_monatlich, eigenkapital, vorname, nachname",
+        "id, leadquelle, berater_id, interesse, einschaetzung, eingeschaetzter_betrag, belegt_deal_id, nettoverdienst_monatlich, eigenkapital, termin_status, vorname, nachname",
       ),
     supabase
       .from("profiles")
@@ -666,4 +668,41 @@ export function beraterPerformance(a: AnalyticsData): BeraterPerf[] {
     })
     .filter((r) => r.umsatz > 0 || r.offene > 0)
     .sort((x, y) => y.umsatz - x.umsatz);
+}
+
+// ── Heiße Leads (15.2) ───────────────────────────────────────────────────
+// „Verkaufsreif, aber noch nicht gestartet": qualifiziert (Netto + Eigen-
+// kapital über der Schwelle) + Finanzierung eingeschätzt + Erstgespräch
+// durchgeführt — und noch KEIN fortgeschrittener Deal. Genau die Kunden, bei
+// denen Umsatz liegen bleibt.
+//
+// Bewusst NUR Immobilien (Entscheidung 16.07.): die Finanzierungseinschätzung
+// gibt es fachlich nur dort. Damit ist die Sparten-Bindung explizit statt ein
+// stiller Nebeneffekt des Einschätzungs-Filters.
+
+/** Deal gilt als fortgeschritten (Kunde ist „schon gestartet"). */
+export function istFortgeschrittenerDeal(
+  d: Deal,
+  sMap: Map<string, Stage>,
+): boolean {
+  const s = sMap.get(d.stage_id);
+  if (!s) return false;
+  return s.is_won || s.position >= 4;
+}
+
+/** Kunden-IDs mit heißem Lead (nur Immobilien) — eine Quelle für alle Views. */
+export function heisseLeads(a: AnalyticsData): Contact[] {
+  const gestartet = new Set(
+    a.deals
+      .filter((d) => istFortgeschrittenerDeal(d, a.sMap))
+      .map((d) => d.contact_id),
+  );
+  return a.contacts.filter(
+    (c) =>
+      (c.interesse ?? []).includes("immobilien") &&
+      istQualifiziert(c.nettoverdienst_monatlich, c.eigenkapital) &&
+      c.einschaetzung === "eingeschaetzt" &&
+      c.termin_status === "Durchgeführt" &&
+      !gestartet.has(c.id),
+  );
 }

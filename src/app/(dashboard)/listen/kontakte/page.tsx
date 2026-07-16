@@ -10,7 +10,11 @@ const META: Record<string, { title: string; subtitle: string }> = {
   vv: { title: "Vermögensverwaltung-Kunden", subtitle: "Interesse = Vermögensverwaltung" },
   eingeschaetzt: { title: "Eingeschätzte Kunden", subtitle: "Immobilien mit Einschätzung „eingeschätzt“, nach Volumen sortiert" },
   qualifiziert: { title: "Qualifizierte Leads", subtitle: "Automatisch: Nettoeinkommen & Eigenkapital über der Schwelle" },
-  heiss: { title: "Heiße Leads", subtitle: "Qualifiziert + eingeschätzt + Termin durchgeführt" },
+  heiss: {
+    title: "Heiße Leads",
+    subtitle:
+      "Nur Immobilien · qualifiziert + eingeschätzt + Erstgespräch gelaufen — aber noch kein Deal",
+  },
   offen: { title: "Offene Leads", subtitle: "Noch kein Termin vereinbart" },
 };
 
@@ -94,8 +98,10 @@ export default async function KontaktListenPage({
       if (s && istFortgeschritten(d.bereich, s.position, s.is_won))
         fortgeschritten.add(d.contact_id);
     }
+    // NUR Immobilien (Entscheidung 16.07.) — siehe listen/page.tsx.
     list = list.filter(
       (c) =>
+        c.interesse?.includes("immobilien") &&
         istQualifiziert(c.nettoverdienst_monatlich, c.eigenkapital) &&
         c.einschaetzung === "eingeschaetzt" &&
         c.termin_status === "Durchgeführt" &&

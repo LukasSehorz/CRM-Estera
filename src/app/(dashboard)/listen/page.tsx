@@ -309,10 +309,12 @@ export default async function ListenHubPage() {
   const cEing = kontakte.filter(
     (c) => c.interesse?.includes("immobilien") && c.einschaetzung === "eingeschaetzt",
   );
-  // Heiß (15.2, optionales Zusatz-Signal): qualifiziert + positive
-  // Einschätzung + kürzliche Aktivität (Termin durchgeführt als Proxy).
+  // Heiße Leads (15.2): verkaufsreif, aber noch kein Deal. NUR Immobilien —
+  // die Finanzierungseinschätzung gibt es fachlich nur dort (Entscheidung
+  // 16.07.: explizit statt stiller Nebeneffekt des Einschätzungs-Filters).
   const cHeiss = kontakte.filter(
     (c) =>
+      c.interesse?.includes("immobilien") &&
       istQualifiziert(c.nettoverdienst_monatlich, c.eigenkapital) &&
       c.einschaetzung === "eingeschaetzt" &&
       c.termin_status === "Durchgeführt" &&
