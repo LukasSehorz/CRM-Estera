@@ -21,12 +21,13 @@ export default function LoginPage() {
   );
   const jahr = new Date().getFullYear();
 
+  // Login bewusst IMMER dunkel — auch wenn der User den Hellmodus nutzt: die
+  // Klasse "dark" auf dem Wurzelelement erzwingt die Dark-Tokens für die ganze
+  // Seite (sonst mischen sich Navy-Panel links und helle Karte rechts).
   return (
-    <main className="grid min-h-screen bg-background lg:grid-cols-2">
-      {/* Marken-Panel — immer Navy, unabhängig vom Theme (Klasse "dark"
-          erzwingt die Dark-Tokens nur in diesem Teilbaum). */}
+    <main className="dark grid min-h-screen bg-background text-foreground lg:grid-cols-2">
       <section
-        className="dark relative hidden overflow-hidden bg-background text-foreground lg:flex lg:flex-col lg:justify-between lg:p-10"
+        className="relative hidden overflow-hidden bg-background text-foreground lg:flex lg:flex-col lg:justify-between lg:p-10"
         aria-label="Estera"
       >
         {/* Hintergrund: bewusst pur — nur die Navy-Fläche (--background),
@@ -221,7 +222,7 @@ export default function LoginPage() {
               <Button
                 type="submit"
                 disabled={pending}
-                className="h-11 w-full bg-accent-500 font-semibold text-foreground hover:bg-accent-600 dark:text-background"
+                className="h-11 w-full bg-accent-500 font-semibold text-background hover:bg-accent-600"
               >
                 {pending ? (
                   <>
