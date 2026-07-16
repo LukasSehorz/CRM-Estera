@@ -1,14 +1,8 @@
-import {
-  CalendarClock,
-  Percent,
-  Ruler,
-  Timer,
-  Undo2,
-  Wallet,
-} from "lucide-react";
+import { Percent, Ruler, Timer, Undo2 } from "lucide-react";
 import { Topbar } from "@/components/layout/topbar";
 import { formatEUR, formatProzent } from "@/lib/format";
 import { KpiCard } from "@/components/charts/kpi-card";
+import { ExpandableStat } from "@/components/charts/expandable-stat";
 import { DashboardTabs } from "../dashboard-tabs";
 import { BereichSwitcher } from "../bereich-switcher";
 import { PerformanceView, type PerfRow } from "./performance-view";
@@ -27,6 +21,7 @@ import {
   stornoQuote,
   forecastGewichtet,
   umsatzRollierend,
+  isOpen,
   isWon,
 } from "@/lib/analytics";
 import { dealBeraterProvision } from "@/lib/provision";
@@ -123,6 +118,69 @@ export default async function PerformanceDashboardPage({
       ? ((woche.current - woche.previous) / woche.previous) * 100
       : null;
 
+  // Aufschlüsselung der KPI-Zahlen (Feedback SJ): Umsatz nach Sparte + Anzahl.
+  const nowMs = now.getTime();
+  const splitUmsatz = (sinceMs: number | null) => {
+    let immo = 0;
+    let vv = 0;
+    let n = 0;
+    for (const d of a.deals) {
+      const am = a.realisiertAm(d);
+      if (!am) continue;
+      if (sinceMs != null && new Date(am).getTime() < sinceMs) continue;
+      const amt = a.umsatzOf(d);
+      if (d.bereich === "immobilien") immo += amt;
+      else vv += amt;
+      n += 1;
+    }
+    return { immo, vv, n };
+  };
+  const split7 = splitUmsatz(nowMs - 7 * 86_400_000);
+  const split30 = splitUmsatz(nowMs - 30 * 86_400_000);
+  const splitGesamt = splitUmsatz(null);
+  const umsatzDetails = (s: { immo: number; vv: number; n: number }) => [
+    { label: "Immobilien", value: formatEUR(s.immo), tone: "primary" },
+    { label: "Vermögensverwaltung", value: formatEUR(s.vv), tone: "info" },
+    { label: "Gewonnene Deals", value: String(s.n) },
+  ];
+
+  // Forecast-Aufschlüsselung je Zeitfenster (kumulativ, wie forecastGewichtet).
+  const fb = {
+    t7: { immo: 0, vv: 0, n: 0 },
+    t30: { immo: 0, vv: 0, n: 0 },
+    t60: { immo: 0, vv: 0, n: 0 },
+    t90: { immo: 0, vv: 0, n: 0 },
+  };
+  for (const d of a.deals) {
+    if (!isOpen(d, a.sMap)) continue;
+    const prob = (a.sMap.get(d.stage_id)?.wahrscheinlichkeit ?? 0) / 100;
+    const g = a.umsatzOf(d) * prob;
+    const slot = d.bereich === "immobilien" ? "immo" : "vv";
+    fb.t90[slot] += g;
+    fb.t90.n += 1;
+    if (prob >= 0.4) {
+      fb.t60[slot] += g;
+      fb.t60.n += 1;
+    }
+    if (prob >= 0.8) {
+      fb.t30[slot] += g;
+      fb.t30.n += 1;
+    }
+    if (prob >= 0.9) {
+      fb.t7[slot] += g;
+      fb.t7.n += 1;
+    }
+  }
+  const fcDetails = (s: { immo: number; vv: number; n: number }) => [
+    { label: "Immobilien", value: formatEUR(s.immo), tone: "primary" },
+    { label: "Vermögensverwaltung", value: formatEUR(s.vv), tone: "info" },
+    { label: "offene Deals im Fenster", value: String(s.n) },
+  ];
+  const deltaText = (v: number | null, suffix: string) =>
+    v == null
+      ? undefined
+      : `${v >= 0 ? "+" : ""}${v.toFixed(1).replace(".", ",")} % ${suffix}`;
+
   return (
     <>
       <Topbar
@@ -136,28 +194,31 @@ export default async function PerformanceDashboardPage({
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {/* Wochenrückblick (5.6): das wichtigste Steuerungsintervall */}
-          <KpiCard
+          {/* Wochenrückblick (5.6) — Umsatz-KPIs aufklappbar (Feedback SJ) */}
+          <ExpandableStat
             label={a.isGf ? "Umsatz (7 Tage)" : "Mein Umsatz (7 Tage)"}
             value={formatEUR(woche.current)}
-            delta={wocheDelta}
-            deltaLabel="vs. Vorwoche"
-            icon={CalendarClock}
+            deltaText={deltaText(wocheDelta, "vs. Vorwoche")}
+            deltaUp={(wocheDelta ?? 0) >= 0}
+            iconKey="cal"
             tone="success"
+            details={umsatzDetails(split7)}
           />
-          <KpiCard
+          <ExpandableStat
             label={a.isGf ? "Umsatz (30 Tage)" : "Mein Umsatz (30 Tage)"}
             value={formatEUR(roll.current)}
-            delta={rollMom}
-            deltaLabel="vs. 30 Tage davor"
-            icon={CalendarClock}
+            deltaText={deltaText(rollMom, "vs. 30 Tage davor")}
+            deltaUp={(rollMom ?? 0) >= 0}
+            iconKey="cal"
             tone="accent"
+            details={umsatzDetails(split30)}
           />
-          <KpiCard
+          <ExpandableStat
             label={a.isGf ? "Umsatz gesamt (Provision)" : "Mein Umsatz gesamt"}
             value={formatEUR(umsatz)}
-            icon={Wallet}
+            iconKey="wallet"
             tone="accent"
+            details={umsatzDetails(splitGesamt)}
           />
           <KpiCard
             label="Ø Deal-Größe (Volumen)"
@@ -211,29 +272,33 @@ export default async function PerformanceDashboardPage({
             </p>
           </div>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <KpiCard
+            <ExpandableStat
               label="Nächste 7 Tage"
               value={formatEUR(forecast.t7)}
-              icon={CalendarClock}
+              iconKey="cal"
               tone="success"
+              details={fcDetails(fb.t7)}
             />
-            <KpiCard
+            <ExpandableStat
               label="Nächste 30 Tage"
               value={formatEUR(forecast.t30)}
-              icon={CalendarClock}
+              iconKey="cal"
               tone="success"
+              details={fcDetails(fb.t30)}
             />
-            <KpiCard
+            <ExpandableStat
               label="Nächste 60 Tage"
               value={formatEUR(forecast.t60)}
-              icon={CalendarClock}
+              iconKey="cal"
               tone="info"
+              details={fcDetails(fb.t60)}
             />
-            <KpiCard
+            <ExpandableStat
               label="Nächste 90 Tage"
               value={formatEUR(forecast.t90)}
-              icon={CalendarClock}
+              iconKey="cal"
               tone="accent"
+              details={fcDetails(fb.t90)}
             />
           </div>
         </section>
