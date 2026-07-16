@@ -13,6 +13,7 @@ import {
 import { cn } from "@/lib/utils";
 import { formatDate, formatEUR } from "@/lib/format";
 import { Pill } from "@/components/ui/pill";
+import { InfoHint } from "@/components/ui/info-hint";
 import { bereichLabel } from "@/config/enums";
 import type { Werte } from "./provision-block";
 
@@ -40,30 +41,6 @@ function DeltaPill({ value }: { value: number | null }) {
       )}
       {up ? "+" : ""}
       {value.toFixed(2).replace(".", ",")} %
-    </span>
-  );
-}
-
-/**
- * ?-Tooltip (5.1): CSS-only, per Hover UND Tastatur-Fokus sichtbar —
- * kein zusätzliches Paket, keine Portal-Logik nötig.
- */
-function InfoHint({ text }: { text: string }) {
-  return (
-    <span className="group/info relative inline-flex">
-      <button
-        type="button"
-        aria-label="Erklärung anzeigen"
-        className="grid h-4 w-4 place-items-center rounded-full border border-current text-[9px] font-bold leading-none opacity-60 transition-opacity hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      >
-        ?
-      </button>
-      <span
-        role="tooltip"
-        className="pointer-events-none absolute left-1/2 top-full z-30 mt-2 w-60 -translate-x-1/2 rounded-lg border border-border bg-surface p-2.5 text-left text-[11px] font-normal leading-relaxed text-foreground opacity-0 shadow-xl transition-opacity duration-150 group-focus-within/info:opacity-100 group-hover/info:opacity-100"
-      >
-        {text}
-      </span>
     </span>
   );
 }

@@ -6,8 +6,13 @@ import {
   branchChildTowards,
   dealBeraterProvision,
   dealOverheadFuerUpline,
+  dealTippgeberAnteil,
+  zahlartOf,
+  FACTORING_ANTEIL,
+  PROVISIONSSATZ,
   type DealFinanz,
 } from "@/lib/provision";
+import { formatEUR } from "@/lib/format";
 import { rangFuerStufe } from "@/config/karriere";
 import {
   DecisionTree,
@@ -18,12 +23,16 @@ import {
   type PartnerStats,
   type TeamMember,
   type TippgeberMember,
+  type TippgeberDealDetail,
   type OverheadPosten,
+  type OverheadDealDetail,
 } from "./partner-view";
 
 type Bereich = "immobilien" | "vv";
 type StageJoin = { is_won: boolean; is_lost: boolean };
 type DealRow = {
+  id: string;
+  dealname: string;
   berater_id: string;
   bereich: string;
   kaufpreis: number | null;
@@ -89,7 +98,7 @@ export default async function PartnerPage() {
     supabase
       .from("deals")
       .select(
-        "berater_id, bereich, kaufpreis, bws, factoring, vv_zahlart, ratierlich, provisionssatz, berater_anteil, tippgeber_satz, tippgeber_id, pipeline_stages!inner(is_won, is_lost)",
+        "id, dealname, berater_id, bereich, kaufpreis, bws, factoring, vv_zahlart, ratierlich, provisionssatz, berater_anteil, tippgeber_satz, tippgeber_id, pipeline_stages!inner(is_won, is_lost)",
       ),
     supabase
       .from("berater_monatsziele")
@@ -130,9 +139,15 @@ export default async function PartnerPage() {
     perfMap.set(d.berater_id, cur);
   }
 
+  const profNameMap = new Map(
+    (profiles ?? []).map((p) => [p.id, `${p.vorname} ${p.nachname}`]),
+  );
+
   // Umsatz, den ein verwalteter Tippgeber eingebracht hat (3.3): Summe der
-  // Volumina gewonnener Deals, die auf ihn verweisen.
+  // Volumina gewonnener Deals, die auf ihn verweisen — inkl. Deal-Details
+  // für die aufklappbare Rechnung (Feedback SJ).
   const tippgeberPerf = new Map<string, { umsatz: number; vermittelt: number }>();
+  const tippgeberDeals = new Map<string, TippgeberDealDetail[]>();
   for (const d of deals) {
     if (!d.tippgeber_id || !won(d)) continue;
     const vol =
@@ -141,11 +156,17 @@ export default async function PartnerPage() {
     cur.umsatz += vol;
     cur.vermittelt += 1;
     tippgeberPerf.set(d.tippgeber_id, cur);
+    const list = tippgeberDeals.get(d.tippgeber_id) ?? [];
+    list.push({
+      dealId: d.id,
+      dealname: d.dealname,
+      bereich: d.bereich as Bereich,
+      beraterName: profNameMap.get(d.berater_id) ?? "—",
+      volumen: vol,
+      anteil: dealTippgeberAnteil(d as unknown as DealFinanz),
+    });
+    tippgeberDeals.set(d.tippgeber_id, list);
   }
-
-  const profNameMap = new Map(
-    (profiles ?? []).map((p) => [p.id, `${p.vorname} ${p.nachname}`]),
-  );
 
   const zielMap = new Map(
     (ziele ?? []).map((z) => [
@@ -244,40 +265,70 @@ export default async function PartnerPage() {
   const meImmo =
     me.immo_anteil_default == null ? null : Number(me.immo_anteil_default);
   let overheadGesamt = 0;
-  const ohMap = new Map<string, number>();
+  const ohMap = new Map<string, { betrag: number; deals: OverheadDealDetail[] }>();
   for (const d of deals) {
     if (!won(d) || d.berater_id === me.id) continue;
     const ankerId = branchChildTowards(parentLookup, me.id, d.berater_id);
     const anker = ankerId ? profMap.get(ankerId) : undefined;
     if (!anker) continue;
     const eigenerDeal = d.berater_id === anker.id;
+    const ankerStufe = Number(anker.vertriebler_stufe ?? 0);
+    const ankerImmo = eigenerDeal
+      ? (d.berater_anteil == null ? null : Number(d.berater_anteil))
+      : anker.immo_anteil_default == null
+        ? null
+        : Number(anker.immo_anteil_default);
     const betrag = dealOverheadFuerUpline(
       d as unknown as DealFinanz,
       meStufe,
       meImmo,
-      Number(anker.vertriebler_stufe ?? 0),
+      ankerStufe,
       immoModus,
-      eigenerDeal
-        ? undefined
-        : anker.immo_anteil_default == null
-          ? null
-          : Number(anker.immo_anteil_default),
+      eigenerDeal ? undefined : ankerImmo,
     );
     if (betrag <= 0) continue;
     overheadGesamt += betrag;
-    ohMap.set(anker.id, (ohMap.get(anker.id) ?? 0) + betrag);
+
+    // Nachvollziehbare Rechnung je Deal (Feedback SJ): Basis + Differenz.
+    let formel: string;
+    if (d.bereich === "vv") {
+      const mitFactoring =
+        zahlartOf(d as unknown as DealFinanz) === "factoring";
+      const basis =
+        Number(d.bws ?? 0) * PROVISIONSSATZ * (mitFactoring ? FACTORING_ANTEIL : 1);
+      const diff = Math.max(0, meStufe - ankerStufe);
+      formel = `Basis ${formatEUR(basis)} (BWS ${formatEUR(Number(d.bws ?? 0))} × 7,8 %${
+        mitFactoring ? " × 90 %" : ""
+      }) × ${diff} % — deine Stufe ${meStufe} % − ${ankerStufe} % (${anker.vorname} ${anker.nachname})`;
+    } else {
+      const diff = Math.max(0, (meImmo ?? 0) - (ankerImmo ?? 0));
+      formel = `Kaufpreis ${formatEUR(Number(d.kaufpreis ?? 0))} × ${diff} % — dein Immo-Anteil ${meImmo ?? 0} % − ${ankerImmo ?? 0} % (${anker.vorname} ${anker.nachname})`;
+    }
+
+    const cur = ohMap.get(anker.id) ?? { betrag: 0, deals: [] };
+    cur.betrag += betrag;
+    cur.deals.push({
+      dealId: d.id,
+      dealname: d.dealname,
+      bereich: d.bereich as Bereich,
+      beraterName: profNameMap.get(d.berater_id) ?? "—",
+      betrag,
+      formel,
+    });
+    ohMap.set(anker.id, cur);
   }
   const overheadBreakdown: OverheadPosten[] = [...ohMap.entries()]
-    .map(([id, betrag]) => ({
+    .map(([id, v]) => ({
       name: profNameMap.get(id) ?? "—",
-      betrag,
+      betrag: v.betrag,
+      deals: v.deals.sort((a, b) => b.betrag - a.betrag),
     }))
     .sort((a, b) => b.betrag - a.betrag);
 
   // Bester Partner = wer bislang am meisten Umsatz eingebracht hat.
   const besterName = team.length && team[0].umsatz > 0 ? team[0].name : "";
 
-  // Tippgeber als eigener Team-Bereich, mit eingebrachtem Umsatz.
+  // Tippgeber als eigener Team-Bereich, mit eingebrachtem Umsatz + Deals.
   const tippgeberTeam: TippgeberMember[] = (tippgeber ?? [])
     .map((t) => {
       const tp = tippgeberPerf.get(t.id);
@@ -288,6 +339,9 @@ export default async function PartnerPage() {
         satz: t.provision_satz == null ? 0 : Number(t.provision_satz),
         umsatz: tp?.umsatz ?? 0,
         vermittelt: tp?.vermittelt ?? 0,
+        deals: (tippgeberDeals.get(t.id) ?? []).sort(
+          (a, b) => b.volumen - a.volumen,
+        ),
       };
     })
     .sort((a, b) => b.umsatz - a.umsatz);
