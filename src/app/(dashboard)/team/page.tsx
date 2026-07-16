@@ -1,8 +1,9 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Topbar } from "@/components/layout/topbar";
-import { NeuerBeraterForm, StufeTable, type BeraterRow } from "./stufe-table";
-import { TippgeberSection, type TippgeberRow } from "./tippgeber-section";
+import { NeuerBeraterForm, type BeraterRow } from "./stufe-table";
+import { type TippgeberRow } from "./tippgeber-section";
+import { TeamDirectory } from "./team-directory";
 import {
   DecisionTree,
   type TreeNode,
@@ -49,7 +50,7 @@ export default async function TeamPage() {
     supabase
       .from("deals")
       .select(
-        "berater_id, bereich, kaufpreis, bws, pipeline_stages!inner(is_won, is_lost)",
+        "berater_id, bereich, kaufpreis, bws, tippgeber_id, pipeline_stages!inner(is_won, is_lost)",
       ),
   ]);
 
@@ -131,6 +132,21 @@ export default async function TeamPage() {
     perfMap.set(d.berater_id, cur);
   }
 
+  // Eingebrachter Umsatz je verwaltetem Tippgeber (3.3).
+  const tippgeberPerf = new Map<string, { umsatz: number; vermittelt: number }>();
+  for (const d of deals ?? []) {
+    const st = (
+      Array.isArray(d.pipeline_stages) ? d.pipeline_stages[0] : d.pipeline_stages
+    ) as { is_won: boolean; is_lost: boolean } | null;
+    if (!d.tippgeber_id || !st?.is_won) continue;
+    const vol =
+      d.bereich === "immobilien" ? Number(d.kaufpreis ?? 0) : Number(d.bws ?? 0);
+    const cur = tippgeberPerf.get(d.tippgeber_id) ?? { umsatz: 0, vermittelt: 0 };
+    cur.umsatz += vol;
+    cur.vermittelt += 1;
+    tippgeberPerf.set(d.tippgeber_id, cur);
+  }
+
   // Organigramm: Profile mehrstufig (parent_berater_id) + Tippgeber als Blätter.
   const nodeMap = new Map<string, TreeNode>();
   for (const p of profiles ?? []) {
@@ -147,6 +163,10 @@ export default async function TeamPage() {
           ? undefined
           : String(Number(p.immo_anteil_default)),
       perf: perfMap.get(p.id),
+      href:
+        p.rolle === "geschaeftsfuehrung"
+          ? undefined
+          : `/dashboard/berater/${p.id}`,
       children: [],
     });
   }
@@ -157,7 +177,8 @@ export default async function TeamPage() {
   }
   for (const t of tippgeber ?? []) {
     const owner = nodeMap.get(t.owner_id);
-    if (owner)
+    if (owner) {
+      const tp = tippgeberPerf.get(t.id);
       owner.children.push({
         id: t.id,
         name: t.name,
@@ -168,8 +189,12 @@ export default async function TeamPage() {
           | "immobilien"
           | "vv"
         )[],
+        perf: tp
+          ? { abschluesse: tp.vermittelt, umsatz: tp.umsatz, pipeline: 0 }
+          : undefined,
         children: [],
       });
+    }
   }
   // Wurzel = Geschäftsführung; alle Berater ohne eigenen Partner hängen als
   // deren direkte Zweige darunter (Anzeige-Struktur, Entscheidungsbaum).
@@ -201,17 +226,12 @@ export default async function TeamPage() {
           </p>
           {structureRoot && <DecisionTree root={structureRoot} />}
         </div>
-        <div className="space-y-2">
-          <p className="max-w-2xl text-sm text-muted-foreground">
-            Die Stufe bestimmt den persönlichen Provisionsanteil (Netto-Provision
-            × Stufe). Die Sparten steuern, welche Bereiche der Berater sieht —
-            durchgesetzt in der Datenbank, nicht nur in der Oberfläche. Die
-            Monatsziele (eigene Provision, gemeinsam mit dem Berater vereinbart)
-            treiben die Ziel-Box im Berater-Dashboard.
-          </p>
-          <StufeTable rows={rows} partnerKandidaten={partnerKandidaten} />
-        </div>
-        <TippgeberSection rows={tippgeberRows} ownerOptions={ownerOptions} />
+        <TeamDirectory
+          beraterRows={rows}
+          partnerKandidaten={partnerKandidaten}
+          tippgeberRows={tippgeberRows}
+          ownerOptions={ownerOptions}
+        />
       </div>
     </>
   );

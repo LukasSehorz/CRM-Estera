@@ -222,6 +222,7 @@ export type Database = {
           ratierlich: boolean | null;
           tippgeber: string | null;
           tippgeber_satz: number | null;
+          tippgeber_id: string | null;
           provisionssatz: number | null;
           berater_anteil: number | null;
           next_step: string | null;
@@ -252,6 +253,7 @@ export type Database = {
           ratierlich?: boolean | null;
           tippgeber?: string | null;
           tippgeber_satz?: number | null;
+          tippgeber_id?: string | null;
           provisionssatz?: number | null;
           berater_anteil?: number | null;
           next_step?: string | null;
@@ -282,6 +284,7 @@ export type Database = {
           ratierlich?: boolean | null;
           tippgeber?: string | null;
           tippgeber_satz?: number | null;
+          tippgeber_id?: string | null;
           provisionssatz?: number | null;
           berater_anteil?: number | null;
           next_step?: string | null;

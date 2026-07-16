@@ -63,6 +63,14 @@ export type DealFormState = {
   vv_zahlart: string; // factoring | ohne_factoring | ratierlich (7.1)
   tippgeber: string;
   tippgeber_satz: string;
+  tippgeber_id: string; // Verweis auf verwalteten Tippgeber (3.3), "" = keiner
+};
+
+export type TippgeberOption = {
+  id: string;
+  name: string;
+  satz: string;
+  bereiche: Bereich[];
 };
 
 function num(s: string): number | null {
@@ -113,6 +121,7 @@ export function DealForm({
   vertrieblerStufe = 0,
   isGf = false,
   immoModus = "anteil_von_provision",
+  tippgeberOptions = [],
 }: {
   mode: "create" | "edit";
   dealId?: string;
@@ -124,6 +133,7 @@ export function DealForm({
   vertrieblerStufe?: number;
   isGf?: boolean;
   immoModus?: "anteil_von_provision" | "anteil_von_kaufpreis";
+  tippgeberOptions?: TippgeberOption[];
 }) {
   const router = useRouter();
   const [v, setV] = useState<DealFormState>(initial);
@@ -215,6 +225,7 @@ export function DealForm({
       vv_zahlart: (v.vv_zahlart || "factoring") as DealInput["vv_zahlart"],
       tippgeber: txt(v.tippgeber),
       tippgeber_satz: num(v.tippgeber_satz),
+      tippgeber_id: v.tippgeber_id || null,
     };
   }
 
@@ -266,6 +277,9 @@ export function DealForm({
           vertrieblerStufe,
         })
       : null;
+
+  // Verwaltete Tippgeber für die Auswahl (3.3) — nur die mit Sparte VV.
+  const vvTippgeber = tippgeberOptions.filter((t) => t.bereiche.includes("vv"));
 
   return (
     <form onSubmit={onSubmit} className="space-y-5 pb-24">
@@ -586,12 +600,41 @@ export function DealForm({
             </Field>
 
             <Field label="Tippgeber" htmlFor="tippgeber">
-              <Input
-                id="tippgeber"
-                value={v.tippgeber}
-                onChange={(e) => set("tippgeber", e.target.value)}
-                placeholder="Name (optional)"
-              />
+              <Select
+                value={v.tippgeber_id || NONE}
+                onValueChange={(val) => {
+                  if (val === NONE) {
+                    setV((p) => ({ ...p, tippgeber_id: "", tippgeber: "" }));
+                    return;
+                  }
+                  const opt = vvTippgeber.find((t) => t.id === val);
+                  setV((p) => ({
+                    ...p,
+                    tippgeber_id: val,
+                    tippgeber: opt?.name ?? "",
+                    // Satz aus dem verwalteten Tippgeber vorbelegen.
+                    tippgeber_satz: opt?.satz ? opt.satz : p.tippgeber_satz,
+                  }));
+                }}
+              >
+                <SelectTrigger id="tippgeber">
+                  <SelectValue placeholder="Kein Tippgeber" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE}>Kein Tippgeber</SelectItem>
+                  {vvTippgeber.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.name}
+                      {t.satz ? ` · ${t.satz} %` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {vvTippgeber.length === 0
+                  ? "Noch keine VV-Tippgeber — in der Team-Verwaltung anlegen."
+                  : "Verwalteter Tippgeber — die Performance wird ihm zugeordnet."}
+              </p>
             </Field>
             <Field label="Tippgeber-Satz (%)" htmlFor="tippsatz">
               <Input

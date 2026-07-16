@@ -16,6 +16,8 @@ import {
   PartnerView,
   type PartnerStats,
   type TeamMember,
+  type TippgeberMember,
+  type OverheadPosten,
 } from "./partner-view";
 
 type Bereich = "immobilien" | "vv";
@@ -31,6 +33,7 @@ type DealRow = {
   provisionssatz: number | null;
   berater_anteil: number | null;
   tippgeber_satz: number | null;
+  tippgeber_id: string | null;
   pipeline_stages: StageJoin | StageJoin[] | null;
 };
 
@@ -85,7 +88,7 @@ export default async function PartnerPage() {
     supabase
       .from("deals")
       .select(
-        "berater_id, bereich, kaufpreis, bws, factoring, vv_zahlart, ratierlich, provisionssatz, berater_anteil, tippgeber_satz, pipeline_stages!inner(is_won, is_lost)",
+        "berater_id, bereich, kaufpreis, bws, factoring, vv_zahlart, ratierlich, provisionssatz, berater_anteil, tippgeber_satz, tippgeber_id, pipeline_stages!inner(is_won, is_lost)",
       ),
     supabase
       .from("berater_monatsziele")
@@ -126,6 +129,23 @@ export default async function PartnerPage() {
     perfMap.set(d.berater_id, cur);
   }
 
+  // Umsatz, den ein verwalteter Tippgeber eingebracht hat (3.3): Summe der
+  // Volumina gewonnener Deals, die auf ihn verweisen.
+  const tippgeberPerf = new Map<string, { umsatz: number; vermittelt: number }>();
+  for (const d of deals) {
+    if (!d.tippgeber_id || !won(d)) continue;
+    const vol =
+      d.bereich === "immobilien" ? Number(d.kaufpreis ?? 0) : Number(d.bws ?? 0);
+    const cur = tippgeberPerf.get(d.tippgeber_id) ?? { umsatz: 0, vermittelt: 0 };
+    cur.umsatz += vol;
+    cur.vermittelt += 1;
+    tippgeberPerf.set(d.tippgeber_id, cur);
+  }
+
+  const profNameMap = new Map(
+    (profiles ?? []).map((p) => [p.id, `${p.vorname} ${p.nachname}`]),
+  );
+
   const zielMap = new Map(
     (ziele ?? []).map((z) => [
       z.berater_id,
@@ -152,6 +172,11 @@ export default async function PartnerPage() {
       perf: perf
         ? { abschluesse: perf.abschluesse, umsatz: perf.umsatz, pipeline: perf.pipeline }
         : undefined,
+      // Klick auf den Namen im Baum → Berater-Drilldown (nur echte Berater).
+      href:
+        p.rolle === "geschaeftsfuehrung"
+          ? undefined
+          : `/dashboard/berater/${p.id}`,
       children: [],
     });
   }
@@ -162,7 +187,8 @@ export default async function PartnerPage() {
   }
   for (const t of tippgeber ?? []) {
     const owner = nodeMap.get(t.owner_id);
-    if (owner)
+    if (owner) {
+      const tp = tippgeberPerf.get(t.id);
       owner.children.push({
         id: t.id,
         name: t.name,
@@ -170,8 +196,12 @@ export default async function PartnerPage() {
         provisionSatz:
           t.provision_satz == null ? undefined : String(Number(t.provision_satz)),
         bereiche: (t.bereiche?.length ? t.bereiche : ["immobilien"]) as Bereich[],
+        perf: tp
+          ? { abschluesse: tp.vermittelt, umsatz: tp.umsatz, pipeline: 0 }
+          : undefined,
         children: [],
       });
+    }
   }
   const meNode = nodeMap.get(me.id);
   if (meNode && me.rolle === "geschaeftsfuehrung") {
@@ -200,7 +230,7 @@ export default async function PartnerPage() {
     })
     .sort((a, b) => b.umsatz - a.umsatz);
 
-  // Kennzahlen inkl. Overhead aus DIREKTEN Partnern.
+  // Overhead aus DIREKTEN Partnern — je Person aufgeschlüsselt (KPI-Klick).
   const directChildren = (profiles ?? []).filter(
     (p) => p.parent_berater_id === me.id,
   );
@@ -208,12 +238,12 @@ export default async function PartnerPage() {
   const meImmo =
     me.immo_anteil_default == null ? null : Number(me.immo_anteil_default);
   let overheadGesamt = 0;
-  const bester = directChildren
+  const overheadBreakdown: OverheadPosten[] = directChildren
     .map((child) => {
-      let oh = 0;
+      let betrag = 0;
       for (const d of deals) {
         if (d.berater_id !== child.id || !won(d)) continue;
-        oh += dealOverheadFuerUpline(
+        betrag += dealOverheadFuerUpline(
           d as unknown as DealFinanz,
           meStufe,
           meImmo,
@@ -221,16 +251,35 @@ export default async function PartnerPage() {
           immoModus,
         );
       }
-      overheadGesamt += oh;
-      return { name: `${child.vorname} ${child.nachname}`, oh };
+      overheadGesamt += betrag;
+      return { name: `${child.vorname} ${child.nachname}`, betrag };
     })
-    .sort((a, b) => b.oh - a.oh)[0];
+    .filter((r) => r.betrag > 0)
+    .sort((a, b) => b.betrag - a.betrag);
+
+  // Bester Partner = wer bislang am meisten Umsatz eingebracht hat.
+  const besterName = team.length && team[0].umsatz > 0 ? team[0].name : "";
+
+  // Tippgeber als eigener Team-Bereich, mit eingebrachtem Umsatz.
+  const tippgeberTeam: TippgeberMember[] = (tippgeber ?? [])
+    .map((t) => {
+      const tp = tippgeberPerf.get(t.id);
+      return {
+        id: t.id,
+        name: t.name,
+        ownerName: profNameMap.get(t.owner_id) ?? "—",
+        satz: t.provision_satz == null ? 0 : Number(t.provision_satz),
+        umsatz: tp?.umsatz ?? 0,
+        vermittelt: tp?.vermittelt ?? 0,
+      };
+    })
+    .sort((a, b) => b.umsatz - a.umsatz);
 
   const stats: PartnerStats = {
     partnerCount: team.length,
     tippgeberCount: (tippgeber ?? []).length,
     overhead: overheadGesamt,
-    bester: bester && bester.oh > 0 ? bester.name : "",
+    bester: besterName,
   };
 
   return (
@@ -240,7 +289,12 @@ export default async function PartnerPage() {
         subtitle="Deine Struktur — Berater, Tippgeber & Overhead"
       />
       <div className="space-y-6 px-6 py-6">
-        <PartnerView stats={stats} team={team} />
+        <PartnerView
+          stats={stats}
+          team={team}
+          tippgeberTeam={tippgeberTeam}
+          overheadBreakdown={overheadBreakdown}
+        />
 
         <div className="rounded-xl border border-border bg-surface p-5">
           <h2 className="text-base font-semibold">Mein Organigramm</h2>

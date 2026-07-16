@@ -55,6 +55,23 @@ export default async function NeuerDealPage({
     name: `${c.vorname} ${c.nachname}`,
   }));
 
+  // Verwaltete Tippgeber für die Deal-Auswahl (3.3) — RLS liefert eigene +
+  // Downline (GF alle).
+  const { data: tippgeber } = await supabase
+    .from("tippgeber")
+    .select("id, name, provision_satz, bereiche")
+    .eq("aktiv", true)
+    .order("name");
+  const tippgeberOpts = (tippgeber ?? []).map((t) => ({
+    id: t.id,
+    name: t.name,
+    satz: t.provision_satz == null ? "" : String(Number(t.provision_satz)),
+    bereiche: (t.bereiche?.length ? t.bereiche : ["immobilien"]) as (
+      | "immobilien"
+      | "vv"
+    )[],
+  }));
+
   const initial: DealFormState = {
     contact_id: "",
     dealname: "",
@@ -75,6 +92,7 @@ export default async function NeuerDealPage({
     vv_zahlart: "factoring",
     tippgeber: "",
     tippgeber_satz: "",
+    tippgeber_id: "",
   };
 
   return (
@@ -94,6 +112,7 @@ export default async function NeuerDealPage({
           vertrieblerStufe={vertrieblerStufe}
           isGf={isGf}
           immoModus={await getImmoModus()}
+          tippgeberOptions={tippgeberOpts}
         />
       </div>
     </>

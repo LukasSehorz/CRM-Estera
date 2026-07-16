@@ -150,6 +150,8 @@ export type DealInput = {
   vv_zahlart: "factoring" | "ohne_factoring" | "ratierlich";
   tippgeber: string | null;
   tippgeber_satz: number | null;
+  // Verweis auf einen verwalteten Tippgeber (3.3) — optional, nur VV.
+  tippgeber_id: string | null;
 };
 
 export type ActionResult = { ok: true; id?: string } | { error: string };
@@ -192,6 +194,7 @@ function bereichFields(v: DealInput) {
       ratierlich: null,
       tippgeber: null,
       tippgeber_satz: null,
+      tippgeber_id: null,
     };
   }
   // factoring/ratierlich werden vom DB-Trigger sync_vv_zahlart aus der
@@ -210,6 +213,7 @@ function bereichFields(v: DealInput) {
     deal_typ: null,
     tippgeber: v.tippgeber,
     tippgeber_satz: v.tippgeber_satz,
+    tippgeber_id: v.tippgeber_id,
   };
 }
 

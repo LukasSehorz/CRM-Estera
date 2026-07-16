@@ -47,6 +47,22 @@ export default async function DealDetailPage({
     ? `${contact.vorname} ${contact.nachname}`
     : "—";
 
+  // Verwaltete Tippgeber für die Auswahl (3.3).
+  const { data: tippgeber } = await supabase
+    .from("tippgeber")
+    .select("id, name, provision_satz, bereiche")
+    .eq("aktiv", true)
+    .order("name");
+  const tippgeberOpts = (tippgeber ?? []).map((t) => ({
+    id: t.id,
+    name: t.name,
+    satz: t.provision_satz == null ? "" : String(Number(t.provision_satz)),
+    bereiche: (t.bereiche?.length ? t.bereiche : ["immobilien"]) as (
+      | "immobilien"
+      | "vv"
+    )[],
+  }));
+
   const { data: profiles } = await supabase
     .from("profiles")
     .select("id, vorname, nachname, rolle, vertriebler_stufe");
@@ -97,6 +113,7 @@ export default async function DealDetailPage({
       d.vv_zahlart ?? (d.ratierlich ? "ratierlich" : d.factoring ? "factoring" : "ohne_factoring"),
     tippgeber: d.tippgeber ?? "",
     tippgeber_satz: d.tippgeber_satz?.toString() ?? "",
+    tippgeber_id: d.tippgeber_id ?? "",
   };
 
   return (
@@ -120,6 +137,7 @@ export default async function DealDetailPage({
               vertrieblerStufe={vertrieblerStufe}
               isGf={isGf}
               immoModus={await getImmoModus()}
+              tippgeberOptions={tippgeberOpts}
             />
             {/* Kundenunterlagen direkt am Deal (Call SJ 1.4) */}
             <DealDokumente contactId={d.contact_id} bereich={bereich} />

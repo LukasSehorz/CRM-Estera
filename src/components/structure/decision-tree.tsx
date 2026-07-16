@@ -7,8 +7,16 @@ import {
   useRef,
   useState,
 } from "react";
+import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { Crown, Handshake, Maximize2, MousePointerClick, User } from "lucide-react";
+import {
+  ArrowUpRight,
+  Crown,
+  Handshake,
+  Maximize2,
+  MousePointerClick,
+  User,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatEUR } from "@/lib/format";
 
@@ -21,6 +29,8 @@ export type TreeNode = {
   provisionSatz?: string;
   bereiche?: ("immobilien" | "vv")[];
   perf?: { abschluesse: number; umsatz: number; pipeline: number };
+  /** Ziel für den Klick auf den Namen (Berater-Drilldown). */
+  href?: string;
   children: TreeNode[];
 };
 
@@ -41,6 +51,7 @@ type Pos = { x: number; y: number; depth: number };
  * in einem festen Panel, das keine Knoten verdeckt.
  */
 export function DecisionTree({ root }: { root: TreeNode }) {
+  const router = useRouter();
   const viewportRef = useRef<HTMLDivElement>(null);
   const [cw, setCw] = useState(960);
   const [ch, setCh] = useState(460);
@@ -316,17 +327,36 @@ export function DecisionTree({ root }: { root: TreeNode }) {
                 >
                   <NodeShape node={node} active={active} />
                   <div className="whitespace-nowrap text-center">
-                    <div
-                      className={cn(
-                        "text-xs font-semibold",
-                        active ? "text-foreground" : "text-foreground/90",
-                      )}
-                    >
-                      {node.name}
-                    </div>
+                    {node.href ? (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          router.push(node.href!);
+                        }}
+                        className={cn(
+                          "group/name inline-flex items-center gap-0.5 text-xs font-semibold transition-colors hover:text-primary hover:underline",
+                          active ? "text-foreground" : "text-foreground/90",
+                        )}
+                      >
+                        {node.name}
+                        <ArrowUpRight className="h-3 w-3 opacity-0 transition-opacity group-hover/name:opacity-100" />
+                      </button>
+                    ) : (
+                      <div
+                        className={cn(
+                          "text-xs font-semibold",
+                          active ? "text-foreground" : "text-foreground/90",
+                        )}
+                      >
+                        {node.name}
+                      </div>
+                    )}
                     <div className="text-[10px] text-muted-foreground">
                       {node.kind === "tippgeber"
-                        ? `Tippgeber${node.provisionSatz ? ` · ${node.provisionSatz} %` : ""}`
+                        ? node.perf && node.perf.umsatz > 0
+                          ? `Tippgeber · ${formatEUR(node.perf.umsatz)}`
+                          : `Tippgeber${node.provisionSatz ? ` · ${node.provisionSatz} %` : ""}`
                         : node.kind === "gf"
                           ? "Geschäftsführung"
                           : node.perf
@@ -371,10 +401,24 @@ export function DecisionTree({ root }: { root: TreeNode }) {
               </div>
               <div className="space-y-1.5">
                 {hoveredNode.kind === "tippgeber" ? (
-                  <Detail
-                    label="Provision"
-                    value={hoveredNode.provisionSatz ? `${hoveredNode.provisionSatz} %` : "—"}
-                  />
+                  <>
+                    <Detail
+                      label="Provision"
+                      value={hoveredNode.provisionSatz ? `${hoveredNode.provisionSatz} %` : "—"}
+                    />
+                    {hoveredNode.perf && (
+                      <>
+                        <Detail
+                          label="Vermittelt"
+                          value={String(hoveredNode.perf.abschluesse)}
+                        />
+                        <Detail
+                          label="Umsatz"
+                          value={formatEUR(hoveredNode.perf.umsatz)}
+                        />
+                      </>
+                    )}
+                  </>
                 ) : (
                   <>
                     <Detail
@@ -401,9 +445,20 @@ export function DecisionTree({ root }: { root: TreeNode }) {
                   </>
                 )}
               </div>
-              {hoveredNode.children.length > 0 && (
-                <div className="mt-2.5 border-t border-border pt-2 text-[11px] text-muted-foreground">
-                  {hoveredNode.children.length} direkt darunter · Klick zum Zoomen
+              {(hoveredNode.children.length > 0 || hoveredNode.href) && (
+                <div className="mt-2.5 space-y-1 border-t border-border pt-2 text-[11px] text-muted-foreground">
+                  {hoveredNode.children.length > 0 && (
+                    <div>
+                      {hoveredNode.children.length} direkt darunter · Klick zum
+                      Zoomen
+                    </div>
+                  )}
+                  {hoveredNode.href && (
+                    <div className="flex items-center gap-1 text-primary">
+                      <ArrowUpRight className="h-3 w-3" />
+                      Namen anklicken → Berater-Details
+                    </div>
+                  )}
                 </div>
               )}
             </motion.div>
