@@ -3,7 +3,10 @@ import { createClient } from "@/lib/supabase/server";
 import { Topbar } from "@/components/layout/topbar";
 import { NeuerBeraterForm, StufeTable, type BeraterRow } from "./stufe-table";
 import { TippgeberSection, type TippgeberRow } from "./tippgeber-section";
-import { StructureTree, type StructureNode } from "./structure-tree";
+import {
+  DecisionTree,
+  type TreeNode,
+} from "@/components/structure/decision-tree";
 
 /**
  * Team-Verwaltung: nur Geschäftsführung. Berater anlegen, Vertriebler-Stufe
@@ -129,7 +132,7 @@ export default async function TeamPage() {
   }
 
   // Organigramm: Profile mehrstufig (parent_berater_id) + Tippgeber als Blätter.
-  const nodeMap = new Map<string, StructureNode>();
+  const nodeMap = new Map<string, TreeNode>();
   for (const p of profiles ?? []) {
     nodeMap.set(p.id, {
       id: p.id,
@@ -168,9 +171,19 @@ export default async function TeamPage() {
         children: [],
       });
   }
-  const structureRoots = (profiles ?? [])
-    .filter((p) => !p.parent_berater_id)
-    .map((p) => nodeMap.get(p.id)!);
+  // Wurzel = Geschäftsführung; alle Berater ohne eigenen Partner hängen als
+  // deren direkte Zweige darunter (Anzeige-Struktur, Entscheidungsbaum).
+  const gfProfile = (profiles ?? []).find(
+    (p) => p.rolle === "geschaeftsfuehrung",
+  );
+  const structureRoot = gfProfile ? nodeMap.get(gfProfile.id) : undefined;
+  if (structureRoot) {
+    for (const p of profiles ?? []) {
+      if (!p.parent_berater_id && p.rolle !== "geschaeftsfuehrung") {
+        structureRoot.children.push(nodeMap.get(p.id)!);
+      }
+    }
+  }
 
   return (
     <>
@@ -186,7 +199,7 @@ export default async function TeamPage() {
             Mehrstufige Partnerstruktur (Berater &amp; Tippgeber). Fahre über
             einen Knoten für dessen Performance.
           </p>
-          <StructureTree roots={structureRoots} />
+          {structureRoot && <DecisionTree root={structureRoot} />}
         </div>
         <div className="space-y-2">
           <p className="max-w-2xl text-sm text-muted-foreground">

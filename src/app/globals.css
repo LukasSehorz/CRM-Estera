@@ -415,6 +415,18 @@
   animation: grow-x 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
+/* Entscheidungsbaum: Lichtimpuls entlang der aktiven Verbindungslinie */
+.decision-pulse {
+  stroke-dasharray: 8 24;
+  opacity: 0.9;
+  animation: decision-pulse-flow 1.1s linear infinite;
+}
+@keyframes decision-pulse-flow {
+  to {
+    stroke-dashoffset: -32;
+  }
+}
+
 /* Reduzierte Bewegung respektieren */
 @media (prefers-reduced-motion: reduce) {
   *,
