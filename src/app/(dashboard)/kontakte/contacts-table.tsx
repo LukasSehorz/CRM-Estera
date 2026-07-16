@@ -20,11 +20,20 @@ import {
 import {
   BEREICH,
   KONTAKT_STATUS,
+  KUNDEN_SEGMENTE,
   bereichLabel,
   istQualifiziert,
   einschaetzungLabel,
   einschaetzungTone,
+  kundenSegmentLabel,
+  type KundenSegment,
 } from "@/config/enums";
+
+const SEGMENT_TONE: Record<KundenSegment, "muted" | "info" | "success"> = {
+  interessent: "muted",
+  pipeline: "info",
+  bestand: "success",
+};
 
 export type ContactRow = {
   id: string;
@@ -52,16 +61,20 @@ export function ContactsTable({
   beraterMap,
   isGf,
   showVolumen = false,
+  segmentMap,
 }: {
   contacts: ContactRow[];
   beraterMap: Record<string, string>;
   isGf: boolean;
   showVolumen?: boolean;
+  /** Segment je Kunde (4.2, berechnet aus Deals) — ohne Map keine Spalte. */
+  segmentMap?: Record<string, KundenSegment>;
 }) {
   const router = useRouter();
   const [q, setQ] = useState("");
   const [status, setStatus] = useState(ALL);
   const [interesse, setInteresse] = useState(ALL);
+  const [segment, setSegment] = useState(ALL);
   const [nurQualifiziert, setNurQualifiziert] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>(
     showVolumen ? "volumen" : "created_at",
@@ -81,6 +94,11 @@ export function ContactsTable({
     let list = contacts.filter((c) => {
       if (status !== ALL && c.status !== status) return false;
       if (interesse !== ALL && !c.interesse.includes(interesse)) return false;
+      if (
+        segment !== ALL &&
+        (segmentMap?.[c.id] ?? "interessent") !== segment
+      )
+        return false;
       if (
         nurQualifiziert &&
         !istQualifiziert(c.nettoverdienst_monatlich, c.eigenkapital)
@@ -107,7 +125,7 @@ export function ContactsTable({
       return sortAsc ? cmp : -cmp;
     });
     return list;
-  }, [contacts, q, status, interesse, nurQualifiziert, sortKey, sortAsc]);
+  }, [contacts, q, status, interesse, segment, segmentMap, nurQualifiziert, sortKey, sortAsc]);
 
   const SortIcon = ({ k }: { k: SortKey }) =>
     sortKey === k ? (
@@ -154,6 +172,22 @@ export function ContactsTable({
             ))}
           </SelectContent>
         </Select>
+        {/* Segment-Filter (4.2): Interessent / In Pipeline / Bestandskunde */}
+        {segmentMap && (
+          <Select value={segment} onValueChange={setSegment}>
+            <SelectTrigger className="sm:w-44">
+              <SelectValue placeholder="Segment" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>Alle Segmente</SelectItem>
+              {KUNDEN_SEGMENTE.map((s) => (
+                <SelectItem key={s.value} value={s.value}>
+                  {s.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
         {/* Qualifiziert-Filter (15.2): automatisch aus Netto + Eigenkapital */}
         <button
           type="button"
@@ -168,7 +202,7 @@ export function ContactsTable({
           Nur qualifizierte
         </button>
         <span className="text-sm text-muted-foreground sm:ml-auto">
-          {rows.length} {rows.length === 1 ? "Kontakt" : "Kontakte"}
+          {rows.length} {rows.length === 1 ? "Kunde" : "Kunden"}
         </span>
       </div>
 
@@ -195,6 +229,9 @@ export function ContactsTable({
                   Status <SortIcon k="status" />
                 </button>
               </th>
+              {segmentMap && (
+                <th className="px-4 py-3 font-medium">Segment</th>
+              )}
               <th className="px-4 py-3 font-medium">Termin</th>
               <th className="px-4 py-3 font-medium">Interesse</th>
               <th className="px-4 py-3 font-medium">Leadquelle</th>
@@ -217,7 +254,7 @@ export function ContactsTable({
             {rows.length === 0 ? (
               <tr>
                 <td
-                  colSpan={(isGf ? 7 : 6) + (showVolumen ? 1 : 0)}
+                  colSpan={(isGf ? 7 : 6) + (showVolumen ? 1 : 0) + (segmentMap ? 1 : 0)}
                   className="px-4 py-10 text-center text-muted-foreground"
                 >
                   Keine Treffer. Passe Suche oder Filter an.
@@ -243,6 +280,15 @@ export function ContactsTable({
                   <td className="px-4 py-3">
                     <Pill tone={kontaktStatusTone(c.status)}>{c.status}</Pill>
                   </td>
+                  {segmentMap && (
+                    <td className="px-4 py-3">
+                      <Pill
+                        tone={SEGMENT_TONE[segmentMap[c.id] ?? "interessent"]}
+                      >
+                        {kundenSegmentLabel(segmentMap[c.id] ?? "interessent")}
+                      </Pill>
+                    </td>
+                  )}
                   <td className="px-4 py-3">
                     <Pill tone={terminStatusTone(c.termin_status)}>
                       {c.termin_status}

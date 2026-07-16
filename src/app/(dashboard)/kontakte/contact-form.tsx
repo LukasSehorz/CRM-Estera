@@ -246,11 +246,11 @@ export function ContactForm({
           const ok = await uploadAllStaged(res.id);
           toast.success(
             ok > 0
-              ? `Kontakt angelegt · ${ok} Dokument${ok === 1 ? "" : "e"} hochgeladen`
-              : "Kontakt angelegt",
+              ? `Kunde angelegt · ${ok} Dokument${ok === 1 ? "" : "e"} hochgeladen`
+              : "Kunde angelegt",
           );
         } else {
-          toast.success("Kontakt angelegt");
+          toast.success("Kunde angelegt");
         }
         router.push(`/kontakte/${res.id}`);
       } else {
@@ -385,7 +385,7 @@ export function ContactForm({
               ))}
             </div>
             <p className="text-xs text-muted-foreground">
-              Steuert, in welcher Pipeline der Kontakt geführt wird.
+              Steuert, in welcher Pipeline der Kunde geführt wird.
             </p>
           </Field>
 
@@ -630,8 +630,8 @@ export function ContactForm({
               {pending
                 ? "Speichern …"
                 : mode === "create"
-                  ? "Kontakt anlegen"
-                  : "Kontakt speichern"}
+                  ? "Kunden anlegen"
+                  : "Kunden speichern"}
             </Button>
           </div>
         </div>
@@ -649,7 +649,7 @@ function DeleteButton({ id }: { id: string }) {
       variant="outline"
       disabled={pending}
       onClick={() => {
-        if (confirm("Diesen Kontakt wirklich löschen?"))
+        if (confirm("Diesen Kunden wirklich löschen?"))
           startTransition(() => deleteContact(id));
       }}
       className="text-destructive hover:text-destructive"

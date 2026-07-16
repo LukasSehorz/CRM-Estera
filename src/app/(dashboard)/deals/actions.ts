@@ -233,7 +233,7 @@ async function beraterAnteilFor(
 }
 
 function validate(v: DealInput): string | null {
-  if (!v.contact_id) return "Bitte einen Kontakt verknüpfen.";
+  if (!v.contact_id) return "Bitte einen Kunden verknüpfen.";
   if (!v.dealname.trim()) return "Bitte einen Dealnamen vergeben.";
   if (!v.stage_id) return "Bitte eine Phase wählen.";
   return null;
@@ -256,7 +256,7 @@ export async function createDeal(values: DealInput): Promise<ActionResult> {
     .select("berater_id")
     .eq("id", values.contact_id)
     .maybeSingle();
-  if (!contact) return { error: "Kontakt nicht gefunden oder kein Zugriff." };
+  if (!contact) return { error: "Kunde nicht gefunden oder kein Zugriff." };
 
   // Phase muss zum Bereich des Deals gehören (Diskriminator absichern).
   const { data: stage } = await supabase

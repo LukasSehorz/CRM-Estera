@@ -169,10 +169,10 @@ export function AufgabenView({
           />
           <Select value={kontakt} onValueChange={setKontakt}>
             <SelectTrigger>
-              <SelectValue placeholder="Kontakt (optional)" />
+              <SelectValue placeholder="Kunde (optional)" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={NONE}>Ohne Kontakt</SelectItem>
+              <SelectItem value={NONE}>Ohne Kunden</SelectItem>
               {kontaktOptionen.map((k) => (
                 <SelectItem key={k.id} value={k.id}>
                   {k.name}

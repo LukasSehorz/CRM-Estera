@@ -210,7 +210,7 @@ function Sparkline({ buckets }: { buckets: { label: string; n: number }[] }) {
         ))}
       </div>
       <p className="mt-1.5 text-xs text-muted-foreground">
-        Neue Kontakte · letzte 6 Monate
+        Neue Kunden · letzte 6 Monate
       </p>
     </div>
   );
@@ -360,13 +360,13 @@ export default async function ListenHubPage() {
 
   const gruppen: Group[] = [
     {
-      title: "Kontakte",
+      title: "Kunden",
       icon: Users,
       tone: "var(--stage-1)",
       items: [
-        { href: "/listen/kontakte?preset=alle", label: "Alle Kontakte", count: kontakte.length },
-        { href: "/listen/kontakte?preset=immobilien", label: "Immobilien-Kontakte", count: cImmo.length, bereich: "immobilien" },
-        { href: "/listen/kontakte?preset=vv", label: "Vermögensverwaltung-Kontakte", count: cVv.length, bereich: "vv" },
+        { href: "/listen/kontakte?preset=alle", label: "Alle Kunden", count: kontakte.length },
+        { href: "/listen/kontakte?preset=immobilien", label: "Immobilien-Kunden", count: cImmo.length, bereich: "immobilien" },
+        { href: "/listen/kontakte?preset=vv", label: "Vermögensverwaltung-Kunden", count: cVv.length, bereich: "vv" },
         { href: "/listen/kontakte?preset=eingeschaetzt", label: "Eingeschätzte Kunden (nach Volumen)", count: cEing.length },
         { href: "/listen/kontakte?preset=heiss", label: "Heiße Leads", count: cHeiss.length },
         { href: "/listen/kontakte?preset=offen", label: "Offene Leads", count: cOffen.length },
@@ -408,13 +408,13 @@ export default async function ListenHubPage() {
   return (
     <>
       <Topbar
-        title="Listen & Übersichten"
+        title="Übersichten"
         subtitle="Alle gespeicherten Listen auf einen Klick"
       />
       <div className="space-y-6 px-6 py-6">
         <div className="grid gap-4 sm:grid-cols-3">
           <KpiCard
-            label="Kontakte gesamt"
+            label="Kunden gesamt"
             value={kontakte.length}
             icon={Users}
             href="/listen/kontakte?preset=alle"

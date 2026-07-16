@@ -81,7 +81,7 @@ export function BeraterTable({
           <thead>
             <tr className="border-b border-border text-left text-xs text-muted-foreground">
               <th className="px-4 py-3 font-medium">Berater</th>
-              <th className="px-4 py-3 font-medium">Kontakte</th>
+              <th className="px-4 py-3 font-medium">Kunden</th>
               <th className="px-4 py-3 font-medium">Offene Deals</th>
               <th className="px-4 py-3 font-medium">Pipeline-Volumen</th>
               <th className="px-4 py-3 font-medium">Umsatz (Provision)</th>

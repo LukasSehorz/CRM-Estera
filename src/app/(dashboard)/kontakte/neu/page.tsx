@@ -63,7 +63,7 @@ export default async function NeuerKontaktPage() {
   return (
     <>
       <Topbar
-        title="Neuer Kontakt"
+        title="Neuer Kunde"
         subtitle="Lead oder Kunde anlegen"
         backHref="/kontakte"
       />

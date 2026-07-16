@@ -83,7 +83,7 @@ export function DealSidebar({
               </span>
             </span>
           </Row>
-          <Row label="Kontakt">
+          <Row label="Kunde">
             <Link
               href={`/kontakte/${contactId}`}
               className="text-primary hover:underline"

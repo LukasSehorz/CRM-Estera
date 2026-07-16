@@ -38,9 +38,9 @@ const NAV: NavSection[] = [
     items: [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
       { href: "/aufgaben", label: "Aufgaben", icon: CheckSquare },
-      { href: "/kontakte", label: "Kontakte", icon: Users },
+      { href: "/kontakte", label: "Kunden", icon: Users },
       { href: "/dokumente", label: "Dokumente", icon: FolderOpen },
-      { href: "/listen", label: "Listen", icon: ListChecks },
+      { href: "/listen", label: "Übersichten", icon: ListChecks },
       { href: "/partner", label: "Partner", icon: Network },
     ],
   },

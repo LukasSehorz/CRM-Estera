@@ -5,9 +5,9 @@ import { istQualifiziert } from "@/config/enums";
 import { ContactsTable, type ContactRow } from "../../kontakte/contacts-table";
 
 const META: Record<string, { title: string; subtitle: string }> = {
-  alle: { title: "Alle Kontakte", subtitle: "Immobilien + Vermögensverwaltung" },
-  immobilien: { title: "Immobilien-Kontakte", subtitle: "Interesse = Immobilien" },
-  vv: { title: "Vermögensverwaltung-Kontakte", subtitle: "Interesse = Vermögensverwaltung" },
+  alle: { title: "Alle Kunden", subtitle: "Immobilien + Vermögensverwaltung" },
+  immobilien: { title: "Immobilien-Kunden", subtitle: "Interesse = Immobilien" },
+  vv: { title: "Vermögensverwaltung-Kunden", subtitle: "Interesse = Vermögensverwaltung" },
   eingeschaetzt: { title: "Eingeschätzte Kunden", subtitle: "Immobilien mit Einschätzung „eingeschätzt“, nach Volumen sortiert" },
   qualifiziert: { title: "Qualifizierte Leads", subtitle: "Automatisch: Nettoeinkommen & Eigenkapital über der Schwelle" },
   heiss: { title: "Heiße Leads", subtitle: "Qualifiziert + eingeschätzt + Termin durchgeführt" },

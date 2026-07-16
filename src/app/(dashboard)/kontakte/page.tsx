@@ -3,6 +3,7 @@ import { Plus, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Topbar } from "@/components/layout/topbar";
 import { Button } from "@/components/ui/button";
+import { type KundenSegment } from "@/config/enums";
 import { ContactsTable, type ContactRow } from "./contacts-table";
 
 function EmptyState() {
@@ -11,14 +12,14 @@ function EmptyState() {
       <span className="grid h-12 w-12 place-items-center rounded-full bg-primary/10 text-primary">
         <Users className="h-6 w-6" />
       </span>
-      <h2 className="text-lg font-semibold">Noch keine Kontakte</h2>
+      <h2 className="text-lg font-semibold">Noch keine Kunden</h2>
       <p className="max-w-sm text-sm text-muted-foreground">
-        Lege deinen ersten Kontakt an, um Leads und Kunden zu verwalten.
+        Lege deinen ersten Kunden an, um Leads und Bestandskunden zu verwalten.
       </p>
       <Button asChild className="mt-2">
         <Link href="/kontakte/neu">
           <Plus className="mr-1 h-4 w-4" />
-          Kontakt anlegen
+          Kunden anlegen
         </Link>
       </Button>
     </div>
@@ -29,7 +30,7 @@ function ErrorState() {
   return (
     <div className="rounded-xl border border-border bg-surface px-6 py-16 text-center">
       <h2 className="text-lg font-semibold">
-        Kontakte konnten nicht geladen werden
+        Kunden konnten nicht geladen werden
       </h2>
       <p className="mt-1 text-sm text-muted-foreground">
         Prüfe deine Verbindung und versuche es erneut.
@@ -68,16 +69,33 @@ export default async function KontaktePage() {
     (profiles ?? []).map((p) => [p.id, `${p.vorname} ${p.nachname}`]),
   );
 
+  // Segment je Kunde (4.2, berechnet): Bestandskunde (≥1 gewonnener Deal) >
+  // In Pipeline (≥1 offener Deal) > Interessent (kein Deal).
+  const { data: dealsForSegment } = await supabase
+    .from("deals")
+    .select("contact_id, pipeline_stages!inner(is_won, is_lost)");
+  const segmentMap: Record<string, KundenSegment> = {};
+  for (const d of dealsForSegment ?? []) {
+    const st = (
+      Array.isArray(d.pipeline_stages) ? d.pipeline_stages[0] : d.pipeline_stages
+    ) as { is_won: boolean; is_lost: boolean } | null;
+    const cur = segmentMap[d.contact_id];
+    if (st?.is_won) segmentMap[d.contact_id] = "bestand";
+    else if (!st?.is_lost && cur !== "bestand")
+      segmentMap[d.contact_id] = "pipeline";
+    else if (!cur) segmentMap[d.contact_id] = "interessent";
+  }
+
   return (
     <>
       <Topbar
-        title="Kontakte"
-        subtitle="Alle Leads und Kunden"
+        title="Kunden"
+        subtitle="Leads, Interessenten & Bestandskunden"
       >
         <Button asChild>
           <Link href="/kontakte/neu">
             <Plus className="mr-1 h-4 w-4" />
-            Neuer Kontakt
+            Neuer Kunde
           </Link>
         </Button>
       </Topbar>
@@ -90,6 +108,7 @@ export default async function KontaktePage() {
           <ContactsTable
             contacts={contacts as ContactRow[]}
             beraterMap={beraterMap}
+            segmentMap={segmentMap}
             isGf={isGf}
           />
         )}

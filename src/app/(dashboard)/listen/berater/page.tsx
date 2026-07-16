@@ -88,7 +88,7 @@ export default async function BeraterUebersichtPage() {
     <>
       <Topbar
         title="Berater-Übersicht"
-        subtitle="Kontakte, offene Deals, Pipeline und Umsatz je Berater — getrennt nach Immobilien und Vermögensverwaltung"
+        subtitle="Kunden, offene Deals, Pipeline und Umsatz je Berater — getrennt nach Immobilien und Vermögensverwaltung"
         backHref="/listen"
       />
       <div className="px-6 py-6">

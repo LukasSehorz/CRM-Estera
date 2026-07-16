@@ -233,7 +233,7 @@ export function DealForm({
     e.preventDefault();
     setError(null);
     if (!v.contact_id) {
-      setError("Bitte einen Kontakt verknüpfen.");
+      setError("Bitte einen Kunden verknüpfen.");
       return;
     }
     if (!v.dealname.trim()) {
@@ -289,7 +289,7 @@ export function DealForm({
         description={`Bereich: ${bereichLabel(bereich)} · Kontakt & Phase`}
       >
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Kontakt *" htmlFor="contact" className="sm:col-span-2">
+          <Field label="Kunde *" htmlFor="contact" className="sm:col-span-2">
             {mode === "edit" ? (
               <Input id="contact" value={contactName ?? ""} disabled />
             ) : contactOptions.length === 0 ? (
@@ -300,7 +300,7 @@ export function DealForm({
             ) : (
               <Select value={v.contact_id} onValueChange={onContactChange}>
                 <SelectTrigger id="contact" className="w-full">
-                  <SelectValue placeholder="Kontakt wählen" />
+                  <SelectValue placeholder="Kunden wählen" />
                 </SelectTrigger>
                 <SelectContent>
                   {contactOptions.map((c) => (

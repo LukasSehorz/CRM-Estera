@@ -74,7 +74,7 @@ function GlobalSearch() {
         ...(kontakte.data ?? []).map((k) => ({
           id: k.id,
           label: `${k.vorname} ${k.nachname}`,
-          sub: k.email ?? "Kontakt",
+          sub: k.email ?? "Kunde",
           href: `/kontakte/${k.id}`,
           art: "kontakt" as const,
         })),
@@ -108,7 +108,7 @@ function GlobalSearch() {
             setOffen(true);
           }}
           onFocus={() => setOffen(true)}
-          placeholder="CRM durchsuchen — Kontakte, Deals …"
+          placeholder="CRM durchsuchen — Kunden, Deals …"
           aria-label="CRM durchsuchen"
           className="w-full bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
         />

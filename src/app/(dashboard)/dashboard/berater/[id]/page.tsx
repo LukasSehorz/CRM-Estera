@@ -240,7 +240,7 @@ export default async function BeraterDrilldownPage({
             </div>
             <div className="rounded-xl border border-border bg-surface p-5">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Kontakte</span>
+                <span className="text-sm text-muted-foreground">Kunden</span>
                 <span className="grid h-9 w-9 place-items-center rounded-lg bg-primary/10 text-primary">
                   <Users className="h-4 w-4" />
                 </span>

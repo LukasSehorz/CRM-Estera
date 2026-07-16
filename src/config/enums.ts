@@ -149,3 +149,19 @@ export const BEREICH = [
 export function bereichLabel(value: string): string {
   return BEREICH.find((b) => b.value === value)?.label ?? value;
 }
+
+// Kunden-Segmentierung (Call SJ 4.2) — BERECHNET, nicht gespeichert:
+// „bestand" = mind. 1 gewonnener Deal · „pipeline" = mind. 1 offener Deal ·
+// sonst „interessent". (Die VV-Pipeline-Phase „Interessent" bleibt unberührt —
+// Phase ≠ Segment.)
+export type KundenSegment = "interessent" | "pipeline" | "bestand";
+
+export const KUNDEN_SEGMENTE: { value: KundenSegment; label: string }[] = [
+  { value: "interessent", label: "Interessent" },
+  { value: "pipeline", label: "In Pipeline" },
+  { value: "bestand", label: "Bestandskunde" },
+];
+
+export function kundenSegmentLabel(value: string): string {
+  return KUNDEN_SEGMENTE.find((s) => s.value === value)?.label ?? value;
+}
