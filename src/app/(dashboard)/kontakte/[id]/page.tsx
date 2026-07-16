@@ -120,6 +120,7 @@ export default async function KontaktDetailPage({
     finanzierungsstatus: c.finanzierungsstatus ?? "offen",
     ist_selbststaendig: c.ist_selbststaendig ?? false,
     ist_immobilienbesitzer: c.ist_immobilienbesitzer ?? false,
+    ist_bestandskunde: c.ist_bestandskunde ?? false,
   };
 
   // Manueller „vorhanden"-Haken je Typ (auch ohne Datei setzbar).

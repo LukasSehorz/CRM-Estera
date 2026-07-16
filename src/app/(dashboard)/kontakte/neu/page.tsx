@@ -58,6 +58,7 @@ export default async function NeuerKontaktPage() {
     finanzierungsstatus: "offen",
     ist_selbststaendig: false,
     ist_immobilienbesitzer: false,
+    ist_bestandskunde: false,
   };
 
   return (

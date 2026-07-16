@@ -370,23 +370,22 @@ export function DecisionTree({ root }: { root: TreeNode }) {
               const opacity = !bothVisible ? 0.05 : dim ? 0.2 : 1;
               return (
                 <g key={`${e.from}-${e.to}`}>
+                  {/* Basis bleibt dezent grau — der Fluss wird allein vom
+                      Licht-Puls gezeigt (Herzschlag, mit Lücken), keine
+                      kräftige durchgehende Farblinie mehr (Feedback SJ). */}
                   <path
                     d={d}
                     fill="none"
-                    className={cn(
-                      "transition-[stroke,opacity] duration-300",
-                      active ? "stroke-accent-500" : "stroke-border",
-                    )}
-                    strokeWidth={active ? 2.5 : 1.5}
+                    className="stroke-border transition-opacity duration-300"
+                    strokeWidth={active ? 2 : 1.5}
                     style={{ opacity }}
                   />
                   {active && bothVisible && (
                     <path
                       d={d}
                       fill="none"
-                      className="decision-pulse stroke-accent-400"
-                      strokeWidth={2.5}
-                      strokeLinecap="round"
+                      className="decision-pulse"
+                      strokeWidth={3}
                     />
                   )}
                 </g>

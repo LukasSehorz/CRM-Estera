@@ -58,7 +58,7 @@ export default async function KontaktePage() {
   const { data: contacts, error } = await supabase
     .from("contacts")
     .select(
-      "id, vorname, nachname, email, telefon, status, termin_status, leadquelle, interesse, nettoverdienst_monatlich, eigenkapital, einschaetzung, berater_id, created_at",
+      "id, vorname, nachname, email, telefon, status, termin_status, leadquelle, interesse, nettoverdienst_monatlich, eigenkapital, einschaetzung, berater_id, created_at, ist_bestandskunde",
     )
     .order("created_at", { ascending: false });
 
@@ -84,6 +84,11 @@ export default async function KontaktePage() {
     else if (!st?.is_lost && cur !== "bestand")
       segmentMap[d.contact_id] = "pipeline";
     else if (!cur) segmentMap[d.contact_id] = "interessent";
+  }
+  // Altbestand-Override (0021): manuell markierte Bestandskunden zählen als
+  // „Bestandskunde", auch ohne gewonnenen Deal im CRM.
+  for (const c of contacts ?? []) {
+    if (c.ist_bestandskunde) segmentMap[c.id] = "bestand";
   }
 
   return (

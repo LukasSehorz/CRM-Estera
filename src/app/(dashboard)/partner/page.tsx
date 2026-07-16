@@ -22,6 +22,7 @@ import {
   PartnerView,
   type PartnerStats,
   type TeamMember,
+  type TeamDealDetail,
   type TippgeberMember,
   type TippgeberDealDetail,
   type OverheadPosten,
@@ -116,6 +117,7 @@ export default async function PartnerPage() {
     string,
     { abschluesse: number; umsatz: number; pipeline: number; provision: number }
   >();
+  const wonDealsMap = new Map<string, TeamDealDetail[]>();
   for (const d of deals) {
     const vol =
       d.bereich === "immobilien" ? Number(d.kaufpreis ?? 0) : Number(d.bws ?? 0);
@@ -133,6 +135,17 @@ export default async function PartnerPage() {
         stufeOf(d.berater_id),
         immoModus,
       );
+      // Abgeschlossene Deals je Berater — für die aufklappbare Team-Karte
+      // (Feedback SJ: Berater dürfen den GF-Drilldown nicht öffnen, sollen
+      // aber sehen, welche Deals ein Partner abgeschlossen hat).
+      const list = wonDealsMap.get(d.berater_id) ?? [];
+      list.push({
+        dealId: d.id,
+        dealname: d.dealname,
+        bereich: d.bereich as Bereich,
+        volumen: vol,
+      });
+      wonDealsMap.set(d.berater_id, list);
     } else if (!lost(d)) {
       cur.pipeline += vol;
     }
@@ -194,11 +207,13 @@ export default async function PartnerPage() {
       perf: perf
         ? { abschluesse: perf.abschluesse, umsatz: perf.umsatz, pipeline: perf.pipeline }
         : undefined,
-      // Klick auf den Namen im Baum → Berater-Drilldown (nur echte Berater).
+      // Klick auf den Namen im Baum → Berater-Drilldown. Die Route ist
+      // GF-only — Berater bekommen daher keinen Link (Feedback SJ: führte
+      // sonst nur auf einen Redirect zum Dashboard).
       href:
-        p.rolle === "geschaeftsfuehrung"
-          ? undefined
-          : `/dashboard/berater/${p.id}`,
+        me.rolle === "geschaeftsfuehrung" && p.rolle !== "geschaeftsfuehrung"
+          ? `/dashboard/berater/${p.id}`
+          : undefined,
       children: [],
     });
   }
@@ -233,7 +248,8 @@ export default async function PartnerPage() {
     }
   }
 
-  // Team-Liste (Berater in der eigenen Struktur).
+  // Team-Liste (Berater in der eigenen Struktur) — inkl. abgeschlossener
+  // Deals für die aufklappbare Karte.
   const team: TeamMember[] = (profiles ?? [])
     .filter((p) => p.id !== me.id && p.rolle !== "geschaeftsfuehrung")
     .map((p) => {
@@ -248,6 +264,9 @@ export default async function PartnerPage() {
         umsatz: perf?.umsatz ?? 0,
         provision: perf?.provision ?? 0,
         ziel: zielMap.get(p.id) ?? 0,
+        deals: (wonDealsMap.get(p.id) ?? []).sort(
+          (a, b) => b.volumen - a.volumen,
+        ),
       };
     })
     .sort((a, b) => b.umsatz - a.umsatz);
@@ -365,6 +384,7 @@ export default async function PartnerPage() {
           team={team}
           tippgeberTeam={tippgeberTeam}
           overheadBreakdown={overheadBreakdown}
+          isGf={me.rolle === "geschaeftsfuehrung"}
         />
 
         <div className="rounded-xl border border-border bg-surface p-5">

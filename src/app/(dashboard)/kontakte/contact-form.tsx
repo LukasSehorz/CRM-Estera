@@ -77,6 +77,7 @@ export type FormState = {
   finanzierungsstatus: string;
   ist_selbststaendig: boolean;
   ist_immobilienbesitzer: boolean;
+  ist_bestandskunde: boolean;
 };
 
 function num(s: string): number | null {
@@ -220,6 +221,7 @@ export function ContactForm({
         "offen") as ContactInput["finanzierungsstatus"],
       ist_selbststaendig: v.ist_selbststaendig,
       ist_immobilienbesitzer: v.ist_immobilienbesitzer,
+      ist_bestandskunde: v.ist_bestandskunde,
     };
   }
 
@@ -411,6 +413,22 @@ export function ContactForm({
             </div>
             <p className="text-xs text-muted-foreground">
               Blendet die passenden Gruppen der Dokumenten-Checkliste ein.
+            </p>
+          </Field>
+
+          {/* Segment (Feedback SJ): berechnet sich automatisch aus den Deals —
+              nur Altbestand wird manuell markiert. */}
+          <Field label="Segment" className="sm:col-span-2">
+            <label className="flex w-fit cursor-pointer items-center gap-2 pt-1 text-sm">
+              <Checkbox
+                checked={v.ist_bestandskunde}
+                onCheckedChange={(c) => set("ist_bestandskunde", c === true)}
+              />
+              Bestandskunde (Altbestand — Abschlüsse liegen vor dem CRM)
+            </label>
+            <p className="text-xs text-muted-foreground">
+              Sonst automatisch: ohne Deal „Interessent“, mit offenem Deal
+              „In Pipeline“, mit gewonnenem Deal „Bestandskunde“.
             </p>
           </Field>
         </div>

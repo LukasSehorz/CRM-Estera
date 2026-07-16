@@ -32,6 +32,7 @@
   --surface-2: hsl(240 23% 95%); /* #F1F1F7  Hover-Zeilen, Inputs */
   --border: hsl(240 23% 92%); /* #E6E6EF  Ränder, Trennlinien */
   --tree-dot: hsl(240 23% 88%); /* Punkteraster im Organigramm-Viewport (Light) */
+  --tree-pulse: hsl(204 95% 66%); /* Licht-Puls auf dem aktiven Pfad (helles Leuchten) */
   --text-secondary: hsl(218 17% 35%); /* #4A5568  Slate */
   --text-muted: hsl(218 14% 45%); /* #626E82  Platzhalter, Hilfetext */
 
@@ -103,6 +104,7 @@
   --surface-2: hsl(214 47% 16%); /* #16273D  erhöhte Flächen, Hover-Zeilen, Inputs */
   --border: hsl(215 35% 22%); /* #24344B  Kartenränder, Trennlinien (dezent) */
   --tree-dot: hsl(215 35% 26%); /* Punkteraster im Organigramm-Viewport (Dark) */
+  --tree-pulse: hsl(200 100% 92%); /* Licht-Puls: fast weißes Licht auf Navy */
   --text-secondary: hsl(216 19% 72%); /* #A9B4C4  Labels, sekundärer Text (~8:1) */
   --text-muted: hsl(215 15% 56%); /* #7E8CA0  Platzhalter, Hilfetext (~4.8:1) */
 
@@ -417,15 +419,22 @@
   animation: grow-x 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
-/* Entscheidungsbaum: Lichtimpuls entlang der aktiven Verbindungslinie */
+/* Entscheidungsbaum: Licht-Fluss entlang der aktiven Verbindungslinie
+   (Feedback SJ) — kurze helle Lichtsegmente mit Lücken, die ruhig und
+   DURCHGEHEND den Pfad entlangfließen (kein Herzschlag). Farbe = helles
+   Licht (--tree-pulse), dezent statt kräftiger Farblinie. */
 .decision-pulse {
-  stroke-dasharray: 8 24;
+  stroke: var(--tree-pulse);
+  stroke-linecap: round;
+  stroke-dasharray: 6 22;
   opacity: 0.9;
-  animation: decision-pulse-flow 1.1s linear infinite;
+  filter: drop-shadow(0 0 3px var(--tree-pulse));
+  animation: decision-pulse-flow 2.2s linear infinite;
 }
+/* 6 + 22 = 28 → eine Segmentperiode je Durchlauf (gemächliches Fließen) */
 @keyframes decision-pulse-flow {
   to {
-    stroke-dashoffset: -32;
+    stroke-dashoffset: -28;
   }
 }
 

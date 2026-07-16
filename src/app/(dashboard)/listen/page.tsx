@@ -120,7 +120,9 @@ function ListTile({ item, tone }: { item: Item; tone: string }) {
 function GroupCard({ group }: { group: Group }) {
   const Icon = group.icon;
   return (
-    <section className="overflow-hidden rounded-xl border border-border bg-surface">
+    // h-full: alle Gruppen-Karten gleich hoch (Feedback SJ) — kürzere Gruppen
+    // haben unten Leerraum statt früher zu enden.
+    <section className="h-full overflow-hidden rounded-xl border border-border bg-surface">
       {/* Kopfleiste im Themen-Ton — macht Gruppen auf einen Blick unterscheidbar */}
       <div
         className="h-1"
@@ -442,7 +444,8 @@ export default async function ListenHubPage() {
           </KpiCard>
         </div>
 
-        <div className="grid items-start gap-4 md:grid-cols-2">
+        {/* auto-rows-fr: alle 4 Gruppen-Karten exakt gleich groß (Feedback SJ) */}
+        <div className="grid auto-rows-fr gap-4 md:grid-cols-2">
           {sichtbar.map((g) => (
             <GroupCard key={g.title} group={g} />
           ))}

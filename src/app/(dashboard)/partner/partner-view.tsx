@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ChevronDown,
@@ -14,6 +15,14 @@ import { cn } from "@/lib/utils";
 import { formatEUR } from "@/lib/format";
 import { InfoHint } from "@/components/ui/info-hint";
 
+/** Abgeschlossener Deal eines Team-Beraters (aufklappbare Karte). */
+export type TeamDealDetail = {
+  dealId: string;
+  dealname: string;
+  bereich: "immobilien" | "vv";
+  volumen: number;
+};
+
 export type TeamMember = {
   id: string;
   name: string;
@@ -23,6 +32,7 @@ export type TeamMember = {
   umsatz: number;
   provision: number;
   ziel: number;
+  deals: TeamDealDetail[];
 };
 
 /** Einzel-Deal in der Tippgeber-Aufschlüsselung (Feedback SJ). */
@@ -173,11 +183,14 @@ export function PartnerView({
   team,
   tippgeberTeam,
   overheadBreakdown,
+  isGf = false,
 }: {
   stats: PartnerStats;
   team: TeamMember[];
   tippgeberTeam: TippgeberMember[];
   overheadBreakdown: OverheadPosten[];
+  /** Nur die GF darf den Berater-Drilldown öffnen (Route ist GF-only). */
+  isGf?: boolean;
 }) {
   const beraterRef = useRef<HTMLDivElement>(null);
   const tippgeberRef = useRef<HTMLDivElement>(null);
@@ -372,8 +385,8 @@ export function PartnerView({
           <div>
             <h2 className="text-base font-semibold">Berater</h2>
             <p className="text-xs text-muted-foreground">
-              Level, Umsatz, Provision & Zielerreichung — Name anklicken für
-              Details.
+              Level, Umsatz, Provision & Zielerreichung — Karte anklicken für
+              die Abschlüsse{isGf ? ", Name öffnet den Drilldown" : ""}.
             </p>
           </div>
         </div>
@@ -382,9 +395,9 @@ export function PartnerView({
             Noch keine Berater in deiner Struktur.
           </p>
         ) : (
-          <div className="grid gap-3 md:grid-cols-2">
+          <div className="grid items-start gap-3 md:grid-cols-2">
             {team.map((m, i) => (
-              <TeamCard key={m.id} m={m} index={i} />
+              <TeamCard key={m.id} m={m} index={i} isGf={isGf} />
             ))}
           </div>
         )}
@@ -426,7 +439,16 @@ export function PartnerView({
   );
 }
 
-function TeamCard({ m, index }: { m: TeamMember; index: number }) {
+function TeamCard({
+  m,
+  index,
+  isGf,
+}: {
+  m: TeamMember;
+  index: number;
+  isGf: boolean;
+}) {
+  const [open, setOpen] = useState(false);
   const pct = m.ziel > 0 ? Math.min(100, (m.provision / m.ziel) * 100) : 0;
   const initials = m.name
     .split(" ")
@@ -436,59 +458,146 @@ function TeamCard({ m, index }: { m: TeamMember; index: number }) {
     .join("")
     .toUpperCase();
   return (
-    <motion.a
-      href={`/dashboard/berater/${m.id}`}
+    <motion.div
       custom={index}
       variants={cardVariants}
       initial="hidden"
       animate="show"
-      whileHover={{ scale: 1.015 }}
+      whileHover={{ scale: open ? 1 : 1.015 }}
       transition={{ type: "spring", stiffness: 300, damping: 22 }}
-      className="block rounded-lg border border-border bg-background/40 p-4 transition-colors hover:border-primary/50"
+      className={cn(
+        "self-start rounded-lg border bg-background/40 transition-colors",
+        open ? "border-primary/40" : "border-border hover:border-primary/50",
+      )}
     >
-      <div className="flex items-center gap-3">
-        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
-          {initials}
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-semibold">{m.name}</div>
-          <span
-            className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium text-gold-contrast"
-            style={{ background: "color-mix(in srgb, var(--gold) 15%, transparent)" }}
-          >
-            <Trophy className="h-3 w-3" />
-            {m.level}
+      {/* Karte klappt auf und zeigt die Abschlüsse (Feedback SJ) — der
+          Drilldown-Link am Namen bleibt der GF vorbehalten (Route GF-only). */}
+      <div
+        role="button"
+        tabIndex={0}
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setOpen((v) => !v);
+          }
+        }}
+        className="w-full cursor-pointer p-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <div className="flex items-center gap-3">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+            {initials}
           </span>
-        </div>
-        <div className="text-right">
-          <div className="text-lg font-semibold tabular-nums">
-            {formatEUR(m.umsatz)}
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-sm font-semibold">
+              {isGf ? (
+                <Link
+                  href={`/dashboard/berater/${m.id}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="hover:text-primary hover:underline"
+                >
+                  {m.name}
+                </Link>
+              ) : (
+                m.name
+              )}
+            </div>
+            <span
+              className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium text-gold-contrast"
+              style={{ background: "color-mix(in srgb, var(--gold) 15%, transparent)" }}
+            >
+              <Trophy className="h-3 w-3" />
+              {m.level}
+            </span>
           </div>
-          <div className="text-[11px] text-muted-foreground">
-            {m.abschluesse} Abschl.
+          <div className="text-right">
+            <div className="text-lg font-semibold tabular-nums">
+              {formatEUR(m.umsatz)}
+            </div>
+            <div className="text-[11px] text-muted-foreground">
+              {m.abschluesse} Abschl.
+            </div>
+          </div>
+          <ChevronDown
+            className={cn(
+              "h-4 w-4 shrink-0 text-muted-foreground transition-transform",
+              open && "rotate-180",
+            )}
+          />
+        </div>
+
+        {/* Zielerreichung (Provision vs. Monatsziel) */}
+        <div className="mt-3">
+          <div className="mb-1 flex items-center justify-between text-[11px] text-muted-foreground">
+            <span>Provision {formatEUR(m.provision)}</span>
+            <span>{m.ziel > 0 ? `Ziel ${formatEUR(m.ziel)}` : "kein Ziel"}</span>
+          </div>
+          <div className="h-2 overflow-hidden rounded-full bg-secondary">
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${pct}%` }}
+              transition={{ duration: 0.7, delay: 0.15 + index * 0.05, ease: "easeOut" }}
+              className={cn(
+                "h-full rounded-full",
+                pct >= 100 ? "bg-success" : "bg-primary",
+              )}
+            />
           </div>
         </div>
       </div>
 
-      {/* Zielerreichung (Provision vs. Monatsziel) */}
-      <div className="mt-3">
-        <div className="mb-1 flex items-center justify-between text-[11px] text-muted-foreground">
-          <span>Provision {formatEUR(m.provision)}</span>
-          <span>{m.ziel > 0 ? `Ziel ${formatEUR(m.ziel)}` : "kein Ziel"}</span>
-        </div>
-        <div className="h-2 overflow-hidden rounded-full bg-secondary">
+      {/* Aufschlüsselung: welche Deals abgeschlossen wurden */}
+      <AnimatePresence initial={false}>
+        {open && (
           <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: `${pct}%` }}
-            transition={{ duration: 0.7, delay: 0.15 + index * 0.05, ease: "easeOut" }}
-            className={cn(
-              "h-full rounded-full",
-              pct >= 100 ? "bg-success" : "bg-primary",
-            )}
-          />
-        </div>
-      </div>
-    </motion.a>
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.22, ease: "easeOut" }}
+            className="overflow-hidden"
+          >
+            <div className="border-t border-border/70 px-4 py-3">
+              {m.deals.length === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  Noch keine abgeschlossenen Deals.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {bereichGruppen(m.deals).map((g) => (
+                    <div key={g.bereich}>
+                      <div className="mb-1.5 flex items-center justify-between border-b border-border/60 pb-1 text-[11px] font-medium text-muted-foreground">
+                        <span>{BEREICH_LABEL[g.bereich]}</span>
+                        <span className="tabular-nums">
+                          {formatEUR(
+                            g.items.reduce((s, d) => s + d.volumen, 0),
+                          )}
+                        </span>
+                      </div>
+                      <ul className="space-y-1.5">
+                        {g.items.map((d) => (
+                          <li
+                            key={d.dealId}
+                            className="flex items-center justify-between gap-3"
+                          >
+                            <span className="min-w-0 truncate text-xs font-medium">
+                              {d.dealname}
+                            </span>
+                            <span className="shrink-0 text-xs font-semibold tabular-nums">
+                              {formatEUR(d.volumen)}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }
 

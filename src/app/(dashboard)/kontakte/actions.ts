@@ -28,6 +28,8 @@ export type ContactInput = {
   finanzierungsstatus: Enums["finanzierungsstatus_enum"];
   ist_selbststaendig: boolean;
   ist_immobilienbesitzer: boolean;
+  /** Altbestand (Feedback SJ): als Bestandskunde behandeln, ohne CRM-Deal. */
+  ist_bestandskunde: boolean;
 };
 
 export type ActionResult = { ok: true; id?: string } | { error: string };
@@ -83,6 +85,7 @@ function toRow(v: ContactInput) {
     finanzierungsstatus: v.finanzierungsstatus,
     ist_selbststaendig: v.ist_selbststaendig,
     ist_immobilienbesitzer: v.ist_immobilienbesitzer,
+    ist_bestandskunde: v.ist_bestandskunde,
   };
 }
 

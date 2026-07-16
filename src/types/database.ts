@@ -124,6 +124,7 @@ export type Database = {
           finanzierungsstatus: Database["public"]["Enums"]["finanzierungsstatus_enum"];
           ist_selbststaendig: boolean;
           ist_immobilienbesitzer: boolean;
+          ist_bestandskunde: boolean;
           einschaetzung: string;
           belegt_deal_id: string | null;
           created_at: string;
@@ -154,6 +155,7 @@ export type Database = {
           finanzierungsstatus?: Database["public"]["Enums"]["finanzierungsstatus_enum"];
           ist_selbststaendig?: boolean;
           ist_immobilienbesitzer?: boolean;
+          ist_bestandskunde?: boolean;
           einschaetzung?: string;
           belegt_deal_id?: string | null;
           created_at?: string;
@@ -184,6 +186,7 @@ export type Database = {
           finanzierungsstatus?: Database["public"]["Enums"]["finanzierungsstatus_enum"];
           ist_selbststaendig?: boolean;
           ist_immobilienbesitzer?: boolean;
+          ist_bestandskunde?: boolean;
           einschaetzung?: string;
           belegt_deal_id?: string | null;
           created_at?: string;
