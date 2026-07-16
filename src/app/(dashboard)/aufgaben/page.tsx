@@ -8,7 +8,16 @@ import { AufgabenView, type AufgabeRow } from "./aufgaben-view";
  * „wie eine To-Do-App", sortiert nach Fälligkeit. RLS: jeder sieht nur
  * die eigenen Aufgaben (GF alle).
  */
-export default async function AufgabenPage() {
+export default async function AufgabenPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ from?: string }>;
+}) {
+  // Zurück zur Herkunft (Feedback SJ): kommt man z. B. vom Dashboard, führt
+  // „Zurück" auch dorthin — sonst aufs Dashboard als sinnvolle Startseite.
+  const { from } = await searchParams;
+  const backHref = from && from.startsWith("/") ? from : "/dashboard";
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -52,6 +61,7 @@ export default async function AufgabenPage() {
       <Topbar
         title="Aufgaben"
         subtitle="Dein zentraler To-Do-Ort — überfällig zuerst"
+        backHref={backHref}
       />
       <div className="px-6 py-6">
         <AufgabenView

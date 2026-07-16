@@ -112,7 +112,7 @@ export async function HeuteBlock({ wide = false }: { wide?: boolean }) {
           </div>
         </div>
         <Link
-          href="/aufgaben"
+          href="/aufgaben?from=%2Fdashboard"
           className="shrink-0 text-sm font-medium text-primary hover:underline"
         >
           Alle Aufgaben →
