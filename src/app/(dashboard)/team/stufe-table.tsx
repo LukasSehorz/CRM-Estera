@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { UserPlus } from "lucide-react";
+import { ArrowUpRight, ChevronRight, Handshake, User, UserPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   createBerater,
@@ -46,17 +47,27 @@ export type BeraterRow = {
 type PartnerOption = { id: string; name: string };
 const KEIN_PARTNER = "__none";
 
+export type DownlineChild = {
+  berater: { id: string; name: string; stufe: string }[];
+  tippgeber: { id: string; name: string; satz: string }[];
+};
+
 const BEREICH_LABEL: Record<Bereich, string> = {
   immobilien: "Immobilien",
   vv: "VV",
 };
 
+const COL_COUNT = 9;
+
 export function StufeTable({
   rows,
   partnerKandidaten,
+  childMap = {},
 }: {
   rows: BeraterRow[];
   partnerKandidaten: PartnerOption[];
+  /** Downline je Berater (2.8) — für das Aufklappen der Struktur. */
+  childMap?: Record<string, DownlineChild>;
 }) {
   return (
     <div className="overflow-x-auto rounded-xl border border-border bg-surface">
@@ -80,6 +91,7 @@ export function StufeTable({
               key={r.id}
               row={r}
               partnerKandidaten={partnerKandidaten.filter((p) => p.id !== r.id)}
+              downline={childMap[r.id]}
             />
           ))}
         </tbody>
@@ -100,10 +112,13 @@ function parseZiel(s: string): number | null | undefined {
 function StufeRow({
   row,
   partnerKandidaten,
+  downline,
 }: {
   row: BeraterRow;
   partnerKandidaten: PartnerOption[];
+  downline?: DownlineChild;
 }) {
+  const [open, setOpen] = useState(false);
   const [stufe, setStufe] = useState(row.stufe);
   const [bereiche, setBereiche] = useState<Bereich[]>(row.bereiche);
   const [immoDefault, setImmoDefault] = useState(row.immoDefault);
@@ -186,13 +201,48 @@ function StufeRow({
     });
   }
 
+  const anzahlDownline =
+    (downline?.berater.length ?? 0) + (downline?.tippgeber.length ?? 0);
+  const hatDownline = anzahlDownline > 0;
+
   return (
+    <>
     <tr className="border-b border-border last:border-0">
       <td className="px-4 py-3 font-medium">
-        {row.name}
-        {!row.aktiv && (
-          <span className="ml-2 text-xs text-muted-foreground">(inaktiv)</span>
-        )}
+        <div className="flex items-center gap-1.5">
+          {/* Aufklappen: wer arbeitet unter diesem Berater? (2.8) */}
+          {hatDownline ? (
+            <button
+              type="button"
+              onClick={() => setOpen((v) => !v)}
+              aria-label={open ? "Zuklappen" : "Downline anzeigen"}
+              aria-expanded={open}
+              className="grid h-5 w-5 shrink-0 place-items-center rounded text-muted-foreground transition-colors hover:bg-surface-2 hover:text-foreground"
+            >
+              <ChevronRight
+                className={cn("h-4 w-4 transition-transform", open && "rotate-90")}
+              />
+            </button>
+          ) : (
+            <span className="inline-block w-5" />
+          )}
+          {/* Name -> Berater-Akte (Drilldown/Übersichten) */}
+          <Link
+            href={`/dashboard/berater/${row.id}`}
+            className="group inline-flex items-center gap-1 hover:text-primary hover:underline"
+          >
+            {row.name}
+            <ArrowUpRight className="h-3 w-3 opacity-0 transition-opacity group-hover:opacity-100" />
+          </Link>
+          {!row.aktiv && (
+            <span className="ml-1 text-xs text-muted-foreground">(inaktiv)</span>
+          )}
+          {hatDownline && (
+            <span className="ml-1 rounded-full bg-surface-2 px-1.5 text-[10px] font-medium tabular-nums text-muted-foreground">
+              {anzahlDownline}
+            </span>
+          )}
+        </div>
       </td>
       <td className="px-4 py-3">
         {istGf ? (
@@ -341,6 +391,40 @@ function StufeRow({
         </Button>
       </td>
     </tr>
+    {open && hatDownline && (
+      <tr className="border-b border-border bg-surface-2/40">
+        <td colSpan={COL_COUNT} className="px-4 py-3">
+          <div className="ml-6 flex flex-wrap gap-2">
+            {downline!.berater.map((b) => (
+              <Link
+                key={b.id}
+                href={`/dashboard/berater/${b.id}`}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-1.5 text-xs font-medium transition-colors hover:border-primary hover:text-primary"
+              >
+                <span className="grid h-5 w-5 place-items-center rounded-full bg-amber-500/15 text-amber-600">
+                  <User className="h-3 w-3" />
+                </span>
+                {b.name}
+                <span className="text-muted-foreground">· Stufe {b.stufe || "—"} %</span>
+              </Link>
+            ))}
+            {downline!.tippgeber.map((t) => (
+              <span
+                key={t.id}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-border bg-surface px-2.5 py-1.5 text-xs font-medium text-muted-foreground"
+              >
+                <span className="grid h-5 w-5 place-items-center rounded-full border border-border">
+                  <Handshake className="h-3 w-3" />
+                </span>
+                {t.name}
+                <span>· Tippgeber{t.satz ? ` ${t.satz} %` : ""}</span>
+              </span>
+            ))}
+          </div>
+        </td>
+      </tr>
+    )}
+    </>
   );
 }
 

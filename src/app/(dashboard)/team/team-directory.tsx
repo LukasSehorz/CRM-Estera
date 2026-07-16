@@ -49,6 +49,31 @@ export function TeamDirectory({
     [tippgeberRows, needle],
   );
 
+  // Downline je Berater (2.8): wer arbeitet unter ihm (Sub-Berater + Tippgeber)?
+  const childMap = useMemo(() => {
+    const m: Record<
+      string,
+      {
+        berater: { id: string; name: string; stufe: string }[];
+        tippgeber: { id: string; name: string; satz: string }[];
+      }
+    > = {};
+    for (const r of beraterRows) m[r.id] = { berater: [], tippgeber: [] };
+    for (const r of beraterRows) {
+      if (r.parentId && m[r.parentId])
+        m[r.parentId].berater.push({ id: r.id, name: r.name, stufe: r.stufe });
+    }
+    for (const t of tippgeberRows) {
+      if (m[t.ownerId])
+        m[t.ownerId].tippgeber.push({
+          id: t.id,
+          name: t.name,
+          satz: t.provisionSatz,
+        });
+    }
+    return m;
+  }, [beraterRows, tippgeberRows]);
+
   const showBerater = filter !== "tippgeber";
   const showTippgeber = filter !== "berater";
 
@@ -112,7 +137,11 @@ export function TeamDirectory({
             treiben die Ziel-Box im Berater-Dashboard.
           </p>
           {berater.length > 0 ? (
-            <StufeTable rows={berater} partnerKandidaten={partnerKandidaten} />
+            <StufeTable
+              rows={berater}
+              partnerKandidaten={partnerKandidaten}
+              childMap={childMap}
+            />
           ) : (
             <EmptyHint text="Kein Berater gefunden." />
           )}

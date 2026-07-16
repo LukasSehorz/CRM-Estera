@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatEUR, formatProzent } from "@/lib/format";
 import { ChartCard } from "@/components/charts/chart-card";
@@ -18,6 +19,9 @@ export type PerfRow = {
   closing: number | null;
   storno: number | null;
   umsatz: Record<Period, number>;
+  umsatzImmo: Record<Period, number>;
+  umsatzVv: Record<Period, number>;
+  provision: Record<Period, number>;
 };
 
 const PERIODS: { k: Period; label: string }[] = [
@@ -35,6 +39,7 @@ export function PerformanceView({
   isGf?: boolean;
 }) {
   const [period, setPeriod] = useState<Period>("gesamt");
+  const [openRow, setOpenRow] = useState<string | null>(null);
 
   const bar = rows
     .map((r) => ({ label: r.name.split(" ")[0], value: r.umsatz[period] }))
@@ -106,43 +111,141 @@ export function PerformanceView({
                 </td>
               </tr>
             ) : (
-              tableRows.map((r) => (
-                <tr key={r.id} className="border-b border-border last:border-0">
-                  <td className="px-4 py-3 font-medium text-foreground">
-                    {/* Drilldown (Wunsch B): nur die GF darf in fremde Zahlen */}
-                    {isGf ? (
-                      <Link
-                        href={`/dashboard/berater/${r.id}`}
-                        className="text-primary hover:underline"
-                      >
-                        {r.name}
-                      </Link>
-                    ) : (
-                      r.name
-                    )}
-                  </td>
-                  <td className="px-4 py-3 font-medium tabular-nums text-foreground">
-                    {formatEUR(r.umsatz[period])}
-                  </td>
-                  <td className="px-4 py-3 tabular-nums">{r.offene}</td>
-                  <td className="px-4 py-3 tabular-nums text-muted-foreground">
-                    {r.avgDealGroesse ? formatEUR(r.avgDealGroesse) : "—"}
-                  </td>
-                  <td className="px-4 py-3 tabular-nums text-muted-foreground">
-                    {r.dealTime != null ? `${Math.round(r.dealTime)} Tage` : "—"}
-                  </td>
-                  <td className="px-4 py-3 tabular-nums text-muted-foreground">
-                    {r.closing != null ? formatProzent(r.closing, 0) : "—"}
-                  </td>
-                  <td className="px-4 py-3 tabular-nums text-muted-foreground">
-                    {r.storno != null ? formatProzent(r.storno, 0) : "—"}
-                  </td>
-                </tr>
-              ))
+              tableRows.map((r) => {
+                const offen = openRow === r.id;
+                return (
+                  <RowGroup
+                    key={r.id}
+                    r={r}
+                    period={period}
+                    isGf={isGf}
+                    open={offen}
+                    onToggle={() =>
+                      setOpenRow((v) => (v === r.id ? null : r.id))
+                    }
+                  />
+                );
+              })
             )}
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Tabellenzeile mit aufklappbarer Umsatz-Aufschlüsselung (2.6): Klick auf die
+ * Umsatz-Zahl zeigt, wie sie sich zusammensetzt (Immobilien / VV) und welche
+ * Provision der Berater daraus erzielt hat — nichts mehr „starr".
+ */
+function RowGroup({
+  r,
+  period,
+  isGf,
+  open,
+  onToggle,
+}: {
+  r: PerfRow;
+  period: Period;
+  isGf: boolean;
+  open: boolean;
+  onToggle: () => void;
+}) {
+  const immo = r.umsatzImmo[period];
+  const vv = r.umsatzVv[period];
+  const prov = r.provision[period];
+  return (
+    <>
+      <tr
+        className={cn(
+          "border-b border-border last:border-0",
+          open && "bg-surface-2/40",
+        )}
+      >
+        <td className="px-4 py-3 font-medium text-foreground">
+          {/* Drilldown (Wunsch B): nur die GF darf in fremde Zahlen */}
+          {isGf ? (
+            <Link
+              href={`/dashboard/berater/${r.id}`}
+              className="text-primary hover:underline"
+            >
+              {r.name}
+            </Link>
+          ) : (
+            r.name
+          )}
+        </td>
+        <td className="px-4 py-3">
+          <button
+            type="button"
+            onClick={onToggle}
+            aria-expanded={open}
+            className="-mx-2 inline-flex items-center gap-1.5 rounded-md px-2 py-1 font-medium tabular-nums text-foreground transition-colors hover:bg-surface-2 hover:text-primary"
+          >
+            {formatEUR(r.umsatz[period])}
+            <ChevronDown
+              className={cn(
+                "h-3.5 w-3.5 text-muted-foreground transition-transform",
+                open && "rotate-180",
+              )}
+            />
+          </button>
+        </td>
+        <td className="px-4 py-3 tabular-nums">{r.offene}</td>
+        <td className="px-4 py-3 tabular-nums text-muted-foreground">
+          {r.avgDealGroesse ? formatEUR(r.avgDealGroesse) : "—"}
+        </td>
+        <td className="px-4 py-3 tabular-nums text-muted-foreground">
+          {r.dealTime != null ? `${Math.round(r.dealTime)} Tage` : "—"}
+        </td>
+        <td className="px-4 py-3 tabular-nums text-muted-foreground">
+          {r.closing != null ? formatProzent(r.closing, 0) : "—"}
+        </td>
+        <td className="px-4 py-3 tabular-nums text-muted-foreground">
+          {r.storno != null ? formatProzent(r.storno, 0) : "—"}
+        </td>
+      </tr>
+      {open && (
+        <tr className="border-b border-border bg-surface-2/40">
+          <td colSpan={7} className="px-4 pb-3">
+            <div className="ml-1 grid gap-2 sm:grid-cols-3">
+              <Breakdown label="Umsatz Immobilien" value={immo} tone="primary" />
+              <Breakdown label="Umsatz VV" value={vv} tone="info" />
+              <Breakdown
+                label={isGf ? "Provision (Berater-Anteil)" : "Deine Provision"}
+                value={prov}
+                tone="success"
+              />
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
+  );
+}
+
+const BREAK_TONE = {
+  primary: "text-primary",
+  info: "text-info",
+  success: "text-success",
+} as const;
+
+function Breakdown({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: number;
+  tone: keyof typeof BREAK_TONE;
+}) {
+  return (
+    <div className="rounded-lg border border-border bg-surface p-3">
+      <p className="text-[11px] text-muted-foreground">{label}</p>
+      <p className={cn("mt-0.5 text-sm font-semibold tabular-nums", BREAK_TONE[tone])}>
+        {formatEUR(value)}
+      </p>
     </div>
   );
 }

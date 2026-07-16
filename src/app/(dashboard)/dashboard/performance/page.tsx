@@ -29,6 +29,8 @@ import {
   umsatzRollierend,
   isWon,
 } from "@/lib/analytics";
+import { dealBeraterProvision } from "@/lib/provision";
+import { InfoHint } from "@/components/ui/info-hint";
 
 export default async function PerformanceDashboardPage({
   searchParams,
@@ -43,27 +45,47 @@ export default async function PerformanceDashboardPage({
   const perf = beraterPerformance(a);
 
   // Umsatz je Periode je Berater — nach Buchungsdatum (1.1: Immobilien
-  // realisieren zum Notartermin, VV bei Policierung).
+  // realisieren zum Notartermin, VV bei Policierung). Zusätzlich nach Sparte
+  // und die Berater-Provision, damit sich die Zahl aufklappen lässt (2.6).
   const mk = () => ({ monat: 0, quartal: 0, jahr: 0, gesamt: 0 });
   const byPeriod = new Map<string, ReturnType<typeof mk>>();
-  for (const p of perf) byPeriod.set(p.id, mk());
+  const byImmo = new Map<string, ReturnType<typeof mk>>();
+  const byVv = new Map<string, ReturnType<typeof mk>>();
+  const byProv = new Map<string, ReturnType<typeof mk>>();
+  for (const p of perf) {
+    byPeriod.set(p.id, mk());
+    byImmo.set(p.id, mk());
+    byVv.set(p.id, mk());
+    byProv.set(p.id, mk());
+  }
+  const addTo = (
+    m: Map<string, ReturnType<typeof mk>>,
+    id: string,
+    c: Date,
+    val: number,
+  ) => {
+    let x = m.get(id);
+    if (!x) {
+      x = mk();
+      m.set(id, x);
+    }
+    x.gesamt += val;
+    if (c.getFullYear() === now.getFullYear()) {
+      x.jahr += val;
+      if (Math.floor(c.getMonth() / 3) === Math.floor(now.getMonth() / 3))
+        x.quartal += val;
+      if (c.getMonth() === now.getMonth()) x.monat += val;
+    }
+  };
   for (const d of a.deals) {
     const am = a.realisiertAm(d);
     if (!am) continue;
-    let b = byPeriod.get(d.berater_id);
-    if (!b) {
-      b = mk();
-      byPeriod.set(d.berater_id, b);
-    }
+    const id = d.berater_id;
     const c = new Date(am);
     const amt = a.umsatzOf(d);
-    b.gesamt += amt;
-    if (c.getFullYear() === now.getFullYear()) {
-      b.jahr += amt;
-      if (Math.floor(c.getMonth() / 3) === Math.floor(now.getMonth() / 3))
-        b.quartal += amt;
-      if (c.getMonth() === now.getMonth()) b.monat += amt;
-    }
+    addTo(byPeriod, id, c, amt);
+    addTo(d.bereich === "immobilien" ? byImmo : byVv, id, c, amt);
+    addTo(byProv, id, c, dealBeraterProvision(d, a.stufeOf(id), a.immoModus));
   }
 
   const rows: PerfRow[] = perf.map((p) => ({
@@ -75,6 +97,9 @@ export default async function PerformanceDashboardPage({
     closing: p.closing,
     storno: p.storno,
     umsatz: byPeriod.get(p.id) ?? mk(),
+    umsatzImmo: byImmo.get(p.id) ?? mk(),
+    umsatzVv: byVv.get(p.id) ?? mk(),
+    provision: byProv.get(p.id) ?? mk(),
   }));
 
   const umsatz = umsatzGesamt(a);
@@ -176,7 +201,10 @@ export default async function PerformanceDashboardPage({
             inkl. Wochenforecast (5.6). */}
         <section>
           <div className="mb-3">
-            <h2 className="text-base font-semibold">Forecast</h2>
+            <h2 className="flex items-center gap-1.5 text-base font-semibold">
+              Forecast
+              <InfoHint text="Jeder offene Deal wird mit der Wahrscheinlichkeit seiner Pipeline-Phase gewichtet und je nach Reife einem Zeitfenster zugeordnet: sehr späte Phasen (≥ 90 %) in den nächsten 7 Tagen, ≥ 80 % in 30, ≥ 40 % in 60, der Rest in 90 Tagen (kumulativ). So entsteht ein realistischer Erwartungswert statt reiner Volumensumme." />
+            </h2>
             <p className="text-xs text-muted-foreground">
               Gewichtete {a.isGf ? "Estera-Provision" : "eigene Provision"} der
               offenen Pipeline — Näherung über die Phasen-Wahrscheinlichkeit.
