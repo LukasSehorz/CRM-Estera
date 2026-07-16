@@ -63,11 +63,14 @@ export function StufeTable({
   rows,
   partnerKandidaten,
   childMap = {},
+  readOnly = false,
 }: {
   rows: BeraterRow[];
   partnerKandidaten: PartnerOption[];
   /** Downline je Berater (2.8) — für das Aufklappen der Struktur. */
   childMap?: Record<string, DownlineChild>;
+  /** Berater-Sicht (3.9): nur lesen — Stufe/Anbindung sind GF-Hoheit. */
+  readOnly?: boolean;
 }) {
   return (
     <div className="overflow-x-auto rounded-xl border border-border bg-surface">
@@ -92,6 +95,7 @@ export function StufeTable({
               row={r}
               partnerKandidaten={partnerKandidaten.filter((p) => p.id !== r.id)}
               downline={childMap[r.id]}
+              readOnly={readOnly}
             />
           ))}
         </tbody>
@@ -113,10 +117,12 @@ function StufeRow({
   row,
   partnerKandidaten,
   downline,
+  readOnly = false,
 }: {
   row: BeraterRow;
   partnerKandidaten: PartnerOption[];
   downline?: DownlineChild;
+  readOnly?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [stufe, setStufe] = useState(row.stufe);
@@ -249,6 +255,7 @@ function StufeRow({
           <Pill tone="accent">Geschäftsführung</Pill>
         ) : (
           <Select
+            disabled={readOnly}
             value={row.rolle}
             onValueChange={(val) => {
               if (val === row.rolle) return;
@@ -282,7 +289,7 @@ function StufeRow({
                 <button
                   key={b}
                   type="button"
-                  disabled={pending}
+                  disabled={pending || readOnly}
                   onClick={() => toggleBereich(b)}
                   aria-pressed={aktivB}
                   className={cn(
@@ -305,6 +312,7 @@ function StufeRow({
           min={0}
           max={100}
           inputMode="decimal"
+          disabled={readOnly}
           value={stufe}
           onChange={(e) => setStufe(e.target.value)}
           className="w-24"
@@ -321,6 +329,7 @@ function StufeRow({
             max={100}
             inputMode="decimal"
             placeholder="z. B. 5"
+            disabled={readOnly}
             value={immoDefault}
             onChange={(e) => setImmoDefault(e.target.value)}
             className="w-24"
@@ -335,6 +344,7 @@ function StufeRow({
           <span className="text-xs text-muted-foreground">—</span>
         ) : (
           <Select
+            disabled={readOnly}
             value={parentId === "" ? KEIN_PARTNER : parentId}
             onValueChange={(val) =>
               setParentId(val === KEIN_PARTNER ? "" : val)
@@ -359,6 +369,7 @@ function StufeRow({
           <Input
             inputMode="decimal"
             placeholder="z. B. 10000"
+            disabled={readOnly}
             value={zielImmo}
             onChange={(e) => setZielImmo(e.target.value)}
             className="w-32 tabular-nums"
@@ -372,6 +383,7 @@ function StufeRow({
           <Input
             inputMode="decimal"
             placeholder="z. B. 5000"
+            disabled={readOnly}
             value={zielVv}
             onChange={(e) => setZielVv(e.target.value)}
             className="w-32 tabular-nums"
@@ -381,14 +393,16 @@ function StufeRow({
         )}
       </td>
       <td className="px-4 py-3 text-right">
-        <Button
-          size="sm"
-          variant={dirty ? "default" : "outline"}
-          disabled={!dirty || pending}
-          onClick={saveStufe}
-        >
-          {pending ? "Speichern …" : "Speichern"}
-        </Button>
+        {!readOnly && (
+          <Button
+            size="sm"
+            variant={dirty ? "default" : "outline"}
+            disabled={!dirty || pending}
+            onClick={saveStufe}
+          >
+            {pending ? "Speichern …" : "Speichern"}
+          </Button>
+        )}
       </td>
     </tr>
     {open && hatDownline && (

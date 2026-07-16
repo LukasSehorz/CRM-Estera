@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Topbar } from "@/components/layout/topbar";
 import { NeuerBeraterForm, type BeraterRow } from "./stufe-table";
+import { NeuerSubBeraterForm } from "./neuer-sub-berater-form";
 import { type TippgeberRow } from "./tippgeber-section";
 import { TeamDirectory } from "./team-directory";
 import {
@@ -22,10 +23,16 @@ export default async function TeamPage() {
 
   const { data: me } = await supabase
     .from("profiles")
-    .select("rolle")
+    .select("rolle, bereich")
     .eq("id", user.id)
     .single();
-  if (me?.rolle !== "geschaeftsfuehrung") redirect("/dashboard");
+  // Backoffice hat kein Team; Berater sehen ihre EIGENE Struktur (3.9),
+  // die GF alles. RLS liefert ohnehin nur die sichtbaren Profile.
+  if (!me || me.rolle === "backoffice") redirect("/dashboard");
+  const isGf = me.rolle === "geschaeftsfuehrung";
+  const meineBereiche = (
+    me.bereich?.length ? me.bereich : ["immobilien", "vv"]
+  ) as ("immobilien" | "vv")[];
 
   const [
     { data: profiles },
@@ -71,9 +78,10 @@ export default async function TeamPage() {
   const profNameMap = new Map(
     (profiles ?? []).map((p) => [p.id, `${p.vorname} ${p.nachname}`]),
   );
-  // Besitzer-Optionen für Tippgeber: alle aktiven Profile (Berater + GF).
+  // Besitzer-Optionen für Tippgeber: die GF darf jeden zuordnen, ein Berater
+  // nur sich selbst (RLS erzwingt das zusätzlich serverseitig).
   const ownerOptions = (profiles ?? [])
-    .filter((p) => p.aktiv)
+    .filter((p) => p.aktiv && (isGf || p.id === user.id))
     .map((p) => ({ id: p.id, name: `${p.vorname} ${p.nachname}` }));
   const tippgeberRows: TippgeberRow[] = (tippgeber ?? []).map((t) => ({
     id: t.id,
@@ -199,13 +207,18 @@ export default async function TeamPage() {
       });
     }
   }
-  // Wurzel = Geschäftsführung; alle Berater ohne eigenen Partner hängen als
-  // deren direkte Zweige darunter (Anzeige-Struktur, Entscheidungsbaum).
+  // Wurzel: GF sieht die Gesamtstruktur (alle elternlosen Berater hängen als
+  // Zweige unter ihr), ein Berater sieht sich selbst als Wurzel seiner
+  // eigenen Downline (3.9).
   const gfProfile = (profiles ?? []).find(
     (p) => p.rolle === "geschaeftsfuehrung",
   );
-  const structureRoot = gfProfile ? nodeMap.get(gfProfile.id) : undefined;
-  if (structureRoot) {
+  const structureRoot = isGf
+    ? gfProfile
+      ? nodeMap.get(gfProfile.id)
+      : undefined
+    : nodeMap.get(user.id);
+  if (isGf && structureRoot) {
     for (const p of profiles ?? []) {
       if (!p.parent_berater_id && p.rolle !== "geschaeftsfuehrung") {
         structureRoot.children.push(nodeMap.get(p.id)!);
@@ -217,16 +230,28 @@ export default async function TeamPage() {
     <>
       <Topbar
         title="Team-Verwaltung"
-        subtitle="Berater, Provisionsstufen & sichtbare Sparten — nur Geschäftsführung"
+        subtitle={
+          isGf
+            ? "Berater, Provisionsstufen & sichtbare Sparten — Geschäftsführung"
+            : "Dein Team — eigene Berater & Tippgeber anlegen und verwalten"
+        }
       />
       <div className="space-y-6 px-6 py-6">
-        <NeuerBeraterForm />
+        {/* Anlegen: die GF legt frei an, ein Berater legt seine eigene
+            Downline an (3.8) — die Action hängt sie automatisch unter ihn. */}
+        {isGf ? (
+          <NeuerBeraterForm />
+        ) : (
+          <NeuerSubBeraterForm meineBereiche={meineBereiche} />
+        )}
         <div className="rounded-xl border border-border bg-surface p-5">
-          <h2 className="text-base font-semibold">Struktur / Organigramm</h2>
+          <h2 className="text-base font-semibold">
+            {isGf ? "Struktur / Organigramm" : "Meine Struktur"}
+          </h2>
           <p className="mb-3 text-xs text-muted-foreground">
             Mehrstufige Partnerstruktur (Berater &amp; Tippgeber). Fahre über
-            einen Knoten für dessen Performance, klicke zum Zoomen auf den Ast —
-            ein Klick auf den Berater-Namen öffnet dessen Details.
+            einen Knoten für dessen Performance, klicke zum Zoomen auf den Ast
+            {isGf ? " — ein Klick auf den Berater-Namen öffnet dessen Details." : "."}
           </p>
           {structureRoot && <DecisionTree root={structureRoot} />}
         </div>
@@ -235,6 +260,7 @@ export default async function TeamPage() {
           partnerKandidaten={partnerKandidaten}
           tippgeberRows={tippgeberRows}
           ownerOptions={ownerOptions}
+          isGf={isGf}
         />
       </div>
     </>

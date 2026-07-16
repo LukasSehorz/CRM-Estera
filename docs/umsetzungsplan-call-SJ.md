@@ -113,6 +113,11 @@ sehen dessen Performance; motivierend dargestellt.
 - [x] **3.8** **Berater-Self-Service**: Berater legt eigene Berater/Tippgeber an & setzt deren
   Provision — **nur für die eigenen Leute** (RLS/SECURITY DEFINER). (F5/F6/40:07)
 - [x] **3.9** **Berater-„Team-Verwaltung"** analog GF, für die eigene Downline. (F5)
+  — Nachtrag 16.07.: UI fehlte (Route + Nav waren GF-only, `createSubBerater`
+  ungenutzt). Jetzt: Nav-Punkt auch für Berater, eigenes Anlege-Formular
+  (Sub-Berater hängt automatisch unter dem Anleger), Tippgeber nur für sich
+  selbst, „Meine Struktur" mit sich als Wurzel; Stufe/Anbindung bleiben
+  lesend (DB erzwingt GF-Hoheit).
 - [x] **3.10** **Overhead ausweisen**: Berater verdient an Downline/Tippgeber mit — in
   Performance/Struktur sichtbar. (F5)
 - [x] **3.11** Gamifizierte **„Partner"-Seite** (eigener Nav-Punkt): Anzahl Partner, bester

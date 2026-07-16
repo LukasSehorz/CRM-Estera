@@ -66,7 +66,8 @@ const NAV: NavSection[] = [
   },
 ];
 
-// Nur für die Geschäftsführung sichtbar.
+// Team-Verwaltung: die GF verwaltet alle, ein Berater seine eigene Downline
+// (3.9) — Backoffice hat kein Team. Der Inhalt ist rollenabhängig.
 const ADMIN_NAV: NavSection = {
   label: "Verwaltung",
   items: [{ href: "/team", label: "Team-Verwaltung", icon: UserCog }],
@@ -123,7 +124,8 @@ function NavLinks({
       return !it.bereich || isGf || bereiche.includes(it.bereich);
     }),
   })).filter((section) => section.items.length > 0);
-  const sections = isGf ? [...base, ADMIN_NAV] : base;
+  // Team-Verwaltung sehen GF und Berater (eigene Downline), Backoffice nicht.
+  const sections = isBackoffice ? base : [...base, ADMIN_NAV];
   return (
     <nav className="flex-1 space-y-6 overflow-y-auto overflow-x-hidden px-3 py-4">
       {sections.map((section, i) => (

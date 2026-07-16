@@ -20,11 +20,15 @@ export function TeamDirectory({
   partnerKandidaten,
   tippgeberRows,
   ownerOptions,
+  isGf = true,
 }: {
   beraterRows: BeraterRow[];
   partnerKandidaten: PartnerOption[];
   tippgeberRows: TippgeberRow[];
   ownerOptions: OwnerOption[];
+  /** Stufe/Rolle/Anbindung sind GF-Hoheit (DB erzwingt es) — Berater sehen
+   *  ihre Downline nur lesend. */
+  isGf?: boolean;
 }) {
   const [filter, setFilter] = useState<Filter>("alle");
   const [q, setQ] = useState("");
@@ -130,17 +134,16 @@ export function TeamDirectory({
       {showBerater && (
         <div className="space-y-2">
           <p className="max-w-2xl text-sm text-muted-foreground">
-            Die Stufe bestimmt den persönlichen Provisionsanteil (Netto-Provision
-            × Stufe). Die Sparten steuern, welche Bereiche der Berater sieht —
-            durchgesetzt in der Datenbank, nicht nur in der Oberfläche. Die
-            Monatsziele (eigene Provision, gemeinsam mit dem Berater vereinbart)
-            treiben die Ziel-Box im Berater-Dashboard.
+            {isGf
+              ? "Die Stufe bestimmt den persönlichen Provisionsanteil (Netto-Provision × Stufe). Die Sparten steuern, welche Bereiche der Berater sieht — durchgesetzt in der Datenbank, nicht nur in der Oberfläche. Die Monatsziele (eigene Provision, gemeinsam mit dem Berater vereinbart) treiben die Ziel-Box im Berater-Dashboard."
+              : "Deine Downline. Stufe, Anbindung und Ziele legt die Geschäftsführung fest — du siehst sie hier zur Übersicht. Zeile aufklappen zeigt, wer unter dem Berater arbeitet."}
           </p>
           {berater.length > 0 ? (
             <StufeTable
               rows={berater}
               partnerKandidaten={partnerKandidaten}
               childMap={childMap}
+              readOnly={!isGf}
             />
           ) : (
             <EmptyHint text="Kein Berater gefunden." />
