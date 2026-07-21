@@ -89,6 +89,8 @@ export type AnalyticsData = {
   immoModus: ImmoProvisionModus;
   /** Immobilien-Anteil-Default eines Beraters (Prozent, Anbindung 1.5/8.4). */
   immoDefaultOf: (beraterId: string) => number;
+  /** Sichtbare Sparten eines Beraters (profiles.bereich; leer ⇒ beide). */
+  bereichOf: (beraterId: string) => ("immobilien" | "vv")[];
   /** Übergeordneter Partner (Upline) eines Beraters — null, wenn keiner. */
   parentOf: (beraterId: string) => string | null;
   /** Direkte Partner (Downline) eines Beraters (Kap. 8). */
@@ -303,6 +305,17 @@ export async function loadAnalytics(): Promise<AnalyticsData> {
   const immoDefaultMap = new Map(
     profiles.map((p) => [p.id, Number(p.immo_anteil_default ?? 0)]),
   );
+  // Sichtbare Sparten je Berater (Call SJ Fine-Tuning P3): reine Immobilien-
+  // Berater bekommen in der Performance nirgends VV zu sehen. Leer ⇒ beide.
+  const bereichMap = new Map(
+    profiles.map((p) => [
+      p.id,
+      (p.bereich?.length ? p.bereich : ["immobilien", "vv"]) as (
+        | "immobilien"
+        | "vv"
+      )[],
+    ]),
+  );
   const parentMap = new Map(
     profiles.map((p) => [p.id, p.parent_berater_id ?? null]),
   );
@@ -388,6 +401,8 @@ export async function loadAnalytics(): Promise<AnalyticsData> {
     stufeOf: (id: string) => stufeMap.get(id) ?? 0,
     immoModus,
     immoDefaultOf: (id: string) => immoDefaultMap.get(id) ?? 0,
+    bereichOf: (id: string) =>
+      bereichMap.get(id) ?? ["immobilien", "vv"],
     parentOf: (id: string) => parentMap.get(id) ?? null,
     downlineOf: (id: string) => downlineMap.get(id) ?? [],
     fensterStartOf: (id: string) =>
@@ -672,6 +687,46 @@ export function beraterPerformance(a: AnalyticsData): BeraterPerf[] {
     })
     .filter((r) => r.umsatz > 0 || r.offene > 0)
     .sort((x, y) => y.umsatz - x.umsatz);
+}
+
+// ── Reserviert / Verbrieft je Berater (Call SJ Fine-Tuning P4) ────────────
+export type ReserviertVerbrieft = {
+  id: string;
+  name: string;
+  reserviert: number;
+  verbrieft: number;
+};
+
+/**
+ * Board „wer hat wie viel reserviert / verbrieft" (GF-Ansicht, nur Immobilien).
+ * „Verbrieft = zum Notar gebracht" ⇒ der Deal hat die Notartermin-Phase
+ * erreicht. „Reserviert" ⇒ mindestens die Phase „Objekt reserviert" erreicht.
+ * Kumulativ (erreicht, nicht aktuelle Phase), storniert zählt nicht — so sinkt
+ * die Zahl nicht, wenn ein Deal weiterzieht; verbrieft ist eine Teilmenge von
+ * reserviert. Volumen = Kaufpreis.
+ */
+export function reserviertVerbrieft(a: AnalyticsData): ReserviertVerbrieft[] {
+  const reservStage = a.stages.find(
+    (s) => s.bereich === "immobilien" && s.name === "Objekt reserviert",
+  );
+  const notarStage = a.stages.find(
+    (s) => s.bereich === "immobilien" && s.name === "Notartermin",
+  );
+  const acc = new Map<string, { reserviert: number; verbrieft: number }>();
+  for (const d of a.deals) {
+    if (d.bereich !== "immobilien") continue;
+    const s = a.sMap.get(d.stage_id);
+    if (!s || s.is_lost) continue;
+    const vol = d.kaufpreis ?? 0;
+    const cur = acc.get(d.berater_id) ?? { reserviert: 0, verbrieft: 0 };
+    if (reservStage && s.position >= reservStage.position) cur.reserviert += vol;
+    if (notarStage && s.position >= notarStage.position) cur.verbrieft += vol;
+    acc.set(d.berater_id, cur);
+  }
+  return [...acc.entries()]
+    .map(([id, v]) => ({ id, name: a.nameOf(id), ...v }))
+    .filter((r) => r.reserviert > 0 || r.verbrieft > 0)
+    .sort((x, y) => y.verbrieft - x.verbrieft || y.reserviert - x.reserviert);
 }
 
 // ── Heiße Leads (15.2) ───────────────────────────────────────────────────

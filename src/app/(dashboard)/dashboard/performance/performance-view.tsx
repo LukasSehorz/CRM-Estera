@@ -22,6 +22,8 @@ export type PerfDealDetail = {
 export type PerfRow = {
   id: string;
   name: string;
+  /** Sichtbare Sparten des Beraters — steuert, ob Immo/VV überhaupt erscheint. */
+  bereich: ("immobilien" | "vv")[];
   offene: number;
   avgDealGroesse: number;
   dealTime: number | null;
@@ -165,6 +167,11 @@ function RowGroup({
   const immo = r.umsatzImmo[period];
   const vv = r.umsatzVv[period];
   const prov = r.provision[period];
+  // Sparten-Trennung (Call SJ Fine-Tuning P3): eine Sparte nur zeigen, wenn der
+  // Berater sie führt — ein reiner Immobilien-Berater sieht nirgends VV.
+  const zeigtImmo = r.bereich.includes("immobilien");
+  const zeigtVv = r.bereich.includes("vv");
+  const spaltenAnzahl = 1 + (zeigtImmo ? 1 : 0) + (zeigtVv ? 1 : 0);
   const periodenDeals = r.deals.filter((d) =>
     period === "gesamt" ? true : d.periode[period],
   );
@@ -222,9 +229,16 @@ function RowGroup({
       {open && (
         <tr className="border-b border-border bg-surface-2/40">
           <td colSpan={7} className="px-4 pb-3">
-            <div className="ml-1 grid gap-2 sm:grid-cols-3">
-              <Breakdown label="Umsatz Immobilien" value={immo} tone="primary" />
-              <Breakdown label="Umsatz VV" value={vv} tone="info" />
+            <div
+              className={cn(
+                "ml-1 grid gap-2",
+                spaltenAnzahl === 3 ? "sm:grid-cols-3" : "sm:grid-cols-2",
+              )}
+            >
+              {zeigtImmo && (
+                <Breakdown label="Umsatz Immobilien" value={immo} tone="primary" />
+              )}
+              {zeigtVv && <Breakdown label="Umsatz VV" value={vv} tone="info" />}
               <Breakdown
                 label={isGf ? "Provision (Berater-Anteil)" : "Deine Provision"}
                 value={prov}

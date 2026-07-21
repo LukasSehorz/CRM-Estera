@@ -12,12 +12,14 @@ import {
 } from "./performance-view";
 import { GfSignale } from "./gf-signale";
 import { SummenSkalaBlock } from "./summen-skala";
+import { ReserviertVerbrieftBoard } from "./reserviert-verbrieft-board";
 import {
   loadAnalytics,
   scopeToBereich,
   resolveScope,
   erlaubteScopes,
   beraterPerformance,
+  reserviertVerbrieft,
   umsatzGesamt,
   volumenGewonnen,
   dealTimeTage,
@@ -103,20 +105,38 @@ export default async function PerformanceDashboardPage({
     byDeals.set(id, liste);
   }
 
-  const rows: PerfRow[] = perf.map((p) => ({
-    id: p.id,
-    name: p.name,
-    offene: p.offene,
-    avgDealGroesse: p.avgDealGroesse,
-    dealTime: p.dealTime,
-    closing: p.closing,
-    storno: p.storno,
-    umsatz: byPeriod.get(p.id) ?? mk(),
-    umsatzImmo: byImmo.get(p.id) ?? mk(),
-    umsatzVv: byVv.get(p.id) ?? mk(),
-    provision: byProv.get(p.id) ?? mk(),
-    deals: (byDeals.get(p.id) ?? []).sort((x, y) => y.betrag - x.betrag),
-  }));
+  const rows: PerfRow[] = perf.map((p) => {
+    // Sparten-Trennung (Call SJ Fine-Tuning P3): ein reiner Immobilien-Berater
+    // zeigt nirgends VV (und ein reiner VV-Berater kein Immo). Da jeder Deal
+    // genau eine Sparte hat, gilt byPeriod = byImmo + byVv — der Kopf-Umsatz
+    // ist also die Summe nur der Sparten, die der Berater tatsächlich führt.
+    const bereich = a.bereichOf(p.id);
+    const zeigtImmo = bereich.includes("immobilien");
+    const zeigtVv = bereich.includes("vv");
+    const umsatzRow =
+      zeigtImmo && zeigtVv
+        ? (byPeriod.get(p.id) ?? mk())
+        : zeigtVv
+          ? (byVv.get(p.id) ?? mk())
+          : (byImmo.get(p.id) ?? mk());
+    return {
+      id: p.id,
+      name: p.name,
+      bereich,
+      offene: p.offene,
+      avgDealGroesse: p.avgDealGroesse,
+      dealTime: p.dealTime,
+      closing: p.closing,
+      storno: p.storno,
+      umsatz: umsatzRow,
+      umsatzImmo: zeigtImmo ? (byImmo.get(p.id) ?? mk()) : mk(),
+      umsatzVv: zeigtVv ? (byVv.get(p.id) ?? mk()) : mk(),
+      provision: byProv.get(p.id) ?? mk(),
+      deals: (byDeals.get(p.id) ?? [])
+        .filter((d) => (d.bereich === "immobilien" ? zeigtImmo : zeigtVv))
+        .sort((x, y) => y.betrag - x.betrag),
+    };
+  });
 
   const umsatz = umsatzGesamt(a);
   const gewonnen = a.deals.filter((d) => isWon(d, a.sMap)).length;
@@ -278,6 +298,12 @@ export default async function PerformanceDashboardPage({
         {/* Berater-Liste direkt nach den KPIs (5.4): „Berater-Performance"
             zeigt die Berater ohne Scroll-Weg. */}
         <PerformanceView rows={rows} isGf={aFull.isGf} />
+
+        {/* Reserviert-/Verbrieft-Board (Call SJ Fine-Tuning P4) — GF-Ansicht,
+            nur Immobilien; bei reiner VV-Sicht ausgeblendet. */}
+        {aFull.isGf && scope !== "vv" && (
+          <ReserviertVerbrieftBoard rows={reserviertVerbrieft(aFull)} />
+        )}
 
         {/* Forecast (Kap. 6): gewichtete Provision, nicht Volumen —
             inkl. Wochenforecast (5.6). */}
