@@ -52,7 +52,15 @@ const DETAIL_TONE: Record<string, string> = {
   muted: "text-foreground",
 };
 
-export type StatDetail = { label: string; value: string; tone?: string };
+/** Einzelner Deal hinter einer Aufschlüsselungs-Zeile (Feedback SJ). */
+export type StatDeal = { name: string; value: string; sub?: string };
+export type StatDetail = {
+  label: string;
+  value: string;
+  tone?: string;
+  /** Optionale Deal-Liste — macht die Zeile selbst aufklappbar. */
+  deals?: StatDeal[];
+};
 
 /**
  * KPI-Karte mit optionaler Aufschlüsselung (Feedback SJ): Klick zeigt, wie
@@ -84,6 +92,7 @@ export function ExpandableStat({
   linkLabel?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const [openDetail, setOpenDetail] = useState<string | null>(null);
   const Icon = ICONS[iconKey] ?? Wallet;
   const canOpen = !!details && details.length > 0;
 
@@ -147,24 +156,67 @@ export function ExpandableStat({
 
       {canOpen && open && (
         <div className="mt-3 space-y-1.5 border-t border-border pt-3">
-          {details!.map((d) => (
-            <div
-              key={d.label}
-              className="flex items-center justify-between gap-3 text-sm"
-            >
-              <span className="min-w-0 truncate text-muted-foreground">
-                {d.label}
-              </span>
-              <span
-                className={cn(
-                  "shrink-0 font-semibold tabular-nums",
-                  DETAIL_TONE[d.tone ?? "muted"],
+          {details!.map((d) => {
+            const hasDeals = !!d.deals && d.deals.length > 0;
+            const detailOpen = openDetail === d.label;
+            return (
+              <div key={d.label}>
+                <button
+                  type="button"
+                  onClick={() =>
+                    hasDeals &&
+                    setOpenDetail((v) => (v === d.label ? null : d.label))
+                  }
+                  disabled={!hasDeals}
+                  aria-expanded={hasDeals ? detailOpen : undefined}
+                  className={cn(
+                    "-mx-1 flex w-[calc(100%+0.5rem)] items-center justify-between gap-3 rounded-md px-1 py-0.5 text-left text-sm",
+                    hasDeals && "transition-colors hover:bg-surface-2",
+                  )}
+                >
+                  <span className="flex min-w-0 items-center gap-1 truncate text-muted-foreground">
+                    {d.label}
+                    {hasDeals && (
+                      <ChevronDown
+                        className={cn(
+                          "h-3 w-3 shrink-0 transition-transform",
+                          detailOpen && "rotate-180",
+                        )}
+                      />
+                    )}
+                  </span>
+                  <span
+                    className={cn(
+                      "shrink-0 font-semibold tabular-nums",
+                      DETAIL_TONE[d.tone ?? "muted"],
+                    )}
+                  >
+                    {d.value}
+                  </span>
+                </button>
+                {hasDeals && detailOpen && (
+                  <ul className="mb-1 mt-1 space-y-1 border-l border-border pl-3">
+                    {d.deals!.map((dl, i) => (
+                      <li
+                        key={`${dl.name}-${i}`}
+                        className="flex items-center justify-between gap-3 text-xs"
+                      >
+                        <span className="min-w-0 flex-1 truncate text-foreground">
+                          {dl.name}
+                          {dl.sub && (
+                            <span className="text-muted-foreground"> · {dl.sub}</span>
+                          )}
+                        </span>
+                        <span className="shrink-0 font-medium tabular-nums text-muted-foreground">
+                          {dl.value}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
                 )}
-              >
-                {d.value}
-              </span>
-            </div>
-          ))}
+              </div>
+            );
+          })}
           {linkHref && (
             <Link
               href={linkHref}

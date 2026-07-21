@@ -39,6 +39,8 @@ export type OverheadPosten = {
   partnerName: string;
   betrag: number;
   deals: number;
+  /** Einzelne Deals hinter dem Overhead-Betrag (Feedback SJ: Dropdown). */
+  dealListe: { dealname: string; betrag: number }[];
 };
 /** Einzelner sofort ausgezahlter Deal — für die Aufschlüsselung (Feedback SJ). */
 export type SofortPosten = {
@@ -184,12 +186,21 @@ export function computeGehalt(
     if (oh <= 0) continue;
     const row =
       posten.get(anker) ??
-      { partnerId: anker, partnerName: a.nameOf(anker), betrag: 0, deals: 0 };
+      {
+        partnerId: anker,
+        partnerName: a.nameOf(anker),
+        betrag: 0,
+        deals: 0,
+        dealListe: [],
+      };
     row.betrag += oh;
     row.deals++;
+    row.dealListe.push({ dealname: d.dealname, betrag: oh });
     posten.set(anker, row);
   }
   const overheadPosten = [...posten.values()].sort((x, y) => y.betrag - x.betrag);
+  for (const o of overheadPosten)
+    o.dealListe.sort((x, y) => y.betrag - x.betrag);
 
   einbehaltKalender.sort((x, y) =>
     (x.faelligISO ?? "").localeCompare(y.faelligISO ?? ""),

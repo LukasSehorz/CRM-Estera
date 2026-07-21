@@ -221,26 +221,58 @@ export function MeinEinkommen({
           >
             <ul className="mt-3 space-y-1.5">
               {gehalt.overheadPosten.map((o) => (
-                <li
-                  key={o.partnerId}
-                  className="flex items-center justify-between gap-2 text-xs"
-                >
-                  <span className="min-w-0 flex-1 truncate text-muted-foreground">
-                    {o.partnerName}
-                  </span>
-                  <span className="shrink-0 text-muted-foreground">
-                    {o.deals} Deals
-                  </span>
-                  <span className="shrink-0 tabular-nums font-medium">
-                    {formatEURCents(o.betrag)}
-                  </span>
-                </li>
+                <OverheadPartnerZeile key={o.partnerId} o={o} />
               ))}
             </ul>
           </BausteinKarte>
         )}
       </div>
     </section>
+  );
+}
+
+/** Overhead-Zeile je Partner — aufklappbar: welche Deals ergeben den Betrag
+ *  (Feedback SJ). */
+function OverheadPartnerZeile({ o }: { o: OverheadPosten }) {
+  const [offen, setOffen] = useState(false);
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={() => setOffen((v) => !v)}
+        aria-expanded={offen}
+        aria-label={`Deals von ${o.partnerName} anzeigen`}
+        className="flex w-full items-center justify-between gap-2 text-xs"
+      >
+        <span className="flex min-w-0 flex-1 items-center gap-1 truncate text-muted-foreground">
+          {o.partnerName}
+          <ChevronDown
+            className={`h-3 w-3 shrink-0 transition-transform ${offen ? "rotate-180" : ""}`}
+          />
+        </span>
+        <span className="shrink-0 text-muted-foreground">{o.deals} Deals</span>
+        <span className="shrink-0 font-medium tabular-nums">
+          {formatEURCents(o.betrag)}
+        </span>
+      </button>
+      {offen && (
+        <ul className="mb-1 mt-1 space-y-1 border-l border-border pl-3">
+          {o.dealListe.map((d, i) => (
+            <li
+              key={`${d.dealname}-${i}`}
+              className="flex items-center justify-between gap-2 text-[11px]"
+            >
+              <span className="min-w-0 flex-1 truncate text-foreground">
+                {d.dealname}
+              </span>
+              <span className="shrink-0 tabular-nums text-muted-foreground">
+                {formatEURCents(d.betrag)}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </li>
   );
 }
 

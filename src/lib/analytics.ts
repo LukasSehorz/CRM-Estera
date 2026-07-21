@@ -456,6 +456,8 @@ export type FunnelStep = {
   reached: number;
   volumen: number;
   wahrscheinlichkeit: number;
+  /** Deals, die diese Phase erreicht haben (Feedback SJ: Klick → Pop-up). */
+  deals: { name: string; volumen: number }[];
 };
 
 export function funnelFor(bereich: "immobilien" | "vv", a: AnalyticsData): FunnelStep[] {
@@ -477,6 +479,9 @@ export function funnelFor(bereich: "immobilien" | "vv", a: AnalyticsData): Funne
       reached: reachedDeals.length,
       volumen: reachedDeals.reduce((sum, d) => sum + betragOf(d), 0),
       wahrscheinlichkeit: s.wahrscheinlichkeit,
+      deals: reachedDeals
+        .map((d) => ({ name: d.dealname, volumen: betragOf(d) }))
+        .sort((x, y) => y.volumen - x.volumen),
     };
   });
 }
@@ -690,20 +695,29 @@ export function beraterPerformance(a: AnalyticsData): BeraterPerf[] {
 }
 
 // ── Reserviert / Verbrieft je Berater (Call SJ Fine-Tuning P4) ────────────
+export type ReserviertVerbrieftDeal = {
+  dealId: string;
+  dealname: string;
+  kaufpreis: number;
+  /** true, wenn der Deal die Notartermin-Phase erreicht hat (= verbrieft). */
+  verbrieft: boolean;
+};
 export type ReserviertVerbrieft = {
   id: string;
   name: string;
   reserviert: number;
   verbrieft: number;
+  /** Einzelne Deals hinter den Zahlen (alle reserviert; verbrieft = Teilmenge). */
+  deals: ReserviertVerbrieftDeal[];
 };
 
 /**
  * Board „wer hat wie viel reserviert / verbrieft" (GF-Ansicht, nur Immobilien).
- * „Verbrieft = zum Notar gebracht" ⇒ der Deal hat die Notartermin-Phase
- * erreicht. „Reserviert" ⇒ mindestens die Phase „Objekt reserviert" erreicht.
- * Kumulativ (erreicht, nicht aktuelle Phase), storniert zählt nicht — so sinkt
- * die Zahl nicht, wenn ein Deal weiterzieht; verbrieft ist eine Teilmenge von
- * reserviert. Volumen = Kaufpreis.
+ * Zwei getrennte Töpfe (Feedback SJ):
+ *  • Verbrieft = zum Notar gebracht (Phase „Notartermin" erreicht).
+ *  • Reserviert = reserviert (Phase „Objekt reserviert" erreicht), aber noch
+ *    NICHT beim Notar.
+ * Ein Deal zählt in genau einen Topf. Storniert zählt nicht. Volumen = Kaufpreis.
  */
 export function reserviertVerbrieft(a: AnalyticsData): ReserviertVerbrieft[] {
   const reservStage = a.stages.find(
@@ -712,19 +726,44 @@ export function reserviertVerbrieft(a: AnalyticsData): ReserviertVerbrieft[] {
   const notarStage = a.stages.find(
     (s) => s.bereich === "immobilien" && s.name === "Notartermin",
   );
-  const acc = new Map<string, { reserviert: number; verbrieft: number }>();
+  const acc = new Map<
+    string,
+    { reserviert: number; verbrieft: number; deals: ReserviertVerbrieftDeal[] }
+  >();
   for (const d of a.deals) {
     if (d.bereich !== "immobilien") continue;
     const s = a.sMap.get(d.stage_id);
     if (!s || s.is_lost) continue;
+    const istVerbrieft = notarStage != null && s.position >= notarStage.position;
+    const istReserviert =
+      !istVerbrieft &&
+      reservStage != null &&
+      s.position >= reservStage.position;
+    if (!istVerbrieft && !istReserviert) continue;
     const vol = d.kaufpreis ?? 0;
-    const cur = acc.get(d.berater_id) ?? { reserviert: 0, verbrieft: 0 };
-    if (reservStage && s.position >= reservStage.position) cur.reserviert += vol;
-    if (notarStage && s.position >= notarStage.position) cur.verbrieft += vol;
+    const cur = acc.get(d.berater_id) ?? {
+      reserviert: 0,
+      verbrieft: 0,
+      deals: [],
+    };
+    if (istVerbrieft) cur.verbrieft += vol;
+    else cur.reserviert += vol;
+    cur.deals.push({
+      dealId: d.id,
+      dealname: d.dealname,
+      kaufpreis: vol,
+      verbrieft: istVerbrieft,
+    });
     acc.set(d.berater_id, cur);
   }
   return [...acc.entries()]
-    .map(([id, v]) => ({ id, name: a.nameOf(id), ...v }))
+    .map(([id, v]) => ({
+      id,
+      name: a.nameOf(id),
+      reserviert: v.reserviert,
+      verbrieft: v.verbrieft,
+      deals: v.deals.sort((x, y) => y.kaufpreis - x.kaufpreis),
+    }))
     .filter((r) => r.reserviert > 0 || r.verbrieft > 0)
     .sort((x, y) => y.verbrieft - x.verbrieft || y.reserviert - x.reserviert);
 }

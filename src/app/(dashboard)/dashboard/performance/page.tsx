@@ -161,60 +161,110 @@ export default async function PerformanceDashboardPage({
 
   // Aufschlüsselung der KPI-Zahlen (Feedback SJ): Umsatz nach Sparte + Anzahl.
   const nowMs = now.getTime();
+  // Einzelne Deals hinter Immobilien/VV mitsammeln (Feedback SJ: Dropdown je
+  // Sparte zeigt, aus welchen Deals sich die Zahl zusammensetzt).
+  type DealPunkt = { name: string; betrag: number; sub?: string };
+  const nachBetrag = (x: DealPunkt, y: DealPunkt) => y.betrag - x.betrag;
+  const dealsToStat = (ds: DealPunkt[]) =>
+    ds.map((d) => ({ name: d.name, value: formatEUR(d.betrag), sub: d.sub }));
   const splitUmsatz = (sinceMs: number | null) => {
     let immo = 0;
     let vv = 0;
     let n = 0;
+    const immoDeals: DealPunkt[] = [];
+    const vvDeals: DealPunkt[] = [];
     for (const d of a.deals) {
       const am = a.realisiertAm(d);
       if (!am) continue;
       if (sinceMs != null && new Date(am).getTime() < sinceMs) continue;
       const amt = a.umsatzOf(d);
-      if (d.bereich === "immobilien") immo += amt;
-      else vv += amt;
+      if (d.bereich === "immobilien") {
+        immo += amt;
+        immoDeals.push({ name: d.dealname, betrag: amt });
+      } else {
+        vv += amt;
+        vvDeals.push({ name: d.dealname, betrag: amt });
+      }
       n += 1;
     }
-    return { immo, vv, n };
+    return {
+      immo,
+      vv,
+      n,
+      immoDeals: immoDeals.sort(nachBetrag),
+      vvDeals: vvDeals.sort(nachBetrag),
+    };
   };
   const split7 = splitUmsatz(nowMs - 7 * 86_400_000);
   const split30 = splitUmsatz(nowMs - 30 * 86_400_000);
   const splitGesamt = splitUmsatz(null);
-  const umsatzDetails = (s: { immo: number; vv: number; n: number }) => [
-    { label: "Immobilien", value: formatEUR(s.immo), tone: "primary" },
-    { label: "Vermögensverwaltung", value: formatEUR(s.vv), tone: "info" },
+  const umsatzDetails = (s: ReturnType<typeof splitUmsatz>) => [
+    {
+      label: "Immobilien",
+      value: formatEUR(s.immo),
+      tone: "primary",
+      deals: dealsToStat(s.immoDeals),
+    },
+    {
+      label: "Vermögensverwaltung",
+      value: formatEUR(s.vv),
+      tone: "info",
+      deals: dealsToStat(s.vvDeals),
+    },
     { label: "Gewonnene Deals", value: String(s.n) },
   ];
 
-  // Forecast-Aufschlüsselung je Zeitfenster (kumulativ, wie forecastGewichtet).
-  const fb = {
-    t7: { immo: 0, vv: 0, n: 0 },
-    t30: { immo: 0, vv: 0, n: 0 },
-    t60: { immo: 0, vv: 0, n: 0 },
-    t90: { immo: 0, vv: 0, n: 0 },
-  };
+  // Forecast-Aufschlüsselung je Zeitfenster (kumulativ, wie forecastGewichtet)
+  // inkl. der einzelnen offenen Deals je Sparte (Feedback SJ: Dropdown).
+  const mkFb = () => ({
+    immo: 0,
+    vv: 0,
+    n: 0,
+    immoDeals: [] as DealPunkt[],
+    vvDeals: [] as DealPunkt[],
+  });
+  const fb = { t7: mkFb(), t30: mkFb(), t60: mkFb(), t90: mkFb() };
   for (const d of a.deals) {
     if (!isOpen(d, a.sMap)) continue;
     const prob = (a.sMap.get(d.stage_id)?.wahrscheinlichkeit ?? 0) / 100;
     const g = a.umsatzOf(d) * prob;
-    const slot = d.bereich === "immobilien" ? "immo" : "vv";
-    fb.t90[slot] += g;
-    fb.t90.n += 1;
-    if (prob >= 0.4) {
-      fb.t60[slot] += g;
-      fb.t60.n += 1;
-    }
-    if (prob >= 0.8) {
-      fb.t30[slot] += g;
-      fb.t30.n += 1;
-    }
-    if (prob >= 0.9) {
-      fb.t7[slot] += g;
-      fb.t7.n += 1;
-    }
+    const eintrag: DealPunkt = {
+      name: d.dealname,
+      betrag: g,
+      sub: `${Math.round(prob * 100)} %`,
+    };
+    const zuFenster = (w: ReturnType<typeof mkFb>) => {
+      w.n += 1;
+      if (d.bereich === "immobilien") {
+        w.immo += g;
+        w.immoDeals.push(eintrag);
+      } else {
+        w.vv += g;
+        w.vvDeals.push(eintrag);
+      }
+    };
+    zuFenster(fb.t90);
+    if (prob >= 0.4) zuFenster(fb.t60);
+    if (prob >= 0.8) zuFenster(fb.t30);
+    if (prob >= 0.9) zuFenster(fb.t7);
   }
-  const fcDetails = (s: { immo: number; vv: number; n: number }) => [
-    { label: "Immobilien", value: formatEUR(s.immo), tone: "primary" },
-    { label: "Vermögensverwaltung", value: formatEUR(s.vv), tone: "info" },
+  for (const w of [fb.t7, fb.t30, fb.t60, fb.t90]) {
+    w.immoDeals.sort(nachBetrag);
+    w.vvDeals.sort(nachBetrag);
+  }
+  const fcDetails = (s: ReturnType<typeof mkFb>) => [
+    {
+      label: "Immobilien",
+      value: formatEUR(s.immo),
+      tone: "primary",
+      deals: dealsToStat(s.immoDeals),
+    },
+    {
+      label: "Vermögensverwaltung",
+      value: formatEUR(s.vv),
+      tone: "info",
+      deals: dealsToStat(s.vvDeals),
+    },
     { label: "offene Deals im Fenster", value: String(s.n) },
   ];
   const deltaText = (v: number | null, suffix: string) =>
@@ -302,7 +352,10 @@ export default async function PerformanceDashboardPage({
         {/* Reserviert-/Verbrieft-Board (Call SJ Fine-Tuning P4) — GF-Ansicht,
             nur Immobilien; bei reiner VV-Sicht ausgeblendet. */}
         {aFull.isGf && scope !== "vv" && (
-          <ReserviertVerbrieftBoard rows={reserviertVerbrieft(aFull)} />
+          <ReserviertVerbrieftBoard
+            rows={reserviertVerbrieft(aFull)}
+            isGf={aFull.isGf}
+          />
         )}
 
         {/* Forecast (Kap. 6): gewichtete Provision, nicht Volumen —
