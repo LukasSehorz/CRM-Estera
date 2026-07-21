@@ -10,6 +10,7 @@
 # next.js (.next-deploy = getrenntes Deploy-distDir, siehe netlify.toml)
 /.next/
 /.next-deploy/
+/.next-dev.log
 /out/
 
 # production
