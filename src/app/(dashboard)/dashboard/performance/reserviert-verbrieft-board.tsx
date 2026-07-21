@@ -6,6 +6,7 @@ import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatEUR } from "@/lib/format";
 import { InfoHint } from "@/components/ui/info-hint";
+import { Pill } from "@/components/ui/pill";
 import type { ReserviertVerbrieft } from "@/lib/analytics";
 
 /**
@@ -32,13 +33,13 @@ export function ReserviertVerbrieftBoard({
       <div className="mb-1 flex items-center justify-between gap-3">
         <h2 className="flex items-center gap-1.5 text-base font-semibold">
           Reserviert &amp; Verbrieft
-          <InfoHint text="Kaufpreis-Volumen je Berater (nur Immobilien), zwei getrennte Töpfe. Reserviert = Deal hat die Phase »Objekt reserviert« erreicht, ist aber noch nicht beim Notar. Verbrieft = zum Notar gebracht (Phase »Notartermin« erreicht). Jeder Deal zählt in genau einen Topf; stornierte zählen nicht. Zeile aufklappen zeigt die Deals — reservierte unter »Reserviert«, verbriefte unter »Verbrieft«." />
+          <InfoHint text="Kaufpreis-Volumen je Berater (nur Immobilien). Reserviert = der Deal hat mindestens die Phase »Objekt reserviert« erreicht; verbrieft = er wurde zum Notar gebracht (Phase »Notartermin« erreicht). Kumulativ — verbriefte Deals zählen auch im Reserviert-Topf mit. Stornierte zählen nicht. Zeile aufklappen zeigt die einzelnen Deals mit ihrem Status." />
         </h2>
         <span className="text-xs text-muted-foreground">Immobilien</span>
       </div>
       <p className="mb-4 text-xs text-muted-foreground">
-        Reserviert = reserviert, noch nicht beim Notar · Verbrieft = beim Notar
-        (ab »Notartermin«). Zeile anklicken zeigt die Deals je Spalte.
+        Reserviert = ab Phase »Objekt reserviert« · Verbrieft = beim Notar (ab
+        »Notartermin«, Teilmenge). Zeile anklicken zeigt die Deals.
       </p>
 
       <div className="overflow-x-auto">
@@ -102,22 +103,27 @@ export function ReserviertVerbrieftBoard({
                   </tr>
                   {offen && (
                     <tr className="border-b border-border bg-surface-2/40">
-                      {/* Deals je Spalte: reservierte unter „Reserviert",
-                          verbriefte unter „Verbrieft" (Feedback SJ). */}
-                      <td className="px-2 pb-3 align-top text-xs text-muted-foreground">
-                        Deals
-                      </td>
-                      <td className="px-2 pb-3 align-top">
-                        <DealSpalte
-                          deals={r.deals.filter((d) => !d.verbrieft)}
-                          tone="info"
-                        />
-                      </td>
-                      <td className="px-2 pb-3 align-top">
-                        <DealSpalte
-                          deals={r.deals.filter((d) => d.verbrieft)}
-                          tone="success"
-                        />
+                      <td colSpan={3} className="px-2 pb-3">
+                        <ul className="ml-1 space-y-1">
+                          {r.deals.map((d) => (
+                            <li
+                              key={d.dealId}
+                              className="flex items-center justify-between gap-3 text-xs"
+                            >
+                              <span className="min-w-0 flex-1 truncate text-foreground">
+                                {d.dealname}
+                              </span>
+                              <span className="flex shrink-0 items-center gap-2">
+                                <Pill tone={d.verbrieft ? "success" : "info"}>
+                                  {d.verbrieft ? "Verbrieft" : "Reserviert"}
+                                </Pill>
+                                <span className="w-24 text-right font-semibold tabular-nums text-foreground">
+                                  {formatEUR(d.kaufpreis)}
+                                </span>
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
                       </td>
                     </tr>
                   )}
@@ -139,37 +145,6 @@ export function ReserviertVerbrieftBoard({
         </table>
       </div>
     </section>
-  );
-}
-
-function DealSpalte({
-  deals,
-  tone,
-}: {
-  deals: ReserviertVerbrieft["deals"];
-  tone: "info" | "success";
-}) {
-  if (deals.length === 0)
-    return <span className="text-xs text-muted-foreground">—</span>;
-  return (
-    <ul className="space-y-1">
-      {deals.map((d) => (
-        <li
-          key={d.dealId}
-          className="flex items-start justify-between gap-2 text-xs"
-        >
-          <span className="min-w-0 flex-1 text-foreground">{d.dealname}</span>
-          <span
-            className={cn(
-              "shrink-0 font-medium tabular-nums",
-              tone === "info" ? "text-info" : "text-success",
-            )}
-          >
-            {formatEUR(d.kaufpreis)}
-          </span>
-        </li>
-      ))}
-    </ul>
   );
 }
 

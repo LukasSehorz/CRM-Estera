@@ -713,11 +713,12 @@ export type ReserviertVerbrieft = {
 
 /**
  * Board „wer hat wie viel reserviert / verbrieft" (GF-Ansicht, nur Immobilien).
- * Zwei getrennte Töpfe (Feedback SJ):
- *  • Verbrieft = zum Notar gebracht (Phase „Notartermin" erreicht).
- *  • Reserviert = reserviert (Phase „Objekt reserviert" erreicht), aber noch
- *    NICHT beim Notar.
- * Ein Deal zählt in genau einen Topf. Storniert zählt nicht. Volumen = Kaufpreis.
+ * Gemeinsame (kumulative) Töpfe:
+ *  • Reserviert = Deal hat mindestens die Phase „Objekt reserviert" erreicht.
+ *  • Verbrieft = zum Notar gebracht (Phase „Notartermin" erreicht) — Teilmenge
+ *    von Reserviert.
+ * Storniert zählt nicht. Volumen = Kaufpreis. Ein verbriefter Deal zählt also
+ * auch im Reserviert-Topf mit.
  */
 export function reserviertVerbrieft(a: AnalyticsData): ReserviertVerbrieft[] {
   const reservStage = a.stages.find(
@@ -734,20 +735,18 @@ export function reserviertVerbrieft(a: AnalyticsData): ReserviertVerbrieft[] {
     if (d.bereich !== "immobilien") continue;
     const s = a.sMap.get(d.stage_id);
     if (!s || s.is_lost) continue;
-    const istVerbrieft = notarStage != null && s.position >= notarStage.position;
     const istReserviert =
-      !istVerbrieft &&
-      reservStage != null &&
-      s.position >= reservStage.position;
-    if (!istVerbrieft && !istReserviert) continue;
+      reservStage != null && s.position >= reservStage.position;
+    if (!istReserviert) continue; // verbrieft ist Teilmenge → reicht als Filter
+    const istVerbrieft = notarStage != null && s.position >= notarStage.position;
     const vol = d.kaufpreis ?? 0;
     const cur = acc.get(d.berater_id) ?? {
       reserviert: 0,
       verbrieft: 0,
       deals: [],
     };
+    cur.reserviert += vol;
     if (istVerbrieft) cur.verbrieft += vol;
-    else cur.reserviert += vol;
     cur.deals.push({
       dealId: d.id,
       dealname: d.dealname,
@@ -764,7 +763,7 @@ export function reserviertVerbrieft(a: AnalyticsData): ReserviertVerbrieft[] {
       verbrieft: v.verbrieft,
       deals: v.deals.sort((x, y) => y.kaufpreis - x.kaufpreis),
     }))
-    .filter((r) => r.reserviert > 0 || r.verbrieft > 0)
+    .filter((r) => r.reserviert > 0)
     .sort((x, y) => y.verbrieft - x.verbrieft || y.reserviert - x.reserviert);
 }
 
