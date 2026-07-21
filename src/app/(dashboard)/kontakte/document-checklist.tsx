@@ -155,7 +155,11 @@ export function DocumentChecklist({
             contentType: file.type || undefined,
           });
         if (upErr) {
-          toast.error(`Upload von „${file.name}" fehlgeschlagen.`);
+          // Echte Ursache zeigen statt generischem Toast (Call SJ P5:
+          // „Ursache unklar"). Typische Meldungen: „Bucket not found",
+          // „new row violates row-level security policy", Größenlimit.
+          console.error("Storage-Upload fehlgeschlagen:", upErr);
+          toast.error(`Upload von „${file.name}" fehlgeschlagen: ${upErr.message}`);
           continue;
         }
         const {
@@ -172,7 +176,10 @@ export function DocumentChecklist({
         });
         if (insErr) {
           await supabase.storage.from(BUCKET).remove([path]);
-          toast.error(`„${file.name}" konnte nicht gespeichert werden.`);
+          console.error("contact_documents-Insert fehlgeschlagen:", insErr);
+          toast.error(
+            `„${file.name}" konnte nicht gespeichert werden: ${insErr.message}`,
+          );
           continue;
         }
         ok++;

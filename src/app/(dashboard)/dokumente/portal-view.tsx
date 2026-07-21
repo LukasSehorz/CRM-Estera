@@ -122,7 +122,7 @@ export function PortalView({
           isGf={isGf}
           sichtbarkeit="vorlage"
           leerText="Noch keine Vorlagen hinterlegt."
-          hinweis="Vorlagen je Bereich — Immobilien (Selbstauskunft, Reservierungsvereinbarung, Reservierungsformular), Vermögensverwaltung (Anbindungsformular) — beim Hochladen den Bereich wählen. Für alle Vertriebspartner sichtbar."
+          hinweis="Vorlagen je Bereich — Immobilien (Selbstauskunft, Reservierungsvereinbarung), Vermögensverwaltung (Anbindungsformular) — beim Hochladen den Bereich wählen. Für alle Vertriebspartner sichtbar."
         />
       )}
       {tab === "kunden" && (

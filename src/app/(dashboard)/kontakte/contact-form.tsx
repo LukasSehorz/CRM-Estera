@@ -154,7 +154,11 @@ export function ContactForm({
           upsert: false,
           contentType: file.type || undefined,
         });
-      if (upErr) return false;
+      if (upErr) {
+        // Echte Ursache protokollieren (Call SJ P5: „Ursache unklar").
+        console.error("Storage-Upload fehlgeschlagen:", upErr);
+        return false;
+      }
       const { error: insErr } = await supabase.from("contact_documents").insert({
         contact_id: contactId,
         dateiname: file.name,
@@ -166,6 +170,7 @@ export function ContactForm({
       });
       if (insErr) {
         await supabase.storage.from(BUCKET).remove([path]);
+        console.error("contact_documents-Insert fehlgeschlagen:", insErr);
         return false;
       }
       return true;
