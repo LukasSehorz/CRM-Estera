@@ -107,10 +107,10 @@ export default async function DashboardPage({
     key,
     label,
     points,
-    statLabel: "Ø Umsatz pro Monat",
-    statValue: formatEUR(
-      points.length ? points.reduce((s, p) => s + p.value, 0) / points.length : 0,
-    ),
+    // Gesamtumsatz im gewählten Zeitraum (nicht der Monatsdurchschnitt) —
+    // konsistent zur 30-Tage-Kachel „Summe 30 Tage" (Feedback SJ: Berater-Ansicht).
+    statLabel: `Summe ${label}`,
+    statValue: formatEUR(points.reduce((s, p) => s + p.value, 0)),
   });
   const umsatzRanges: UmsatzRange[] = [
     {
