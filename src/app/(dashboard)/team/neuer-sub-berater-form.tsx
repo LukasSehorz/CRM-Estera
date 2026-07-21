@@ -161,14 +161,14 @@ export function NeuerSubBeraterForm({
               id="sb-immo"
               type="range"
               min={1}
-              max={10}
+              max={7}
               step={0.5}
               value={v.immoAnteil}
               onChange={(e) => set("immoAnteil", e.target.value)}
               className="h-9 w-full cursor-pointer accent-primary"
             />
             <p className="text-xs text-muted-foreground">
-              Regler 1–10 % · Anteil vom Kaufpreis bei Immobilien-Deals.
+              Regler 1–7 % · Anteil vom Kaufpreis bei Immobilien-Deals.
             </p>
           </div>
         )}

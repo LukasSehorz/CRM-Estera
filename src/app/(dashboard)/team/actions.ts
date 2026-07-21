@@ -419,12 +419,22 @@ export async function createSubBerater(
     return { error: "Das Startpasswort braucht mindestens 8 Zeichen." };
   if (Number.isNaN(input.stufe) || input.stufe < 0 || input.stufe > 100)
     return { error: "Stufe muss zwischen 0 und 100 liegen." };
-  const immoAnteil =
-    Number.isNaN(input.immoAnteil) || input.immoAnteil < 0
-      ? null
-      : Math.min(input.immoAnteil, 100);
   if (input.bereiche.length < 1)
     return { error: "Mindestens eine Sparte auswählen." };
+  // Immo-Anteil nur relevant, wenn die Immobilien-Sparte gewählt ist. Ein
+  // Berater darf seiner Downline 1–7 % vergeben (die GF bis 10 %, eigene
+  // Action) — echte Grenze mit Fehler-Return statt stillem Cappen, damit ein
+  // direkter Call den Slider nicht umgeht (Call SJ Fine-Tuning).
+  let immoAnteil: number | null = null;
+  if (input.bereiche.includes("immobilien")) {
+    if (
+      Number.isNaN(input.immoAnteil) ||
+      input.immoAnteil < 1 ||
+      input.immoAnteil > 7
+    )
+      return { error: "Immo-Anteil muss zwischen 1 und 7 % liegen." };
+    immoAnteil = input.immoAnteil;
+  }
 
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;

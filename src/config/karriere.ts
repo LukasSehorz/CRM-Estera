@@ -16,10 +16,10 @@ export type KarriereRang = {
 
 export const KARRIERE_RAENGE: KarriereRang[] = [
   { stufe: 1, rang: "Associate I", anteil: 10, schwelleBws: 0, fensterMonate: null },
-  { stufe: 2, rang: "Associate II", anteil: 20, schwelleBws: 250_000, fensterMonate: 3 },
-  { stufe: 3, rang: "Consultant", anteil: 40, schwelleBws: 750_000, fensterMonate: 3 },
-  { stufe: 4, rang: "Junior Partner", anteil: 50, schwelleBws: 1_000_000, fensterMonate: 6 },
-  { stufe: 5, rang: "Partner", anteil: 60, schwelleBws: 2_000_000, fensterMonate: 6 },
+  { stufe: 2, rang: "Associate II", anteil: 15, schwelleBws: 250_000, fensterMonate: 3 },
+  { stufe: 3, rang: "Consultant", anteil: 25, schwelleBws: 750_000, fensterMonate: 3 },
+  { stufe: 4, rang: "Junior Partner", anteil: 40, schwelleBws: 1_000_000, fensterMonate: 6 },
+  { stufe: 5, rang: "Partner", anteil: 55, schwelleBws: 2_000_000, fensterMonate: 6 },
 ];
 
 /** Aktuellen Rang aus der (frei setzbaren) Vertriebler-Stufe ableiten:

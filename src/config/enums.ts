@@ -97,10 +97,6 @@ export const FINANZIERUNGSRAHMEN_PRESETS = [
   250000, 300000, 350000, 400000, 500000, 600000, 700000,
 ] as const;
 
-// Estera-Provisionssatz auf den Kaufpreis (Schleife 2, 1.5): variabel je
-// Objekt/Bauträger; diese Werte sind nur Schnellauswahl-Vorschläge.
-export const PROVISIONSSATZ_PRESETS = [12, 14, 25] as const;
-
 // Kundendokumente-Kategorien (Fachkonzept 1.2 + Call SJ 1.6: Reservierungen).
 export const DOKUMENT_KATEGORIEN = [
   "Gehaltsabrechnung",
@@ -108,7 +104,6 @@ export const DOKUMENT_KATEGORIEN = [
   "Ausweis",
   "Eigenkapitalnachweis",
   "Reservierungsvereinbarung",
-  "Reservierungsformular",
   "Sonstige",
 ] as const;
 

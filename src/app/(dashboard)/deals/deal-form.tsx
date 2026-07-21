@@ -11,7 +11,7 @@ import {
   deleteDeal,
   type DealInput,
 } from "./actions";
-import { OBJEKT_STATUS, PROVISIONSSATZ_PRESETS, bereichLabel } from "@/config/enums";
+import { OBJEKT_STATUS, bereichLabel } from "@/config/enums";
 import {
   computeBWS,
   computeImmoProvision,
@@ -430,37 +430,17 @@ export function DealForm({
             {isGf && (
               <>
                 <Field label="Provisionssatz (%)" htmlFor="provsatz">
-                  <div className="flex items-center gap-2">
-                    <Input
-                      id="provsatz"
-                      type="number"
-                      min={0}
-                      max={100}
-                      step="0.1"
-                      inputMode="decimal"
-                      className="w-28"
-                      value={v.provisionssatz}
-                      onChange={(e) => set("provisionssatz", e.target.value)}
-                      placeholder="z. B. 12"
-                    />
-                    <div className="flex gap-1">
-                      {PROVISIONSSATZ_PRESETS.map((p) => (
-                        <button
-                          key={p}
-                          type="button"
-                          onClick={() => set("provisionssatz", String(p))}
-                          className={cn(
-                            "rounded-md border border-border px-2.5 py-1.5 text-xs font-medium transition-colors hover:border-primary/50",
-                            num(v.provisionssatz) === p
-                              ? "border-primary bg-primary/10 text-primary"
-                              : "text-muted-foreground",
-                          )}
-                        >
-                          {p} %
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                  <Input
+                    id="provsatz"
+                    type="number"
+                    min={0}
+                    max={100}
+                    step="0.1"
+                    inputMode="decimal"
+                    className="w-28"
+                    value={v.provisionssatz}
+                    onChange={(e) => set("provisionssatz", e.target.value)}
+                  />
                   <p className="text-xs text-muted-foreground">
                     Variabel je Objekt/Bauträger.
                   </p>
@@ -647,9 +627,6 @@ export function DealForm({
                 onChange={(e) => set("tippgeber_satz", e.target.value)}
                 placeholder="z. B. 10"
               />
-              <p className="text-xs text-muted-foreground">
-                Geht von deinem Anteil ab, nicht vom Hausanteil.
-              </p>
             </Field>
           </div>
 
