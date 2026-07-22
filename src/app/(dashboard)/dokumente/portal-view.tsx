@@ -14,6 +14,7 @@ import {
   Lock,
   Trash2,
   Upload,
+  UserPlus,
   Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -89,31 +90,41 @@ export function PortalView({
 
   return (
     <div className="space-y-6">
-      {/* Tab-Leiste */}
-      <div className="flex flex-wrap gap-1 border-b border-border">
-        {tabs.map((t) => {
-          const Icon = t.icon;
-          const active = tab === t.key;
-          return (
-            <button
-              key={t.key}
-              type="button"
-              onClick={() => setTab(t.key)}
-              className={cn(
-                "-mb-px inline-flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors",
-                active
-                  ? "border-primary text-foreground"
-                  : "border-transparent text-muted-foreground hover:text-foreground",
-              )}
-            >
-              <Icon className="h-4 w-4" />
-              {t.label}
-              <span className="rounded-full bg-secondary px-1.5 py-0.5 text-xs tabular-nums text-muted-foreground">
-                {t.count}
-              </span>
-            </button>
-          );
-        })}
+      {/* Tab-Leiste + „Neuer Kunde" rechts (Kunden-Feedback: Kunde direkt hier
+          anlegen, um Dokumente hochladen zu können, auch wenn er noch fehlt). */}
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border">
+        <div className="flex flex-wrap gap-1">
+          {tabs.map((t) => {
+            const Icon = t.icon;
+            const active = tab === t.key;
+            return (
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => setTab(t.key)}
+                className={cn(
+                  "-mb-px inline-flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors",
+                  active
+                    ? "border-primary text-foreground"
+                    : "border-transparent text-muted-foreground hover:text-foreground",
+                )}
+              >
+                <Icon className="h-4 w-4" />
+                {t.label}
+                <span className="rounded-full bg-secondary px-1.5 py-0.5 text-xs tabular-nums text-muted-foreground">
+                  {t.count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        <Link
+          href="/kontakte/neu"
+          className="mb-1.5 inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
+        >
+          <UserPlus className="h-4 w-4" />
+          Neuen Kunden anlegen
+        </Link>
       </div>
 
       {tab === "vorlagen" && (

@@ -172,6 +172,9 @@ export async function setDocumentStatus(
   if (error) return { error: SAVE_ERROR };
   revalidatePath(`/kontakte/${contactId}`);
   revalidatePath("/immobilien"); // Fortschritts-Badge auf den Deal-Karten
+  // Damit ein neu hochgeladenes Dokument sofort im Dokumentenportal erscheint
+  // (Kunden-Feedback): der Portal-Cache wird invalidiert.
+  revalidatePath("/dokumente");
   return { ok: true };
 }
 
