@@ -2,10 +2,9 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { Calculator, Users, Wallet } from "lucide-react";
 import { formatEUR } from "@/lib/format";
 import { einschaetzungLabel, einschaetzungTone } from "@/config/enums";
-import { KpiCard } from "@/components/charts/kpi-card";
+import { ExpandableStat } from "@/components/charts/expandable-stat";
 import { ChartCard } from "@/components/charts/chart-card";
 import { BarSeries } from "@/components/charts/bar-series";
 import { Pill } from "@/components/ui/pill";
@@ -67,6 +66,21 @@ export function EingeschaetztView({
   );
   const volumen = finanzierbar.reduce((s, r) => s + r.betrag, 0);
   const avg = finanzierbar.length ? volumen / finanzierbar.length : 0;
+  // Drilldown: welche Kunden stecken hinter den Zahlen (Feedback SJ)?
+  const finanzDetails = [
+    {
+      label: "Finanzierbare Kunden",
+      value: String(finanzierbar.length),
+      tone: "primary",
+      deals: [...finanzierbar]
+        .sort((a, b) => b.betrag - a.betrag)
+        .map((r) => ({
+          name: r.name,
+          value: formatEUR(r.betrag),
+          sub: r.berater.split(" ")[0],
+        })),
+    },
+  ];
 
   const perBerater = useMemo(() => {
     const m = new Map<string, number>();
@@ -115,23 +129,29 @@ export function EingeschaetztView({
 
       {/* KPIs */}
       <div className="grid gap-4 sm:grid-cols-3">
-        <KpiCard
+        <ExpandableStat
           label="Finanzierbare Kunden"
           value={String(finanzierbar.length)}
-          icon={Users}
+          iconKey="layers"
           tone="accent"
+          details={finanzDetails}
+          info="Kunden mit positiver Finanzierungseinschätzung — aufklappen zeigt jeden Kunden mit seinem finanzierbaren Betrag."
         />
-        <KpiCard
+        <ExpandableStat
           label="Finanzierbares Volumen"
           value={formatEUR(volumen)}
-          icon={Wallet}
+          iconKey="wallet"
           tone="info"
+          details={finanzDetails}
+          info="Summe der finanzierbaren Beträge aller eingeschätzten Kunden — aufklappen zeigt die einzelnen Kunden."
         />
-        <KpiCard
+        <ExpandableStat
           label="Ø Finanzierbar bis"
           value={avg ? formatEUR(avg) : "—"}
-          icon={Calculator}
+          iconKey="trend"
           tone="success"
+          details={finanzDetails}
+          info="Durchschnittlich finanzierbarer Betrag je eingeschätztem Kunden — aufklappen zeigt die einzelnen Werte."
         />
       </div>
 
