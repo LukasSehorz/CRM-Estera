@@ -51,7 +51,18 @@
       "Bash(node scripts/../scripts/run-migration.mjs --help)",
       "Bash(node shot.mjs perf)",
       "Bash(cp \"C:/Users/lukas/AppData/Local/Temp/claude/c--Users-lukas-OneDrive-Desktop-CRM/4e80db6a-46fb-423f-8e01-a2d44a2bde9c/scratchpad/shot.mjs\" \".pwshot.mjs\")",
-      "Bash(SHOTDIR=\"C:/Users/lukas/AppData/Local/Temp/claude/c--Users-lukas-OneDrive-Desktop-CRM/4e80db6a-46fb-423f-8e01-a2d44a2bde9c/scratchpad\" node .pwshot.mjs \"C:/Users/lukas/AppData/Local/Temp/claude/c--Users-lukas-OneDrive-Desktop-CRM/4e80db6a-46fb-423f-8e01-a2d44a2bde9c/scratchpad/perf\")"
+      "Bash(SHOTDIR=\"C:/Users/lukas/AppData/Local/Temp/claude/c--Users-lukas-OneDrive-Desktop-CRM/4e80db6a-46fb-423f-8e01-a2d44a2bde9c/scratchpad\" node .pwshot.mjs \"C:/Users/lukas/AppData/Local/Temp/claude/c--Users-lukas-OneDrive-Desktop-CRM/4e80db6a-46fb-423f-8e01-a2d44a2bde9c/scratchpad/perf\")",
+      "Bash(file \"Bilder Logo Estera\"/*)",
+      "Bash(cp \"C:/Users/lukas/AppData/Local/Temp/claude/c--Users-lukas-OneDrive-Desktop-CRM/4e80db6a-46fb-423f-8e01-a2d44a2bde9c/scratchpad/logo.mjs\" .logogen.mjs)",
+      "Bash(node .logogen.mjs)",
+      "Bash(rm -f .logogen.mjs)",
+      "Bash(cp \"C:/Users/lukas/AppData/Local/Temp/claude/c--Users-lukas-OneDrive-Desktop-CRM/4e80db6a-46fb-423f-8e01-a2d44a2bde9c/scratchpad/logoshot.mjs\" .logoshot.mjs)",
+      "Bash(node .logoshot.mjs)",
+      "Bash(node scripts/run-migration.mjs supabase/migrations/0024_ziele_von_oben.sql)",
+      "Bash(cp \"C:/Users/lukas/AppData/Local/Temp/claude/c--Users-lukas-OneDrive-Desktop-CRM/4e80db6a-46fb-423f-8e01-a2d44a2bde9c/scratchpad/p1shot.mjs\" .p1shot.mjs)",
+      "Bash(node .p1shot.mjs)",
+      "Bash(cp \"C:/Users/lukas/AppData/Local/Temp/claude/c--Users-lukas-OneDrive-Desktop-CRM/4e80db6a-46fb-423f-8e01-a2d44a2bde9c/scratchpad/p1auth.mjs\" .p1auth.mjs)",
+      "Bash(node .p1auth.mjs)"
     ]
   }
 }

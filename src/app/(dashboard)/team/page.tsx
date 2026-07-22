@@ -271,6 +271,7 @@ export default async function TeamPage() {
           tippgeberRows={tippgeberRows}
           ownerOptions={ownerOptions}
           isGf={isGf}
+          currentUserId={user.id}
         />
       </div>
     </>

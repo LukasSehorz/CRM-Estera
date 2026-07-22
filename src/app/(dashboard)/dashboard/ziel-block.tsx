@@ -1,23 +1,10 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
-import {
-  CalendarClock,
-  Flame,
-  Lock,
-  Pencil,
-  Target,
-  TrendingUp,
-} from "lucide-react";
+import { useEffect, useState } from "react";
+import { CalendarClock, Flame, Target, TrendingUp } from "lucide-react";
 import { bereichLabel } from "@/config/enums";
 import { formatEUR } from "@/lib/format";
 import { Pill } from "@/components/ui/pill";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { setEigenesMonatsziel } from "@/app/(dashboard)/actions";
 import type { SpartenZiel, ZielDaten } from "@/lib/ziele";
 
 /* -------------------------------------------------------------------------
@@ -25,6 +12,9 @@ import type { SpartenZiel, ZielDaten } from "@/lib/ziele";
    sieht SOFORT, wo er steht — Monatsziel je Sparte (nie zusammengefasst),
    animierter Fortschritt (weit weg = rot, näher = gelb, nah/erreicht = grün),
    Rest-Tage und Streaks als Dranbleiben-Anreiz. Beträge = eigene Provision.
+   Ziele setzt der Berater NICHT mehr selbst (Kunden-Feedback 22.07.) — sie
+   werden von der GF bzw. dem direkten Vorgesetzten in der Team-Verwaltung
+   vergeben; hier nur Anzeige.
    ------------------------------------------------------------------------- */
 
 /** Sanfter Count-up (ease-out), respektiert prefers-reduced-motion. */
@@ -98,8 +88,9 @@ function ZielKarte({
           Monatsziel {bereichLabel(sparte.bereich)}
         </div>
         <p className="mt-3 text-sm text-muted-foreground">
-          Noch kein Monatsziel gesetzt — leg über „Ziel bearbeiten&ldquo; dein
-          persönliches Ziel fest, dann siehst du hier deinen Fortschritt.
+          Noch kein Monatsziel hinterlegt. Deine Geschäftsführung bzw. dein
+          direkter Vorgesetzter legt dein Ziel fest — dann siehst du hier deinen
+          Fortschritt.
         </p>
       </div>
     );
@@ -188,155 +179,42 @@ function ZielKarte({
   );
 }
 
-/** Betrag-String -> Zahl|null (leer = kein Ziel), undefined = ungültig. */
-function parseZiel(s: string): number | null | undefined {
-  const t = s.trim();
-  if (!t) return null;
-  const n = Number(t.replace(/\./g, "").replace(",", "."));
-  if (Number.isNaN(n) || n < 0) return undefined;
-  return n;
-}
-
-/** Inline-Formular: Berater setzt seine Monatsziele selbst (15.2). */
-function ZielEditor({
-  daten,
-  onClose,
-}: {
-  daten: ZielDaten;
-  onClose: () => void;
-}) {
-  const router = useRouter();
-  const [pending, start] = useTransition();
-  const immoSparte = daten.sparten.find((s) => s.bereich === "immobilien");
-  const vvSparte = daten.sparten.find((s) => s.bereich === "vv");
-  const [immo, setImmo] = useState(
-    immoSparte?.ziel != null ? String(immoSparte.ziel) : "",
-  );
-  const [vv, setVv] = useState(vvSparte?.ziel != null ? String(vvSparte.ziel) : "");
-
-  function save() {
-    const zi = immoSparte ? parseZiel(immo) : null;
-    const zv = vvSparte ? parseZiel(vv) : null;
-    if (zi === undefined || zv === undefined) {
-      toast.error("Ziel muss eine positive Zahl sein (oder leer).");
-      return;
-    }
-    start(async () => {
-      const res = await setEigenesMonatsziel(zi ?? null, zv ?? null);
-      if ("error" in res) {
-        toast.error(res.error);
-        return;
-      }
-      toast.success("Monatsziel gespeichert");
-      onClose();
-      router.refresh();
-    });
-  }
-
-  return (
-    <div className="rounded-xl border border-border bg-surface p-5">
-      <p className="mb-3 text-sm text-muted-foreground">
-        Setze dein persönliches Monatsziel (eigene Provision). Leer lassen = kein
-        Ziel.
-      </p>
-      <div className="grid gap-4 sm:grid-cols-2">
-        {immoSparte && (
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="ziel-immo">Ziel Immobilien (€)</Label>
-            <Input
-              id="ziel-immo"
-              inputMode="decimal"
-              placeholder="z. B. 10000"
-              value={immo}
-              onChange={(e) => setImmo(e.target.value)}
-              className="tabular-nums"
-            />
-          </div>
-        )}
-        {vvSparte && (
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="ziel-vv">Ziel Vermögensverwaltung (€)</Label>
-            <Input
-              id="ziel-vv"
-              inputMode="decimal"
-              placeholder="z. B. 5000"
-              value={vv}
-              onChange={(e) => setVv(e.target.value)}
-              className="tabular-nums"
-            />
-          </div>
-        )}
-      </div>
-      <div className="mt-4 flex justify-end gap-2">
-        <Button variant="outline" size="sm" onClick={onClose} disabled={pending}>
-          Abbrechen
-        </Button>
-        <Button size="sm" onClick={save} disabled={pending}>
-          {pending ? "Speichern …" : "Ziel speichern"}
-        </Button>
-      </div>
-    </div>
-  );
-}
-
 export function ZielBlock({ daten }: { daten: ZielDaten }) {
-  const [edit, setEdit] = useState(false);
   return (
     <section aria-label="Monatsziele">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div>
           <h2 className="text-base font-semibold">Deine Monatsziele</h2>
           <p className="text-xs text-muted-foreground">
-            Eigene Provision im {daten.monatsName} —{" "}
-            {daten.gesperrt
-              ? "von der Geschäftsführung festgelegt."
-              : "du setzt dein Ziel selbst."}
+            Eigene Provision im {daten.monatsName} — von der Geschäftsführung
+            bzw. deinem direkten Vorgesetzten festgelegt.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          {daten.aktivTage >= 2 && (
-            <Pill tone="accent">
-              <Flame className="mr-1 h-3 w-3" aria-hidden />
-              {daten.aktivTage} Werktage aktiv in Folge
-            </Pill>
-          )}
-          {daten.gesperrt ? (
-            <Pill tone="muted">
-              <Lock className="mr-1 h-3 w-3" aria-hidden />
-              gesperrt
-            </Pill>
-          ) : (
-            !edit && (
-              <Button variant="outline" size="sm" onClick={() => setEdit(true)}>
-                <Pencil className="mr-1 h-3.5 w-3.5" />
-                Ziel bearbeiten
-              </Button>
-            )
-          )}
-        </div>
+        {daten.aktivTage >= 2 && (
+          <Pill tone="accent">
+            <Flame className="mr-1 h-3 w-3" aria-hidden />
+            {daten.aktivTage} Werktage aktiv in Folge
+          </Pill>
+        )}
       </div>
 
-      {edit && !daten.gesperrt ? (
-        <ZielEditor daten={daten} onClose={() => setEdit(false)} />
-      ) : (
-        <div
-          className={
-            daten.sparten.length > 1
-              ? "grid items-start gap-4 lg:grid-cols-2"
-              : "grid gap-4"
-          }
-        >
-          {daten.sparten.map((s) => (
-            <ZielKarte
-              key={s.bereich}
-              sparte={s}
-              monatsName={daten.monatsName}
-              restTage={daten.restTage}
-              monatsAnteil={daten.monatsAnteil}
-            />
-          ))}
-        </div>
-      )}
+      <div
+        className={
+          daten.sparten.length > 1
+            ? "grid items-start gap-4 lg:grid-cols-2"
+            : "grid gap-4"
+        }
+      >
+        {daten.sparten.map((s) => (
+          <ZielKarte
+            key={s.bereich}
+            sparte={s}
+            monatsName={daten.monatsName}
+            restTage={daten.restTage}
+            monatsAnteil={daten.monatsAnteil}
+          />
+        ))}
+      </div>
     </section>
   );
 }

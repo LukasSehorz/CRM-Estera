@@ -641,8 +641,12 @@ export type Database = {
         };
         Returns: undefined;
       };
-      set_eigenes_monatsziel: {
-        Args: { p_immo: number | null; p_vv: number | null };
+      set_monatsziel_fuer: {
+        Args: {
+          p_target: string;
+          p_immo: number | null;
+          p_vv: number | null;
+        };
         Returns: undefined;
       };
       set_monatsziel_sperre: {

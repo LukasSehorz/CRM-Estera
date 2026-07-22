@@ -21,6 +21,7 @@ export function TeamDirectory({
   tippgeberRows,
   ownerOptions,
   isGf = true,
+  currentUserId,
 }: {
   beraterRows: BeraterRow[];
   partnerKandidaten: PartnerOption[];
@@ -29,6 +30,8 @@ export function TeamDirectory({
   /** Stufe/Rolle/Anbindung sind GF-Hoheit (DB erzwingt es) — Berater sehen
    *  ihre Downline nur lesend. */
   isGf?: boolean;
+  /** Eigene ID: Ziele der DIREKTEN Berater darf ein Berater setzen. */
+  currentUserId?: string;
 }) {
   const [filter, setFilter] = useState<Filter>("alle");
   const [q, setQ] = useState("");
@@ -135,8 +138,8 @@ export function TeamDirectory({
         <div className="space-y-2">
           <p className="max-w-2xl text-sm text-muted-foreground">
             {isGf
-              ? "Die Stufe bestimmt den persönlichen Provisionsanteil (Netto-Provision × Stufe). Die Sparten steuern, welche Bereiche der Berater sieht — durchgesetzt in der Datenbank, nicht nur in der Oberfläche. Die Monatsziele (eigene Provision, gemeinsam mit dem Berater vereinbart) treiben die Ziel-Box im Berater-Dashboard."
-              : "Deine Downline. Stufe, Anbindung und Ziele legt die Geschäftsführung fest — du siehst sie hier zur Übersicht. Zeile aufklappen zeigt, wer unter dem Berater arbeitet."}
+              ? "Die Stufe bestimmt den persönlichen Provisionsanteil (Netto-Provision × Stufe). Die Sparten steuern, welche Bereiche der Berater sieht — durchgesetzt in der Datenbank, nicht nur in der Oberfläche. Die Monatsziele (eigene Provision) legst du hier je Berater fest; sie treiben die Ziel-Box im Berater-Dashboard."
+              : "Deine Downline. Stufe und Anbindung legt die Geschäftsführung fest. Die Monatsziele deiner DIREKTEN Berater kannst du hier selbst setzen — sie erscheinen in deren Dashboard. Zeile aufklappen zeigt, wer unter dem Berater arbeitet."}
           </p>
           {berater.length > 0 ? (
             <StufeTable
@@ -144,6 +147,7 @@ export function TeamDirectory({
               partnerKandidaten={partnerKandidaten}
               childMap={childMap}
               readOnly={!isGf}
+              currentUserId={currentUserId}
             />
           ) : (
             <EmptyHint text="Kein Berater gefunden." />

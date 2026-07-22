@@ -64,6 +64,7 @@ export function StufeTable({
   partnerKandidaten,
   childMap = {},
   readOnly = false,
+  currentUserId,
 }: {
   rows: BeraterRow[];
   partnerKandidaten: PartnerOption[];
@@ -71,6 +72,9 @@ export function StufeTable({
   childMap?: Record<string, DownlineChild>;
   /** Berater-Sicht (3.9): nur lesen — Stufe/Anbindung sind GF-Hoheit. */
   readOnly?: boolean;
+  /** Eigene ID: ein Berater darf die ZIELE seiner DIREKTEN Berater setzen
+   *  (Kunden-Feedback 22.07.), auch wenn die restliche Zeile readOnly ist. */
+  currentUserId?: string;
 }) {
   return (
     <div className="overflow-x-auto rounded-xl border border-border bg-surface">
@@ -96,6 +100,7 @@ export function StufeTable({
               partnerKandidaten={partnerKandidaten.filter((p) => p.id !== r.id)}
               downline={childMap[r.id]}
               readOnly={readOnly}
+              zielEditable={!readOnly || (!!currentUserId && r.parentId === currentUserId)}
             />
           ))}
         </tbody>
@@ -118,11 +123,14 @@ function StufeRow({
   partnerKandidaten,
   downline,
   readOnly = false,
+  zielEditable = false,
 }: {
   row: BeraterRow;
   partnerKandidaten: PartnerOption[];
   downline?: DownlineChild;
   readOnly?: boolean;
+  /** Dürfen die Ziel-Felder dieser Zeile bearbeitet werden? */
+  zielEditable?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [stufe, setStufe] = useState(row.stufe);
@@ -374,7 +382,7 @@ function StufeRow({
           <Input
             inputMode="decimal"
             placeholder="z. B. 10000"
-            disabled={readOnly}
+            disabled={!zielEditable}
             value={zielImmo}
             onChange={(e) => setZielImmo(e.target.value)}
             className="w-32 tabular-nums"
@@ -388,7 +396,7 @@ function StufeRow({
           <Input
             inputMode="decimal"
             placeholder="z. B. 5000"
-            disabled={readOnly}
+            disabled={!zielEditable}
             value={zielVv}
             onChange={(e) => setZielVv(e.target.value)}
             className="w-32 tabular-nums"
@@ -398,7 +406,7 @@ function StufeRow({
         )}
       </td>
       <td className="px-4 py-3 text-right">
-        {!readOnly && (
+        {(!readOnly || zielEditable) && (
           <Button
             size="sm"
             variant={dirty ? "default" : "outline"}

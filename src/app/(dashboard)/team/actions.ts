@@ -71,9 +71,9 @@ export async function setBeraterBereiche(
 
 /**
  * Setzt die Monatsziele (eigene Provision) eines Beraters je Sparte —
- * von der GF gemeinsam mit dem Berater festgelegt (Schleife 3, Ber. 2).
- * Berechtigung erzwingt die RLS der Tabelle berater_monatsziele (nur GF
- * schreibt); hier zusätzlich Basis-Validierung.
+ * „von oben" (Kunden-Feedback 22.07.): die GF für alle, ein Berater nur für
+ * seine DIREKTEN Berater. Kein Selbst-Setzen. Berechtigung erzwingt die
+ * SECURITY-DEFINER-Funktion set_monatsziel_fuer in der DB.
  */
 export async function setMonatsziele(
   beraterId: string,
@@ -90,16 +90,15 @@ export async function setMonatsziele(
       return { error: "Ziel muss eine positive Zahl sein." };
   }
 
-  const { error } = await supabase.from("berater_monatsziele").upsert({
-    berater_id: beraterId,
-    monatsziel_immobilien: zielImmobilien,
-    monatsziel_vv: zielVv,
-    updated_at: new Date().toISOString(),
+  const { error } = await supabase.rpc("set_monatsziel_fuer", {
+    p_target: beraterId,
+    p_immo: zielImmobilien,
+    p_vv: zielVv,
   });
   if (error)
     return {
       error:
-        "Speichern fehlgeschlagen — nur die Geschäftsführung darf Monatsziele setzen.",
+        "Speichern fehlgeschlagen — nur die Geschäftsführung oder der direkte Vorgesetzte darf dieses Ziel setzen.",
     };
   revalidatePath("/team");
   revalidatePath("/dashboard");
