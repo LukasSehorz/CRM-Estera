@@ -48,3 +48,5 @@ tailwindcss-*.log
 
 # Claude Code lokale Einstellungen (maschinenspezifisch)
 .claude/
+
+dev.log
