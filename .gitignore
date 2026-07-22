@@ -50,3 +50,4 @@ tailwindcss-*.log
 .claude/
 
 dev.log
+prod.log
