@@ -424,9 +424,10 @@ export default async function PerformanceDashboardPage({
             zeigt die Berater ohne Scroll-Weg. */}
         <PerformanceView rows={rows} isGf={aFull.isGf} />
 
-        {/* Reserviert-/Verbrieft-Board (Call SJ Fine-Tuning P4) — GF-Ansicht,
-            nur Immobilien; bei reiner VV-Sicht ausgeblendet. */}
-        {aFull.isGf && scope !== "vv" && (
+        {/* Umsatz-/Reserviert-/Verbrieft-Board (Call SJ P4 + Ausbau) — jetzt auch
+            in der Berater-Ansicht (eigene Struktur); nur Immobilien, bei reiner
+            VV-Sicht ausgeblendet. */}
+        {scope !== "vv" && (
           <ReserviertVerbrieftBoard
             rows={reserviertVerbrieft(aFull)}
             isGf={aFull.isGf}

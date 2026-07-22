@@ -701,24 +701,27 @@ export type ReserviertVerbrieftDeal = {
   kaufpreis: number;
   /** true, wenn der Deal die Notartermin-Phase erreicht hat (= verbrieft). */
   verbrieft: boolean;
+  /** true, wenn der Deal gewonnen ist (Kauf abgeschlossen = Umsatz). */
+  abgeschlossen: boolean;
 };
 export type ReserviertVerbrieft = {
   id: string;
   name: string;
+  /** Abgeschlossenes Volumen (gewonnene Deals, Kaufpreis) — „Umsatz". */
+  umsatz: number;
   reserviert: number;
   verbrieft: number;
-  /** Einzelne Deals hinter den Zahlen (alle reserviert; verbrieft = Teilmenge). */
+  /** Einzelne Deals hinter den Zahlen (alle reserviert; verbrieft/umsatz = Teilmengen). */
   deals: ReserviertVerbrieftDeal[];
 };
 
 /**
- * Board „wer hat wie viel reserviert / verbrieft" (GF-Ansicht, nur Immobilien).
- * Gemeinsame (kumulative) Töpfe:
+ * Board „wer hat wie viel Umsatz / reserviert / verbrieft" (nur Immobilien).
+ * Gemeinsame (kumulative) Töpfe — Trichter Reserviert ⊇ Verbrieft ⊇ Umsatz:
  *  • Reserviert = Deal hat mindestens die Phase „Objekt reserviert" erreicht.
- *  • Verbrieft = zum Notar gebracht (Phase „Notartermin" erreicht) — Teilmenge
- *    von Reserviert.
- * Storniert zählt nicht. Volumen = Kaufpreis. Ein verbriefter Deal zählt also
- * auch im Reserviert-Topf mit.
+ *  • Verbrieft = zum Notar gebracht (Phase „Notartermin" erreicht).
+ *  • Umsatz = Kauf abgeschlossen (gewonnen).
+ * Storniert zählt nicht. Volumen = Kaufpreis.
  */
 export function reserviertVerbrieft(a: AnalyticsData): ReserviertVerbrieft[] {
   const reservStage = a.stages.find(
@@ -729,7 +732,12 @@ export function reserviertVerbrieft(a: AnalyticsData): ReserviertVerbrieft[] {
   );
   const acc = new Map<
     string,
-    { reserviert: number; verbrieft: number; deals: ReserviertVerbrieftDeal[] }
+    {
+      umsatz: number;
+      reserviert: number;
+      verbrieft: number;
+      deals: ReserviertVerbrieftDeal[];
+    }
   >();
   for (const d of a.deals) {
     if (d.bereich !== "immobilien") continue;
@@ -737,21 +745,25 @@ export function reserviertVerbrieft(a: AnalyticsData): ReserviertVerbrieft[] {
     if (!s || s.is_lost) continue;
     const istReserviert =
       reservStage != null && s.position >= reservStage.position;
-    if (!istReserviert) continue; // verbrieft ist Teilmenge → reicht als Filter
+    if (!istReserviert) continue; // verbrieft/umsatz sind Teilmengen
     const istVerbrieft = notarStage != null && s.position >= notarStage.position;
+    const istAbgeschlossen = s.is_won;
     const vol = d.kaufpreis ?? 0;
     const cur = acc.get(d.berater_id) ?? {
+      umsatz: 0,
       reserviert: 0,
       verbrieft: 0,
       deals: [],
     };
     cur.reserviert += vol;
     if (istVerbrieft) cur.verbrieft += vol;
+    if (istAbgeschlossen) cur.umsatz += vol;
     cur.deals.push({
       dealId: d.id,
       dealname: d.dealname,
       kaufpreis: vol,
       verbrieft: istVerbrieft,
+      abgeschlossen: istAbgeschlossen,
     });
     acc.set(d.berater_id, cur);
   }
@@ -759,6 +771,7 @@ export function reserviertVerbrieft(a: AnalyticsData): ReserviertVerbrieft[] {
     .map(([id, v]) => ({
       id,
       name: a.nameOf(id),
+      umsatz: v.umsatz,
       reserviert: v.reserviert,
       verbrieft: v.verbrieft,
       deals: v.deals.sort((x, y) => y.kaufpreis - x.kaufpreis),
