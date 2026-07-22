@@ -10,7 +10,6 @@ import {
 } from "./performance-view";
 import { GfSignale } from "./gf-signale";
 import { SummenSkalaBlock } from "./summen-skala";
-import { ReserviertVerbrieftBoard } from "./reserviert-verbrieft-board";
 import {
   loadAnalytics,
   scopeToBereich,
@@ -105,6 +104,12 @@ export default async function PerformanceDashboardPage({
     byDeals.set(id, liste);
   }
 
+  // Reserviert/Verbrieft je Berater (Immobilien, kumulativer Trichter) — wird
+  // jetzt direkt in „Meine Struktur" auswählbar dargestellt (Feedback SJ), das
+  // separate Board darunter entfällt.
+  const rvList = reserviertVerbrieft(a);
+  const rvMap = new Map(rvList.map((r) => [r.id, r]));
+
   const rows: PerfRow[] = perf.map((p) => {
     // Sparten-Trennung (Call SJ Fine-Tuning P3): ein reiner Immobilien-Berater
     // zeigt nirgends VV (und ein reiner VV-Berater kein Immo). Da jeder Deal
@@ -119,6 +124,7 @@ export default async function PerformanceDashboardPage({
         : zeigtVv
           ? (byVv.get(p.id) ?? mk())
           : (byImmo.get(p.id) ?? mk());
+    const rv = rvMap.get(p.id);
     return {
       id: p.id,
       name: p.name,
@@ -135,6 +141,18 @@ export default async function PerformanceDashboardPage({
       deals: (byDeals.get(p.id) ?? [])
         .filter((d) => (d.bereich === "immobilien" ? zeigtImmo : zeigtVv))
         .sort((x, y) => y.betrag - x.betrag),
+      reserviert: rv?.reserviert ?? 0,
+      verbrieft: rv?.verbrieft ?? 0,
+      rvDeals: (rv?.deals ?? []).map((d) => ({
+        dealId: d.dealId,
+        dealname: d.dealname,
+        kaufpreis: d.kaufpreis,
+        status: d.abgeschlossen
+          ? ("abgeschlossen" as const)
+          : d.verbrieft
+            ? ("verbrieft" as const)
+            : ("reserviert" as const),
+      })),
     };
   });
 
@@ -420,19 +438,10 @@ export default async function PerformanceDashboardPage({
           />
         </div>
 
-        {/* Berater-Liste direkt nach den KPIs (5.4): „Berater-Performance"
-            zeigt die Berater ohne Scroll-Weg. */}
+        {/* „Meine Struktur" (5.4 + Call SJ P4): Umsatz/Reserviert/Verbrieft je
+            Berater — Metrik oben umschaltbar, Deals je Berater aufklappbar. Das
+            frühere separate Board darunter ist hier integriert. */}
         <PerformanceView rows={rows} isGf={aFull.isGf} />
-
-        {/* Umsatz-/Reserviert-/Verbrieft-Board (Call SJ P4 + Ausbau) — jetzt auch
-            in der Berater-Ansicht (eigene Struktur); nur Immobilien, bei reiner
-            VV-Sicht ausgeblendet. */}
-        {scope !== "vv" && (
-          <ReserviertVerbrieftBoard
-            rows={reserviertVerbrieft(aFull)}
-            isGf={aFull.isGf}
-          />
-        )}
 
         {/* Forecast (Kap. 6): gewichtete Provision, nicht Volumen —
             inkl. Wochenforecast (5.6). */}
