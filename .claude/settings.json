@@ -64,7 +64,8 @@
       "Bash(cp \"C:/Users/lukas/AppData/Local/Temp/claude/c--Users-lukas-OneDrive-Desktop-CRM/4e80db6a-46fb-423f-8e01-a2d44a2bde9c/scratchpad/p1auth.mjs\" .p1auth.mjs)",
       "Bash(node .p1auth.mjs)",
       "Bash(cp \"C:/Users/lukas/AppData/Local/Temp/claude/c--Users-lukas-OneDrive-Desktop-CRM/4e80db6a-46fb-423f-8e01-a2d44a2bde9c/scratchpad/p2shot.mjs\" .p2shot.mjs)",
-      "Bash(node .p2shot.mjs)"
+      "Bash(node .p2shot.mjs)",
+      "Bash(node scripts/run-migration.mjs supabase/migrations/0025_benachrichtigungen.sql)"
     ]
   }
 }

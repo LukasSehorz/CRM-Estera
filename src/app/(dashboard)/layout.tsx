@@ -23,6 +23,13 @@ export default async function DashboardLayout({
     .eq("id", user.id)
     .single();
 
+  // Ungelesene Benachrichtigungen (Zähler-Badge in der Navigation).
+  const { count: unreadCount } = await supabase
+    .from("notifications")
+    .select("id", { count: "exact", head: true })
+    .eq("empfaenger_id", user.id)
+    .eq("gelesen", false);
+
   const isGf = profile?.rolle === "geschaeftsfuehrung";
   // Backoffice (2.5): Admin ohne Provisionsrechte — sieht beide Sparten.
   const isBackoffice = profile?.rolle === "backoffice";
@@ -77,6 +84,7 @@ export default async function DashboardLayout({
           isBackoffice={isBackoffice}
           bereiche={bereiche}
           fotoUrl={fotoUrl}
+          unreadCount={unreadCount ?? 0}
         />
         <div className="lg:flex">
           <DesktopSidebar
@@ -86,6 +94,7 @@ export default async function DashboardLayout({
             isBackoffice={isBackoffice}
             bereiche={bereiche}
             fotoUrl={fotoUrl}
+            unreadCount={unreadCount ?? 0}
           />
           <main className="min-w-0 flex-1">{children}</main>
         </div>

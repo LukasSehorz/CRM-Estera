@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  Bell,
   Building2,
   CheckSquare,
   FolderOpen,
@@ -39,6 +40,7 @@ const NAV: NavSection[] = [
     items: [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
       { href: "/aufgaben", label: "Aufgaben", icon: CheckSquare },
+      { href: "/benachrichtigungen", label: "Benachrichtigungen", icon: Bell },
       { href: "/kontakte", label: "Kunden", icon: Users },
       { href: "/dokumente", label: "Dokumente", icon: FolderOpen },
       { href: "/listen", label: "Übersichten", icon: ListChecks },
@@ -116,12 +118,15 @@ function NavLinks({
   bereiche,
   onNavigate,
   rail = false,
+  unreadCount = 0,
 }: {
   isGf: boolean;
   isBackoffice: boolean;
   bereiche: string[];
   onNavigate?: () => void;
   rail?: boolean;
+  /** Ungelesene Benachrichtigungen — Zähler-Badge am Glocken-Eintrag. */
+  unreadCount?: number;
 }) {
   const pathname = usePathname();
   const base = NAV.map((section) => ({
@@ -173,10 +178,32 @@ function NavLinks({
                     style={{ background: "linear-gradient(180deg, var(--accent-400), var(--pink, var(--danger)))" }}
                   />
                 )}
-                <Icon className="h-[18px] w-[18px] shrink-0" />
+                <span className="relative shrink-0">
+                  <Icon className="h-[18px] w-[18px]" />
+                  {/* Rail (eingeklappt): kleiner Punkt bei Ungelesenen. */}
+                  {item.href === "/benachrichtigungen" &&
+                    unreadCount > 0 &&
+                    rail && (
+                      <span
+                        aria-hidden
+                        className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-danger ring-2 ring-sidebar"
+                      />
+                    )}
+                </span>
                 <span className={cn("truncate", railText(rail))}>
                   {item.label}
                 </span>
+                {/* Ausgeklappt: Zähler-Badge. */}
+                {item.href === "/benachrichtigungen" && unreadCount > 0 && (
+                  <span
+                    className={cn(
+                      "ml-auto min-w-5 rounded-full bg-danger px-1.5 py-0.5 text-center text-[10px] font-semibold leading-none text-white tabular-nums",
+                      railText(rail),
+                    )}
+                  >
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                )}
               </Link>
             );
           })}
@@ -255,6 +282,7 @@ export function DesktopSidebar({
   isBackoffice,
   bereiche,
   fotoUrl = null,
+  unreadCount = 0,
 }: {
   name: string;
   rolle: string;
@@ -262,6 +290,7 @@ export function DesktopSidebar({
   isBackoffice: boolean;
   bereiche: string[];
   fotoUrl?: string | null;
+  unreadCount?: number;
 }) {
   return (
     // Schmale Icon-Rail; fährt beim Überfahren mit der Maus über den Inhalt
@@ -270,7 +299,13 @@ export function DesktopSidebar({
       {/* 5.12: Schatten theme-fähig — im Light weich statt schwerem Dark-Schatten. */}
       <div className="group/sidebar absolute inset-y-0 left-0 flex w-[72px] flex-col overflow-hidden border-r border-border bg-sidebar transition-[width,box-shadow] duration-300 ease-out hover:w-64 hover:shadow-[8px_0_32px_rgba(15,27,45,0.14)] dark:hover:shadow-[8px_0_40px_rgba(0,0,0,0.55)]">
         <Brand rail />
-        <NavLinks isGf={isGf} isBackoffice={isBackoffice} bereiche={bereiche} rail />
+        <NavLinks
+          isGf={isGf}
+          isBackoffice={isBackoffice}
+          bereiche={bereiche}
+          rail
+          unreadCount={unreadCount}
+        />
         <Footer name={name} rolle={rolle} rail fotoUrl={fotoUrl} />
       </div>
     </aside>
@@ -284,6 +319,7 @@ export function MobileNav({
   isBackoffice,
   bereiche,
   fotoUrl = null,
+  unreadCount = 0,
 }: {
   name: string;
   rolle: string;
@@ -291,6 +327,7 @@ export function MobileNav({
   isBackoffice: boolean;
   bereiche: string[];
   fotoUrl?: string | null;
+  unreadCount?: number;
 }) {
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
@@ -336,6 +373,7 @@ export function MobileNav({
               isBackoffice={isBackoffice}
               bereiche={bereiche}
               onNavigate={close}
+              unreadCount={unreadCount}
             />
             <Footer
               name={name}

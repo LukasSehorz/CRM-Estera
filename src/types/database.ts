@@ -17,6 +17,42 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      notifications: {
+        Row: {
+          id: string;
+          empfaenger_id: string;
+          typ: string;
+          titel: string;
+          text: string | null;
+          link: string | null;
+          gelesen: boolean;
+          erzeugt_von: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          empfaenger_id: string;
+          typ?: string;
+          titel: string;
+          text?: string | null;
+          link?: string | null;
+          gelesen?: boolean;
+          erzeugt_von?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          empfaenger_id?: string;
+          typ?: string;
+          titel?: string;
+          text?: string | null;
+          link?: string | null;
+          gelesen?: boolean;
+          erzeugt_von?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       profiles: {
         Row: {
           id: string;
