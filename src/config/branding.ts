@@ -13,8 +13,13 @@ export const BRANDING = {
   appName: "Estera CRM",
   claim: "Vertriebs-CRM",
   company: "Estera GmbH",
-  /** Logo im /public-Ordner (pro Instanz austauschbar). */
-  logoSrc: "/estera-logo.jpg",
+  /** Quadratisches Marken-Icon (Navy-Fläche + Serifen-„E") — Sidebar, Favicon,
+   *  Login-Formular. Selbsttragend, funktioniert auf hellen wie dunklen Flächen. */
+  logoSrc: "/estera-icon.png",
+  /** Volle Wortmarke „ESTERA" (Navy, transparent) — helle Flächen. */
+  wordmarkSrc: "/estera-wordmark.png",
+  /** Volle Wortmarke „ESTERA" (Off-White) — dunkle Flächen (z. B. Login). */
+  wordmarkLightSrc: "/estera-wordmark-light.png",
   /** true = externe White-Label-Instanz: Estera-Interna ausblenden. */
   whiteLabel: false,
 } as const;

@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { login, type LoginState } from "./actions";
 import { BrandMark } from "@/components/layout/brand-mark";
+import { BRANDING } from "@/config/branding";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -41,13 +42,12 @@ export default function LoginPage() {
             className="animate-in fade-in slide-in-from-bottom-2"
             style={{ animationDuration: "700ms" }}
           >
-            {/* Freigestelltes E — ohne Logo-Kachel, liegt direkt auf dem
-                München-Hintergrund. */}
+            {/* Wortmarke „ESTERA" (Off-White) — liegt direkt auf der Navy-Fläche. */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/login/estera-e.png"
-              alt="Estera"
-              className="h-48 w-auto"
+              src={BRANDING.wordmarkLightSrc}
+              alt={BRANDING.company}
+              className="h-20 w-auto sm:h-24"
               style={{ filter: "drop-shadow(0 12px 24px rgba(0, 0, 0, 0.45))" }}
             />
           </div>

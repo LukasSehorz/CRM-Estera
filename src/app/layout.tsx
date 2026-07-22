@@ -9,9 +9,9 @@ export const metadata: Metadata = {
   title: "Estera CRM",
   description: "Vertriebs-CRM für die Estera GmbH",
   icons: {
-    icon: "/estera-logo.jpg",
-    shortcut: "/estera-logo.jpg",
-    apple: "/estera-logo.jpg",
+    icon: "/estera-icon.png",
+    shortcut: "/estera-icon.png",
+    apple: "/estera-icon.png",
   },
 };
 
