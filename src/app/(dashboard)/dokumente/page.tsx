@@ -38,6 +38,7 @@ export default async function DokumentePortalPage() {
     { data: kunden },
     { data: docStatus },
     { data: docTypes },
+    { data: alleContacts },
   ] = await Promise.all([
     supabase
       .from("portal_documents")
@@ -58,6 +59,14 @@ export default async function DokumentePortalPage() {
       .select("id, gruppe, name, position")
       .eq("aktiv", true)
       .order("position"),
+    // Alle sichtbaren Kontakte — damit man auch Kunden OHNE Dokumente den
+    // Kundenunterlagen hinzufügen kann (Kunden-Feedback 22.07.).
+    supabase
+      .from("contacts")
+      .select(
+        "id, vorname, nachname, ist_selbststaendig, ist_immobilienbesitzer, interesse",
+      )
+      .order("nachname"),
   ]);
 
   const vorlagen: PortalDoc[] = (portal ?? [])
@@ -115,6 +124,25 @@ export default async function DokumentePortalPage() {
     (statusByContact[s.contact_id] ??= {})[s.document_type_id] = s.vorhanden;
   }
 
+  // Alle Kontakte für den „Kunde hinzufügen"-Picker (auch ohne Dokumente) —
+  // deren Meta auch in metaByContact, damit die Checkliste sofort rendert.
+  const alleKunden = (alleContacts ?? []).map((c) => ({
+    contactId: c.id,
+    name: `${c.vorname} ${c.nachname}`,
+    selbst: c.ist_selbststaendig ?? false,
+    immo: c.ist_immobilienbesitzer ?? false,
+    istImmoKontakt: (c.interesse ?? []).includes("immobilien"),
+  }));
+  for (const k of alleKunden) {
+    if (!metaByContact[k.contactId]) {
+      metaByContact[k.contactId] = {
+        selbst: k.selbst,
+        immo: k.immo,
+        istImmoKontakt: k.istImmoKontakt,
+      };
+    }
+  }
+
   return (
     <>
       <Topbar
@@ -127,6 +155,7 @@ export default async function DokumentePortalPage() {
           vorlagen={vorlagen}
           intern={intern}
           kunden={kundenDocs}
+          alleKunden={alleKunden}
           docTypes={(docTypes ?? []) as DocType[]}
           statusByContact={statusByContact}
           metaByContact={metaByContact}

@@ -22,6 +22,12 @@ import { createClient } from "@/lib/supabase/client";
 import { formatBytes, formatDate } from "@/lib/format";
 import { bereichLabel } from "@/config/enums";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "@/components/ui/select";
 import { DocumentChecklist, type DocType } from "../kontakte/document-checklist";
 import { groupDocsByType } from "@/lib/dokumente";
 
@@ -52,6 +58,14 @@ export type KundenMeta = {
   istImmoKontakt: boolean;
 };
 
+export type AlleKunde = {
+  contactId: string;
+  name: string;
+  selbst: boolean;
+  immo: boolean;
+  istImmoKontakt: boolean;
+};
+
 const PORTAL_BUCKET = "vorlagen";
 const MAX_BYTES = 25 * 1024 * 1024;
 
@@ -66,6 +80,7 @@ export function PortalView({
   vorlagen,
   intern,
   kunden,
+  alleKunden,
   docTypes,
   statusByContact,
   metaByContact,
@@ -74,11 +89,15 @@ export function PortalView({
   vorlagen: PortalDoc[];
   intern: PortalDoc[];
   kunden: KundenDoc[];
+  alleKunden: AlleKunde[];
   docTypes: DocType[];
   statusByContact: Record<string, Record<string, boolean>>;
   metaByContact: Record<string, KundenMeta>;
 }) {
   const [tab, setTab] = useState<Tab>("vorlagen");
+  // Manuell hinzugefügte Kunden (ohne Dokumente) — erscheinen in den
+  // Kundenunterlagen, damit man dort Dokumente hochladen kann.
+  const [hinzugefuegt, setHinzugefuegt] = useState<string[]>([]);
 
   const tabs: { key: Tab; label: string; icon: typeof FileText; count: number }[] = [
     { key: "vorlagen", label: "Vorlagen", icon: FileText, count: vorlagen.length },
@@ -118,13 +137,37 @@ export function PortalView({
             );
           })}
         </div>
-        <Link
-          href="/kontakte/neu"
-          className="mb-1.5 inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
-        >
-          <UserPlus className="h-4 w-4" />
-          Neuen Kunden anlegen
-        </Link>
+        {/* Bestehenden Kunden (ohne Dokumente) zu den Kundenunterlagen
+            hinzufügen, um dort Dokumente hochzuladen (Kunden-Feedback 22.07.).
+            Kein Neu-Anlegen — das passiert im Kundenbereich. */}
+        {(() => {
+          const mitDocs = new Set(kunden.map((k) => k.contactId));
+          const hinzufuegbar = alleKunden.filter(
+            (k) => !mitDocs.has(k.contactId) && !hinzugefuegt.includes(k.contactId),
+          );
+          return (
+            <Select
+              value=""
+              onValueChange={(id) => {
+                setHinzugefuegt((prev) => [...prev, id]);
+                setTab("kunden");
+              }}
+              disabled={hinzufuegbar.length === 0}
+            >
+              <SelectTrigger className="mb-1.5 gap-1.5 border-0 bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 disabled:opacity-60 data-[placeholder]:text-primary-foreground [&>svg]:text-primary-foreground/80">
+                <UserPlus className="h-4 w-4" />
+                Kunde hinzufügen
+              </SelectTrigger>
+              <SelectContent>
+                {hinzufuegbar.map((k) => (
+                  <SelectItem key={k.contactId} value={k.contactId}>
+                    {k.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          );
+        })()}
       </div>
 
       {tab === "vorlagen" && (
@@ -139,6 +182,8 @@ export function PortalView({
       {tab === "kunden" && (
         <KundenListe
           docs={kunden}
+          alleKunden={alleKunden}
+          hinzugefuegt={hinzugefuegt}
           docTypes={docTypes}
           statusByContact={statusByContact}
           metaByContact={metaByContact}
@@ -359,11 +404,15 @@ type KundenOrdner = {
  */
 function KundenListe({
   docs,
+  alleKunden,
+  hinzugefuegt,
   docTypes,
   statusByContact,
   metaByContact,
 }: {
   docs: KundenDoc[];
+  alleKunden: AlleKunde[];
+  hinzugefuegt: string[];
   docTypes: DocType[];
   statusByContact: Record<string, Record<string, boolean>>;
   metaByContact: Record<string, KundenMeta>;
@@ -384,6 +433,19 @@ function KundenListe({
       if (d.created_at > o.letztes) o.letztes = d.created_at;
       map.set(d.contactId, o);
     }
+    // Manuell hinzugefügte Kunden (noch ohne Dokumente) als leere Ordner —
+    // dort kann sofort hochgeladen werden.
+    for (const id of hinzugefuegt) {
+      if (map.has(id)) continue;
+      const k = alleKunden.find((x) => x.contactId === id);
+      if (k)
+        map.set(id, {
+          contactId: id,
+          kundenname: k.name,
+          docs: [],
+          letztes: new Date().toISOString(),
+        });
+    }
     let list = [...map.values()];
     if (needle) {
       list = list.filter(
@@ -397,7 +459,7 @@ function KundenListe({
       );
     }
     return list.sort((a, b) => b.letztes.localeCompare(a.letztes));
-  }, [docs, needle]);
+  }, [docs, needle, hinzugefuegt, alleKunden]);
 
   // Bei aktiver Suche passende Ordner automatisch aufklappen.
   const istOffen = (id: string) => offen.has(id) || needle.length > 0;
