@@ -554,10 +554,18 @@ export function dealTimeTage(a: AnalyticsData, beraterId?: string): number | nul
   return spans.reduce((s, x) => s + x, 0) / spans.length;
 }
 
-/** Closing Rate = gewonnen ÷ (je ersten Termin erreicht). */
-export function closingRate(a: AnalyticsData, beraterId?: string): number | null {
+/**
+ * Closing Rate mit Basis: gewonnen ÷ (alle je den ersten Termin erreichten
+ * Deals). `base` ist die Gesamtzahl dieser Deals (inkl. der noch offenen) —
+ * genau die Zahl, mit der man die Prozentangabe nachrechnen kann (Feedback SJ:
+ * „woher kommen die 24 %"). `rate` ist null, wenn kein Deal den Ersttermin
+ * erreicht hat.
+ */
+export function closingRateDetail(
+  a: AnalyticsData,
+  beraterId?: string,
+): { rate: number | null; won: number; base: number } {
   const et = ersterTerminStageIds(a);
-  const reachedFirst = new Set<string>();
   const posOfFirst = new Map<string, number>();
   for (const [bereich, sid] of et) {
     const s = a.sMap.get(sid);
@@ -571,12 +579,15 @@ export function closingRate(a: AnalyticsData, beraterId?: string): number | null
     const fp = posOfFirst.get(d.bereich);
     if (fp != null && (reachedMax.get(d.id) ?? 0) >= fp) {
       base += 1;
-      reachedFirst.add(d.id);
       if (isWon(d, a.sMap)) won += 1;
     }
   }
-  if (!base) return null;
-  return won / base;
+  return { rate: base ? won / base : null, won, base };
+}
+
+/** Closing Rate = gewonnen ÷ (je ersten Termin erreicht). */
+export function closingRate(a: AnalyticsData, beraterId?: string): number | null {
+  return closingRateDetail(a, beraterId).rate;
 }
 
 // ── Umsatz (realisiert) — Provision, nicht Volumen (1.1) ─────────────────

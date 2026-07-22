@@ -25,6 +25,7 @@ import {
   umsatzProMonat,
   pipelineVolumen,
   closingRate,
+  closingRateDetail,
   dealTimeTage,
   stornoQuote,
   betragOf,
@@ -128,9 +129,17 @@ export default async function BeraterDrilldownPage({
     })
     .sort((x, y) => y._t - x._t)
     .map((r) => ({ name: r.name, value: r.value }));
+  const closingDet = closingRateDetail(a);
   const closingDetails = [
-    { label: "Gewonnen", value: String(wonD.length), tone: "success", deals: wonD.map(toDealVol) },
+    { label: "Gewonnen", value: String(closingDet.won), tone: "success", deals: wonD.map(toDealVol) },
     { label: "Verloren", value: String(lostD.length), tone: "muted", deals: lostD.map(toDealVol) },
+    {
+      // Basis der Quote: alle je den Ersttermin erreichten Deals (inkl. offen)
+      // — damit Gewonnen ÷ Basis = Closing Rate nachrechenbar ist (Feedback SJ).
+      label: "Basis (je Ersttermin erreicht)",
+      value: `${closingDet.won} / ${closingDet.base}`,
+      tone: "info",
+    },
   ];
   const dealTimeDetails = [
     { label: "Realisierte Deals", value: String(dealTimeDeals.length), tone: "info", deals: dealTimeDeals },
@@ -264,7 +273,7 @@ export default async function BeraterDrilldownPage({
             iconKey="percent"
             tone="success"
             details={closingDetails}
-            info="Gewonnene Deals ÷ Deals, die mindestens den ersten Termin erreicht haben (Immobilien: T1 Konzept, VV: Termin vereinbart). Aufklappen zeigt gewonnene und verlorene Deals einzeln."
+            info="Gewonnene Deals ÷ Deals, die mindestens den ersten Termin erreicht haben (Immobilien: T1 Konzept, VV: Termin vereinbart), inkl. der noch offenen. Aufklappen zeigt Gewonnen, Verloren und die Basis, mit der sich die Prozentzahl nachrechnen lässt."
           />
           <ExpandableStat
             label="Ø Deal-Time"

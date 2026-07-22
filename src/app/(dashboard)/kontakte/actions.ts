@@ -234,15 +234,20 @@ export async function addTask(input: {
 
   // Zugewiesener bekommt eine In-App-Benachrichtigung (nicht bei Selbst-Aufgabe).
   if (assignedTo !== user.id) {
-    const link = "/benachrichtigungen";
     // Ersteller-Name denormalisiert mitgeben (der Empfänger muss so nicht das
     // Profil des Zuweisenden lesen). „Von X" + Fälligkeit als erste Zeile, die
     // Beschreibung darunter (per Dropdown aufklappbar).
-    const { data: me } = await supabase
-      .from("profiles")
-      .select("vorname, nachname")
-      .eq("id", user.id)
-      .maybeSingle();
+    const [{ data: me }, { data: emp }] = await Promise.all([
+      supabase
+        .from("profiles")
+        .select("vorname, nachname")
+        .eq("id", user.id)
+        .maybeSingle(),
+      supabase.from("profiles").select("rolle").eq("id", assignedTo).maybeSingle(),
+    ]);
+    // Finanzierer haben eine eigene Ansicht — dorthin verlinken.
+    const link =
+      emp?.rolle === "finanzierer" ? "/finanzierer" : "/benachrichtigungen";
     const vonName = me ? `${me.vorname} ${me.nachname}` : "jemandem";
     const kopf = input.faellig_am
       ? `Von ${vonName} · fällig bis ${input.faellig_am}`

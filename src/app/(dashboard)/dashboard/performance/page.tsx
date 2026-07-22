@@ -21,6 +21,7 @@ import {
   volumenGewonnen,
   dealTimeTage,
   closingRate,
+  closingRateDetail,
   stornoQuote,
   forecastGewichtet,
   umsatzRollierend,
@@ -206,10 +207,11 @@ export default async function PerformanceDashboardPage({
       deals: dealTimeDeals,
     },
   ];
+  const closing = closingRateDetail(a);
   const closingDetails = [
     {
       label: "Gewonnen",
-      value: String(wonDeals.length),
+      value: String(closing.won),
       tone: "success",
       deals: wonDeals.map(toVolDeal),
     },
@@ -218,6 +220,14 @@ export default async function PerformanceDashboardPage({
       value: String(lostDeals.length),
       tone: "muted",
       deals: lostDeals.map(toVolDeal),
+    },
+    {
+      // Basis der Quote: alle Deals, die je den Ersttermin erreicht haben
+      // (inkl. der noch offenen) — damit die Prozentzahl nachrechenbar ist:
+      // Gewonnen ÷ Basis = Closing Rate (Feedback SJ).
+      label: "Basis (je Ersttermin erreicht)",
+      value: `${closing.won} / ${closing.base}`,
+      tone: "info",
     },
   ];
   const stornoDetails = [
@@ -427,7 +437,7 @@ export default async function PerformanceDashboardPage({
             iconKey="percent"
             tone="success"
             details={closingDetails}
-            info="Anteil gewonnener an allen abgeschlossenen Deals (gewonnen + verloren). Aufklappen zeigt beide Gruppen mit Einzeldeals."
+            info="Anteil gewonnener Deals an allen, die je den ersten Termin erreicht haben (inkl. der noch offenen). Aufklappen zeigt Gewonnen, Verloren und die Basis, mit der sich die Prozentzahl nachrechnen lässt."
           />
           <ExpandableStat
             label="Stornoquote"
