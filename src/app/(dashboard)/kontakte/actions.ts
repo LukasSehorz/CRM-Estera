@@ -234,17 +234,26 @@ export async function addTask(input: {
 
   // Zugewiesener bekommt eine In-App-Benachrichtigung (nicht bei Selbst-Aufgabe).
   if (assignedTo !== user.id) {
-    const link = input.contact_id
-      ? `/kontakte/${input.contact_id}`
-      : input.deal_id
-        ? `/deals/${input.deal_id}`
-        : "/aufgaben";
+    const link = "/benachrichtigungen";
+    // Ersteller-Name denormalisiert mitgeben (der Empfänger muss so nicht das
+    // Profil des Zuweisenden lesen). „Von X" + Fälligkeit als erste Zeile, die
+    // Beschreibung darunter (per Dropdown aufklappbar).
+    const { data: me } = await supabase
+      .from("profiles")
+      .select("vorname, nachname")
+      .eq("id", user.id)
+      .maybeSingle();
+    const vonName = me ? `${me.vorname} ${me.nachname}` : "jemandem";
+    const kopf = input.faellig_am
+      ? `Von ${vonName} · fällig bis ${input.faellig_am}`
+      : `Von ${vonName}`;
+    const besch = input.beschreibung?.trim();
     await createNotification(supabase, {
       empfaengerId: assignedTo,
       erzeugtVon: user.id,
       typ: "aufgabe",
       titel: `Neue Aufgabe: ${titel}`,
-      text: input.faellig_am ? `Fällig bis ${input.faellig_am}` : null,
+      text: besch ? `${kopf}\n\n${besch}` : kopf,
       link,
     });
   }

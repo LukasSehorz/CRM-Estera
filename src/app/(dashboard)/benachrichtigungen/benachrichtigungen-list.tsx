@@ -1,8 +1,14 @@
 "use client";
 
-import { useEffect, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, ClipboardList, FileText, Trash2 } from "lucide-react";
+import {
+  Bell,
+  ChevronDown,
+  ClipboardList,
+  FileText,
+  Trash2,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDate } from "@/lib/format";
 import { markAllNotificationsRead, deleteNotification } from "./actions";
@@ -25,6 +31,7 @@ function IconFor({ typ }: { typ: string }) {
 export function BenachrichtigungenListe({ items }: { items: NotificationItem[] }) {
   const router = useRouter();
   const [, start] = useTransition();
+  const [offen, setOffen] = useState<string | null>(null);
 
   // Beim Öffnen alles als gelesen markieren — der Zähler in der Navigation
   // leert sich bei der nächsten Navigation. Die Hervorhebung bleibt in dieser
@@ -49,31 +56,11 @@ export function BenachrichtigungenListe({ items }: { items: NotificationItem[] }
   return (
     <ul className="space-y-2">
       {items.map((n) => {
-        const inner = (
-          <div className="flex items-start gap-3">
-            <span
-              className={cn(
-                "mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg",
-                n.typ === "aufgabe"
-                  ? "bg-primary/10 text-primary"
-                  : n.typ === "dokument"
-                    ? "bg-info/10 text-info"
-                    : "bg-surface-2 text-muted-foreground",
-              )}
-            >
-              <IconFor typ={n.typ} />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-foreground">{n.titel}</p>
-              {n.text && (
-                <p className="mt-0.5 text-sm text-muted-foreground">{n.text}</p>
-              )}
-              <p className="mt-1 text-xs tabular-nums text-muted-foreground">
-                {formatDate(n.created_at)}
-              </p>
-            </div>
-          </div>
-        );
+        // Kopf (immer sichtbar, z. B. „Von X · fällig …") und optionale
+        // Beschreibung (per Dropdown aufklappbar) — getrennt durch Leerzeile.
+        const [kopf, ...rest] = (n.text ?? "").split("\n\n");
+        const beschreibung = rest.join("\n\n").trim();
+        const auf = offen === n.id;
         return (
           <li
             key={n.id}
@@ -84,19 +71,55 @@ export function BenachrichtigungenListe({ items }: { items: NotificationItem[] }
                 : "border-primary/40 bg-primary/[0.03]",
             )}
           >
-            <div className="flex items-center gap-2">
+            <div className="flex items-start gap-3">
+              <span
+                className={cn(
+                  "mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg",
+                  n.typ === "aufgabe"
+                    ? "bg-primary/10 text-primary"
+                    : n.typ === "dokument"
+                      ? "bg-info/10 text-info"
+                      : "bg-surface-2 text-muted-foreground",
+                )}
+              >
+                <IconFor typ={n.typ} />
+              </span>
               <div className="min-w-0 flex-1">
                 {n.link ? (
                   <button
                     type="button"
                     onClick={() => router.push(n.link as string)}
-                    className="block w-full text-left"
+                    className="block text-left text-sm font-medium text-foreground hover:underline"
                   >
-                    {inner}
+                    {n.titel}
                   </button>
                 ) : (
-                  inner
+                  <p className="text-sm font-medium text-foreground">{n.titel}</p>
                 )}
+                {kopf && (
+                  <p className="mt-0.5 text-sm text-muted-foreground">{kopf}</p>
+                )}
+                {beschreibung && (
+                  <button
+                    type="button"
+                    onClick={() => setOffen((v) => (v === n.id ? null : n.id))}
+                    aria-expanded={auf}
+                    className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                  >
+                    <ChevronDown
+                      className={cn("h-3.5 w-3.5 transition-transform", auf && "rotate-180")}
+                    />
+                    Beschreibung {auf ? "ausblenden" : "anzeigen"}
+                  </button>
+                )}
+                {beschreibung && auf && (
+                  <p className="mt-1 whitespace-pre-wrap rounded-md bg-surface-2/60 px-3 py-2 text-sm text-muted-foreground">
+                    {beschreibung}
+                  </p>
+                )}
+                <p className="mt-1 text-xs tabular-nums text-muted-foreground">
+                  {formatDate(n.created_at)}
+                </p>
               </div>
               <button
                 type="button"
