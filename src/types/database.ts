@@ -434,6 +434,7 @@ export type Database = {
           id: string;
           contact_id: string;
           dateiname: string;
+          anzeigename: string | null;
           storage_path: string;
           kategorie: string;
           document_type_id: string | null;
@@ -445,6 +446,7 @@ export type Database = {
           id?: string;
           contact_id: string;
           dateiname: string;
+          anzeigename?: string | null;
           storage_path: string;
           kategorie?: string;
           document_type_id?: string | null;
@@ -456,6 +458,7 @@ export type Database = {
           id?: string;
           contact_id?: string;
           dateiname?: string;
+          anzeigename?: string | null;
           storage_path?: string;
           kategorie?: string;
           document_type_id?: string | null;
@@ -740,6 +743,7 @@ export type Database = {
         Returns: {
           id: string;
           dateiname: string;
+          anzeigename: string | null;
           kategorie: string;
           document_type_id: string | null;
           storage_path: string;

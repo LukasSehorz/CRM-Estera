@@ -13,6 +13,7 @@ export type FinKunde = { contactId: string; name: string };
 type FinDoc = {
   id: string;
   dateiname: string;
+  anzeigename: string | null;
   kategorie: string;
   storage_path: string;
   groesse: number | null;
@@ -121,7 +122,8 @@ export function FinanziererView({ kunden }: { kunden: FinKunde[] }) {
                         <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
                         <div className="min-w-0 flex-1">
                           <div className="truncate text-sm">
-                            {dokumentAnzeigename(d.kategorie, d.dateiname)}
+                            {d.anzeigename ||
+                              dokumentAnzeigename(d.kategorie, d.dateiname)}
                           </div>
                           <div className="truncate text-xs tabular-nums text-muted-foreground">
                             {formatBytes(d.groesse)}

@@ -56,7 +56,7 @@ export default async function KontaktDetailPage({
     supabase
       .from("contact_documents")
       .select(
-        "id, dateiname, storage_path, kategorie, document_type_id, groesse, created_at",
+        "id, dateiname, anzeigename, storage_path, kategorie, document_type_id, groesse, created_at",
       )
       .eq("contact_id", id)
       .order("created_at", { ascending: false }),
@@ -159,6 +159,7 @@ export default async function KontaktDetailPage({
     (docs ?? []).map((d) => ({
       id: d.id,
       dateiname: d.dateiname,
+      anzeigename: d.anzeigename,
       storage_path: d.storage_path,
       groesse: d.groesse,
       created_at: d.created_at,

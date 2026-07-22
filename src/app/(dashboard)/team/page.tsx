@@ -137,7 +137,9 @@ export default async function TeamPage() {
     const [{ data: kdocs }, { data: fg }] = await Promise.all([
       supabase
         .from("contact_documents")
-        .select("id, contact_id, kategorie, dateiname, contacts(vorname, nachname)")
+        .select(
+          "id, contact_id, kategorie, dateiname, anzeigename, contacts(vorname, nachname)",
+        )
         .order("created_at", { ascending: false }),
       supabase.from("document_freigaben").select("document_id, finanzierer_id"),
     ]);
@@ -154,7 +156,12 @@ export default async function TeamPage() {
         name,
         docs: [],
       };
-      cur.docs.push({ id: d.id, dateiname: d.dateiname, kategorie: d.kategorie });
+      cur.docs.push({
+        id: d.id,
+        dateiname: d.dateiname,
+        anzeigename: d.anzeigename,
+        kategorie: d.kategorie,
+      });
       byContact.set(d.contact_id, cur);
     }
     finanziererKunden = [...byContact.values()];

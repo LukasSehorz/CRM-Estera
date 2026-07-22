@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { DOKUMENT_UPLOAD_AKTIV } from "@/config/enums";
 import { formatBytes, formatDate } from "@/lib/format";
-import { dokumentAnzeigename } from "@/lib/dokumente";
+import { dokumentAnzeigename, slotOptionen } from "@/lib/dokumente";
 import { buildZip, uniqueName } from "@/lib/zip";
 import { setDocumentStatus } from "./actions";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -41,6 +41,7 @@ export type DocType = {
 export type DocFile = {
   id: string;
   dateiname: string;
+  anzeigename?: string | null;
   storage_path: string;
   groesse: number | null;
   created_at?: string;
@@ -93,7 +94,11 @@ export function DocumentChecklist({
   // Bei State läse onFile() ggf. noch den alten (null) Wert aus dem Closure,
   // bevor React neu gerendert hat → Upload feuerte gar nicht (Bug Call SJ).
   const uploadTypeRef = useRef<string | null>(null);
+  // Bei Mehrfach-Slots die konkret gewählte Dokumentart (z. B. „Reisepass").
+  const uploadLabelRef = useRef<string | null>(null);
   const [busyType, setBusyType] = useState<string | null>(null);
+  // Offenes Sub-Typ-Menü (Slot-ID) bei Mehrfach-Slots.
+  const [subMenu, setSubMenu] = useState<string | null>(null);
   const [dragType, setDragType] = useState<string | null>(null);
   const [zipping, setZipping] = useState(false);
   const [pending, start] = useTransition();
@@ -137,12 +142,25 @@ export function DocumentChecklist({
     });
   }
 
-  function pickFile(typeId: string) {
+  function pickFile(typeId: string, label?: string) {
     uploadTypeRef.current = typeId;
+    uploadLabelRef.current = label ?? null;
+    setSubMenu(null);
     fileRef.current?.click();
   }
 
-  async function uploadFiles(typeId: string, files: FileList | File[]) {
+  /** Klick auf „Anhängen": bei Mehrfach-Slots erst die Dokumentart wählen. */
+  function onAnhaengen(typeId: string, typeName: string) {
+    const opts = slotOptionen(typeName);
+    if (opts.length > 1) setSubMenu((s) => (s === typeId ? null : typeId));
+    else pickFile(typeId);
+  }
+
+  async function uploadFiles(
+    typeId: string,
+    files: FileList | File[],
+    label?: string | null,
+  ) {
     const typ = types.find((t) => t.id === typeId);
     setBusyType(typeId);
     let ok = 0;
@@ -173,6 +191,9 @@ export function DocumentChecklist({
         const { error: insErr } = await supabase.from("contact_documents").insert({
           contact_id: contactId,
           dateiname: file.name,
+          // Bei Mehrfach-Slot die gewählte Art (z. B. „Reisepass"), sonst NULL
+          // → Anzeigename wird aus dem Slot-Typ abgeleitet.
+          anzeigename: label ?? null,
           storage_path: path,
           kategorie: typ?.name ?? "Sonstige",
           document_type_id: typeId,
@@ -208,9 +229,11 @@ export function DocumentChecklist({
     const files = e.target.files ? Array.from(e.target.files) : [];
     e.target.value = "";
     const typeId = uploadTypeRef.current;
+    const label = uploadLabelRef.current;
     uploadTypeRef.current = null;
+    uploadLabelRef.current = null;
     if (!files.length || !typeId) return;
-    await uploadFiles(typeId, files);
+    await uploadFiles(typeId, files, label);
   }
 
   async function download(f: DocFile) {
@@ -389,7 +412,7 @@ export function DocumentChecklist({
                           <button
                             type="button"
                             disabled={busy}
-                            onClick={() => pickFile(t.id)}
+                            onClick={() => onAnhaengen(t.id, t.name)}
                             title="Datei(en) anhängen"
                             className="inline-flex shrink-0 items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-50"
                           >
@@ -404,6 +427,27 @@ export function DocumentChecklist({
                           </button>
                         )}
                       </div>
+                      {/* Mehrfach-Slot: erst die konkrete Dokumentart wählen
+                          (Kunden-Feedback: Reisepass/Aufenthaltstitel korrekt
+                          benennen statt pauschal „Personalausweis"). */}
+                      {subMenu === t.id && (
+                        <div className="ml-7 mt-1.5 flex flex-wrap items-center gap-1.5 rounded-md border border-border bg-surface-2/50 p-2">
+                          <span className="mr-1 text-xs text-muted-foreground">
+                            Welche Art?
+                          </span>
+                          {slotOptionen(t.name).map((opt) => (
+                            <button
+                              key={opt}
+                              type="button"
+                              disabled={busy}
+                              onClick={() => pickFile(t.id, opt)}
+                              className="rounded-md border border-border bg-surface px-2.5 py-1 text-xs font-medium transition-colors hover:border-primary hover:text-primary disabled:opacity-50"
+                            >
+                              {opt}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                       {/* Dateien je Punkt — aufklappbar, UNTEREINANDER (Wunsch
                           Lukas): mehrere je Punkt, jederzeit nachreichbar. */}
                       {dateien.length > 0 && openTypes.has(t.id) && (
@@ -419,12 +463,13 @@ export function DocumentChecklist({
                                     Feedback): z. B. „Personalausweis". Original-
                                     dateiname als Zusatz. */}
                                 <div className="truncate text-sm">
-                                  {dokumentAnzeigename(
-                                    t.name,
-                                    f.dateiname,
-                                    i,
-                                    dateien.length,
-                                  )}
+                                  {f.anzeigename ||
+                                    dokumentAnzeigename(
+                                      t.name,
+                                      f.dateiname,
+                                      i,
+                                      dateien.length,
+                                    )}
                                 </div>
                                 <div className="truncate text-xs tabular-nums text-muted-foreground">
                                   {f.dateiname} · {formatBytes(f.groesse)}

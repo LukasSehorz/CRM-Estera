@@ -9,6 +9,7 @@ import { DocumentChecklist, type DocType } from "./document-checklist";
 type LoadedDoc = {
   id: string;
   dateiname: string;
+  anzeigename: string | null;
   storage_path: string;
   kategorie: string;
   document_type_id: string | null;
@@ -45,7 +46,7 @@ export function ContactChecklistLoader({ contactId }: { contactId: string }) {
       supabase
         .from("contact_documents")
         .select(
-          "id, dateiname, storage_path, kategorie, document_type_id, groesse, created_at",
+          "id, dateiname, anzeigename, storage_path, kategorie, document_type_id, groesse, created_at",
         )
         .eq("contact_id", contactId)
         .order("created_at", { ascending: false }),

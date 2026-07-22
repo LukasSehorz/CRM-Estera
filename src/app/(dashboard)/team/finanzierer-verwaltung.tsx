@@ -19,7 +19,12 @@ import {
   setAlleFreigaben,
 } from "../kontakte/freigabe-actions";
 
-export type FinDoc = { id: string; dateiname: string; kategorie: string };
+export type FinDoc = {
+  id: string;
+  dateiname: string;
+  anzeigename: string | null;
+  kategorie: string;
+};
 export type FinKunde = { contactId: string; name: string; docs: FinDoc[] };
 export type FinOpt = { id: string; name: string };
 
@@ -202,7 +207,8 @@ export function FinanziererVerwaltung({
                             onCheckedChange={(c) => toggleDoc(k, d.id, c === true)}
                           />
                           <span className="min-w-0 flex-1 truncate">
-                            {dokumentAnzeigename(d.kategorie, d.dateiname)}
+                            {d.anzeigename ||
+                              dokumentAnzeigename(d.kategorie, d.dateiname)}
                             <span className="ml-1.5 text-xs text-muted-foreground">
                               {d.dateiname}
                             </span>

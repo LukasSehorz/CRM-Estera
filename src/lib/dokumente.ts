@@ -48,6 +48,20 @@ export function dokumentAnzeigename(
   return anzahl > 1 ? `${kurz} (${index + 1})` : kurz;
 }
 
+/**
+ * Sub-Typen eines Mehrfach-Slots (Kunden-Feedback 22.07.):
+ * „Personalausweis / Reisepass + Aufenthaltstitel (Vorder- und Rückseite)"
+ * → ["Personalausweis", "Reisepass", "Aufenthaltstitel"]. Bei nur EINEM
+ * Ergebnis gibt es keine Auswahl (Standard-Slot).
+ */
+export function slotOptionen(typename: string): string[] {
+  const kopf = typename.split(" (")[0];
+  return kopf
+    .split(/ \/ | \+ | oder /)
+    .map((s) => s.replace(/^[„"'»]+|[""'«]+$/g, "").trim())
+    .filter(Boolean);
+}
+
 /** Liefert die document_type_id, unter der ein Dokument einsortiert wird. */
 export function resolveDocTypeId(
   doc: { document_type_id: string | null; kategorie: string },
@@ -67,6 +81,7 @@ export function resolveDocTypeId(
 type DocInput = {
   id: string;
   dateiname: string;
+  anzeigename?: string | null;
   storage_path: string;
   groesse: number | null;
   created_at: string;
@@ -77,6 +92,7 @@ type DocInput = {
 export type ResolvedDocFile = {
   id: string;
   dateiname: string;
+  anzeigename: string | null;
   storage_path: string;
   groesse: number | null;
   created_at: string;
@@ -97,6 +113,7 @@ export function groupDocsByType(
     (map[typeId] ??= []).push({
       id: d.id,
       dateiname: d.dateiname,
+      anzeigename: d.anzeigename ?? null,
       storage_path: d.storage_path,
       groesse: d.groesse,
       created_at: d.created_at,

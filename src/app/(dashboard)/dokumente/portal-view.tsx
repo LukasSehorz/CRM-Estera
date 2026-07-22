@@ -43,6 +43,7 @@ export type PortalDoc = {
 export type KundenDoc = {
   id: string;
   dateiname: string;
+  anzeigename: string | null;
   storage_path: string;
   kategorie: string;
   documentTypeId: string | null;
@@ -557,6 +558,7 @@ function KundenListe({
                         o.docs.map((d) => ({
                           id: d.id,
                           dateiname: d.dateiname,
+                          anzeigename: d.anzeigename,
                           storage_path: d.storage_path,
                           groesse: d.groesse,
                           created_at: d.created_at,

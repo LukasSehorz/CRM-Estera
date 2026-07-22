@@ -47,7 +47,7 @@ export default async function DokumentePortalPage() {
     supabase
       .from("contact_documents")
       .select(
-        "id, dateiname, storage_path, kategorie, document_type_id, groesse, created_at, contact_id, contacts(vorname, nachname, ist_selbststaendig, ist_immobilienbesitzer, interesse)",
+        "id, dateiname, anzeigename, storage_path, kategorie, document_type_id, groesse, created_at, contact_id, contacts(vorname, nachname, ist_selbststaendig, ist_immobilienbesitzer, interesse)",
       )
       .order("created_at", { ascending: false })
       .limit(500),
@@ -108,6 +108,7 @@ export default async function DokumentePortalPage() {
     return {
       id: d.id,
       dateiname: d.dateiname,
+      anzeigename: d.anzeigename,
       storage_path: d.storage_path,
       kategorie: d.kategorie,
       documentTypeId: d.document_type_id,
