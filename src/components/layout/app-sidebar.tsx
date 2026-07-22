@@ -91,13 +91,21 @@ const railText = (rail: boolean) =>
 
 function Brand({ rail = false }: { rail?: boolean }) {
   return (
-    <div className="flex items-center gap-2.5 px-4 py-5">
-      <BrandMark className="h-8 w-8 shrink-0" />
-      <span
-        className={cn("text-base font-semibold tracking-tight", railText(rail))}
-      >
-        {BRANDING.company}
-      </span>
+    <div className="flex items-center px-4 py-5">
+      {/* Eingeklappte Rail: nur das E-Icon. Beim Aufklappen (und mobil) die
+          volle Wortmarke. Navy auf hell, per Filter Off-White auf dunkel. */}
+      {rail && (
+        <BrandMark className="h-8 w-8 shrink-0 group-hover/sidebar:hidden" />
+      )}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={BRANDING.wordmarkSrc}
+        alt={BRANDING.company}
+        className={cn(
+          "h-6 w-auto object-contain dark:brightness-0 dark:invert",
+          rail ? "hidden group-hover/sidebar:block" : "block",
+        )}
+      />
     </div>
   );
 }
@@ -289,10 +297,12 @@ export function MobileNav({
   return (
     <div className="lg:hidden">
       <div className="flex items-center justify-between border-b border-border bg-sidebar px-4 py-3">
-        <div className="flex items-center gap-2.5">
-          <BrandMark className="h-7 w-7" />
-          <span className="font-semibold">{BRANDING.company}</span>
-        </div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={BRANDING.wordmarkSrc}
+          alt={BRANDING.company}
+          className="h-6 w-auto object-contain dark:brightness-0 dark:invert"
+        />
         <button
           type="button"
           onClick={() => setOpen(true)}

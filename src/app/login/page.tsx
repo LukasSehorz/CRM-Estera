@@ -51,16 +51,6 @@ export default function LoginPage() {
               style={{ filter: "drop-shadow(0 12px 24px rgba(0, 0, 0, 0.45))" }}
             />
           </div>
-          <div
-            className="mt-6 text-3xl font-semibold tracking-tight animate-in fade-in slide-in-from-bottom-2"
-            style={{
-              animationDuration: "700ms",
-              animationDelay: "100ms",
-              animationFillMode: "backwards",
-            }}
-          >
-            Estera GmbH
-          </div>
           <h1
             className="mt-8 text-4xl font-semibold leading-tight tracking-tight animate-in fade-in slide-in-from-bottom-2"
             style={{
