@@ -230,7 +230,12 @@ export default async function TeamPage() {
     });
   }
   for (const p of profiles ?? []) {
-    if (p.parent_berater_id && nodeMap.has(p.parent_berater_id)) {
+    // Nur existierende Knoten verketten — Finanzierer sind nicht im Baum.
+    if (
+      p.parent_berater_id &&
+      nodeMap.has(p.parent_berater_id) &&
+      nodeMap.has(p.id)
+    ) {
       nodeMap.get(p.parent_berater_id)!.children.push(nodeMap.get(p.id)!);
     }
   }
@@ -268,7 +273,11 @@ export default async function TeamPage() {
     : nodeMap.get(user.id);
   if (isGf && structureRoot) {
     for (const p of profiles ?? []) {
-      if (!p.parent_berater_id && p.rolle !== "geschaeftsfuehrung") {
+      if (
+        !p.parent_berater_id &&
+        p.rolle !== "geschaeftsfuehrung" &&
+        nodeMap.has(p.id)
+      ) {
         structureRoot.children.push(nodeMap.get(p.id)!);
       }
     }

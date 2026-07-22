@@ -211,7 +211,7 @@ export function AufgabenView({
             onChange={(e) => setFaellig(e.target.value)}
           />
           <Select value={kontakt} onValueChange={setKontaktUndReset}>
-            <SelectTrigger>
+            <SelectTrigger className="w-full min-w-0">
               <SelectValue placeholder="Kunde (optional)" />
             </SelectTrigger>
             <SelectContent>
@@ -229,7 +229,7 @@ export function AufgabenView({
             onValueChange={setDeal}
             disabled={kontakt === NONE}
           >
-            <SelectTrigger>
+            <SelectTrigger className="w-full min-w-0">
               <SelectValue
                 placeholder={
                   kontakt === NONE ? "Erst Kunde wählen" : "Deal (optional)"
@@ -248,7 +248,7 @@ export function AufgabenView({
           {/* Zuweisen (Kunden-Feedback): an einen Berater; Standard = mir selbst. */}
           {beraterOptionen.length > 0 && (
             <Select value={zuweisung} onValueChange={setZuweisung}>
-              <SelectTrigger>
+              <SelectTrigger className="w-full min-w-0">
                 <SelectValue placeholder="Zuweisen an" />
               </SelectTrigger>
               <SelectContent>
