@@ -24,6 +24,47 @@ function dauer(from: string, to: string): string {
   return `${Math.round(std / 24)} Tg.`;
 }
 
+/** Gesamte Deal-Time in Tagen (kompakt) — Start bis Abschluss bzw. bis jetzt. */
+function dealTimeText(startISO: string, endISO: string): string {
+  const ms = new Date(endISO).getTime() - new Date(startISO).getTime();
+  if (Number.isNaN(ms) || ms < 0) return "—";
+  const tage = Math.floor(ms / 86_400_000);
+  if (tage >= 1) return `${tage} Tag${tage === 1 ? "" : "e"}`;
+  const std = Math.max(1, Math.round(ms / 3_600_000));
+  return `${std} Std.`;
+}
+
+/** Kompakte Kennzahl-Kachel für den Deal (Deal-Time / Storno-Status). */
+function DealKpi({
+  label,
+  value,
+  hint,
+  tone = "foreground",
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+  tone?: "foreground" | "success" | "danger" | "primary";
+}) {
+  const toneCls =
+    tone === "success"
+      ? "text-success"
+      : tone === "danger"
+        ? "text-danger"
+        : tone === "primary"
+          ? "text-primary"
+          : "text-foreground";
+  return (
+    <div className="rounded-lg border border-border bg-surface-2/40 p-3">
+      <p className="text-[11px] text-muted-foreground">{label}</p>
+      <p className={cn("mt-0.5 text-lg font-semibold tabular-nums", toneCls)}>
+        {value}
+      </p>
+      {hint && <p className="mt-0.5 text-[11px] text-muted-foreground">{hint}</p>}
+    </div>
+  );
+}
+
 function Row({
   label,
   value,
@@ -93,8 +134,43 @@ export function DealSidebar({
           </Row>
           <Row label="Berater" value={beraterName} />
           <Row label="Erstellt" value={formatDate(createdAt)} />
-          {closedAt && <Row label="Gewonnen am" value={formatDate(closedAt)} />}
+          {closedAt && (
+            <Row
+              label={isLost ? "Storniert am" : "Gewonnen am"}
+              value={formatDate(closedAt)}
+            />
+          )}
         </dl>
+      </section>
+
+      {/* Kennzahlen dieses Deals (Call SJ C3/C4): Deal-Time + Storno-Status.
+          Die Aufschlüsselung der Deal-Time auf die Phasen steht im Phasen-
+          Verlauf darunter. */}
+      <section className="rounded-xl border border-border bg-surface p-5">
+        <h2 className="text-base font-semibold">Kennzahlen</h2>
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <DealKpi
+            label="Deal-Time"
+            value={dealTimeText(createdAt, closedAt ?? new Date().toISOString())}
+            hint={isWon || isLost ? "Start bis Abschluss" : "läuft seit Start"}
+          />
+          <DealKpi
+            label="Status"
+            value={isWon ? "Gewonnen" : isLost ? "Storniert" : "Aktiv"}
+            tone={isWon ? "success" : isLost ? "danger" : "primary"}
+            hint={
+              isLost && history.length > 1
+                ? `aus „${history[1].stageName}"`
+                : isWon
+                  ? "Kauf abgeschlossen"
+                  : currentStageName
+            }
+          />
+        </div>
+        <p className="mt-2 text-[11px] text-muted-foreground">
+          Deal-Time = Erstkontakt bis {isWon || isLost ? "Abschluss" : "heute"}.
+          Verteilung auf die Phasen im Verlauf unten.
+        </p>
       </section>
 
       {/* Phasen-Verlauf (aus deal_stage_history) */}

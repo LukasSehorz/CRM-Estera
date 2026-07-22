@@ -1,7 +1,5 @@
-import { Percent, Ruler, Timer, Undo2 } from "lucide-react";
 import { Topbar } from "@/components/layout/topbar";
 import { formatEUR, formatProzent } from "@/lib/format";
-import { KpiCard } from "@/components/charts/kpi-card";
 import { ExpandableStat } from "@/components/charts/expandable-stat";
 import { DashboardTabs } from "../dashboard-tabs";
 import { BereichSwitcher } from "../bereich-switcher";
@@ -29,6 +27,8 @@ import {
   umsatzRollierend,
   isOpen,
   isWon,
+  isLost,
+  betragOf,
 } from "@/lib/analytics";
 import { dealBeraterProvision } from "@/lib/provision";
 import { InfoHint } from "@/components/ui/info-hint";
@@ -143,6 +143,73 @@ export default async function PerformanceDashboardPage({
   // Ø Deal-Größe = Transaktionsvolumen (1.1), nicht die Provision.
   const avgGroesse = gewonnen ? volumenGewonnen(a) / gewonnen : 0;
   const storno = stornoQuote(a);
+  // Drill-down-Deals hinter den 4 KPIs (Feedback SJ: jede KPI bis zum Einzel-
+  // deal aufklappbar — nachvollziehen, wie die Zahl entsteht).
+  const toVolDeal = (d: (typeof a.deals)[number]) => ({
+    name: d.dealname,
+    value: formatEUR(betragOf(d)),
+    sub: d.bereich === "immobilien" ? "Immo" : "VV",
+  });
+  const wonDeals = a.deals.filter((d) => isWon(d, a.sMap));
+  const lostDeals = a.deals.filter((d) => isLost(d, a.sMap));
+  const dealTimeDeals = a.deals
+    .filter((d) => a.istRealisiert(d))
+    .map((d) => {
+      const am = a.realisiertAm(d);
+      const t = am
+        ? Math.max(
+            0,
+            Math.round(
+              (new Date(am).getTime() - new Date(d.created_at).getTime()) /
+                86_400_000,
+            ),
+          )
+        : 0;
+      return { name: d.dealname, value: `${t} Tage`, sub: t, _t: t };
+    })
+    .sort((x, y) => y._t - x._t)
+    .map((r) => ({ name: r.name, value: r.value, sub: `${r._t} Tg.` }));
+  const groesseDetails = [
+    {
+      label: "Gewonnene Deals",
+      value: String(gewonnen),
+      tone: "primary",
+      deals: [...wonDeals]
+        .sort((x, y) => betragOf(y) - betragOf(x))
+        .map(toVolDeal),
+    },
+  ];
+  const dealTimeDetails = [
+    {
+      label: "Realisierte Deals",
+      value: String(dealTimeDeals.length),
+      tone: "info",
+      deals: dealTimeDeals,
+    },
+  ];
+  const closingDetails = [
+    {
+      label: "Gewonnen",
+      value: String(wonDeals.length),
+      tone: "success",
+      deals: wonDeals.map(toVolDeal),
+    },
+    {
+      label: "Verloren / Storniert",
+      value: String(lostDeals.length),
+      tone: "muted",
+      deals: lostDeals.map(toVolDeal),
+    },
+  ];
+  const stornoDetails = [
+    {
+      label: "Storniert",
+      value: String(lostDeals.length),
+      tone: "muted",
+      deals: lostDeals.map(toVolDeal),
+    },
+    { label: "Gewonnen (kein Storno)", value: String(wonDeals.length), tone: "success" },
+  ];
   const forecast = forecastGewichtet(a);
   // Rollierender 30-Tage-Umsatz — dieselbe Zahl wie auf dem Übersicht-Dashboard,
   // damit man sie nach dem KPI-Klick auch hier auf einen Blick sieht (Wunsch 3).
@@ -311,37 +378,45 @@ export default async function PerformanceDashboardPage({
             tone="accent"
             details={umsatzDetails(splitGesamt)}
           />
-          <KpiCard
+          <ExpandableStat
             label="Ø Deal-Größe (Volumen)"
             value={avgGroesse ? formatEUR(avgGroesse) : "—"}
-            icon={Ruler}
+            iconKey="ruler"
             tone="info"
+            details={groesseDetails}
+            info="Durchschnittliches Transaktionsvolumen der gewonnenen Deals (Kaufpreis bzw. BWS). Aufklappen zeigt alle Abschlüsse mit ihrem Volumen."
           />
-          <KpiCard
+          <ExpandableStat
             label="Ø Deal-Time"
             value={
               dealTimeTage(a) != null
                 ? `${Math.round(dealTimeTage(a) as number)} Tage`
                 : "—"
             }
-            icon={Timer}
+            iconKey="timer"
             tone="warning"
+            details={dealTimeDetails}
+            info="Durchschnittliche Zeit vom Erstkontakt bis zum Abschluss. Aufklappen zeigt die Deal-Time jedes realisierten Deals."
           />
-          <KpiCard
+          <ExpandableStat
             label="Closing Rate"
             value={
               closingRate(a) != null
                 ? formatProzent(closingRate(a) as number, 0)
                 : "—"
             }
-            icon={Percent}
+            iconKey="percent"
             tone="success"
+            details={closingDetails}
+            info="Anteil gewonnener an allen abgeschlossenen Deals (gewonnen + verloren). Aufklappen zeigt beide Gruppen mit Einzeldeals."
           />
-          <KpiCard
+          <ExpandableStat
             label="Stornoquote"
             value={storno != null ? formatProzent(storno, 0) : "—"}
-            icon={Undo2}
+            iconKey="undo"
             tone="danger"
+            details={stornoDetails}
+            info="Anteil stornierter an allen abgeschlossenen Deals. Aufklappen zeigt, welche Deals storniert wurden."
           />
         </div>
 
