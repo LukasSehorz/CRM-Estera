@@ -236,6 +236,16 @@ function validate(v: DealInput): string | null {
   if (!v.contact_id) return "Bitte einen Kunden verknüpfen.";
   if (!v.dealname.trim()) return "Bitte einen Dealnamen vergeben.";
   if (!v.stage_id) return "Bitte eine Phase wählen.";
+  // Der Berater-Anteil kommt AUS der Estera-Provision — er darf den
+  // Provisionssatz nie übersteigen (sonst wäre der Estera-Netto negativ,
+  // Call SJ). Nur prüfen, wenn beide Werte gesetzt sind.
+  if (
+    v.bereich === "immobilien" &&
+    v.provisionssatz != null &&
+    v.berater_anteil != null &&
+    v.berater_anteil > v.provisionssatz
+  )
+    return "Der Berater-Anteil darf den Provisionssatz nicht übersteigen.";
   return null;
 }
 

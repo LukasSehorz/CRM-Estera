@@ -163,7 +163,10 @@ export function computeImmoProvision(
   return {
     esteraProvision,
     beraterProvision,
-    hausAnteil: esteraProvision - beraterProvision,
+    // Estera-Netto kann nie negativ sein: der Berater-Anteil kommt AUS der
+    // Estera-Provision — übersteigt der Anteil (fehlerhaft/unvollständig) den
+    // Provisionssatz, ist der Netto-Umsatz 0, nicht negativ (Call SJ).
+    hausAnteil: Math.max(0, esteraProvision - beraterProvision),
   };
 }
 
@@ -211,7 +214,8 @@ export function dealEsteraUmsatz(
     return computeImmoProvision(d.kaufpreis, d.provisionssatz, d.berater_anteil, modus)
       .hausAnteil;
   }
-  return vvBasis(d) * (1 - (vertrieblerStufe ?? 0) / 100);
+  // Auch bei VV nie negativ (falls eine Stufe > 100 % gesetzt würde).
+  return Math.max(0, vvBasis(d) * (1 - (vertrieblerStufe ?? 0) / 100));
 }
 
 export function dealBeraterProvision(
