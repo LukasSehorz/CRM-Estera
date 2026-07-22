@@ -87,7 +87,11 @@ export function DocumentChecklist({
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const fileRef = useRef<HTMLInputElement>(null);
-  const [uploadTypeId, setUploadTypeId] = useState<string | null>(null);
+  // Welcher Checklisten-Typ gerade hochgeladen wird — bewusst als REF, nicht als
+  // State: pickFile() öffnet den Datei-Dialog synchron direkt nach dem Setzen.
+  // Bei State läse onFile() ggf. noch den alten (null) Wert aus dem Closure,
+  // bevor React neu gerendert hat → Upload feuerte gar nicht (Bug Call SJ).
+  const uploadTypeRef = useRef<string | null>(null);
   const [busyType, setBusyType] = useState<string | null>(null);
   const [dragType, setDragType] = useState<string | null>(null);
   const [zipping, setZipping] = useState(false);
@@ -133,7 +137,7 @@ export function DocumentChecklist({
   }
 
   function pickFile(typeId: string) {
-    setUploadTypeId(typeId);
+    uploadTypeRef.current = typeId;
     fileRef.current?.click();
   }
 
@@ -197,11 +201,14 @@ export function DocumentChecklist({
   }
 
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = e.target.files;
+    // Dateien SNAPSHOTTEN, bevor der Input zurückgesetzt wird: `e.target.value
+    // = ""` leert die Live-FileList, auf die `e.target.files` nur verweist —
+    // sonst wären es 0 Dateien und der Upload feuerte nie (Bug Call SJ).
+    const files = e.target.files ? Array.from(e.target.files) : [];
     e.target.value = "";
-    const typeId = uploadTypeId;
-    setUploadTypeId(null);
-    if (!files?.length || !typeId) return;
+    const typeId = uploadTypeRef.current;
+    uploadTypeRef.current = null;
+    if (!files.length || !typeId) return;
     await uploadFiles(typeId, files);
   }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import { toast } from "sonner";
 import { Paperclip, Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -36,7 +36,8 @@ export function StagedChecklist({
   onChange: (next: StagedByType) => void;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
-  const [uploadTypeId, setUploadTypeId] = useState<string | null>(null);
+  // REF statt State (Race, siehe document-checklist): synchron gesetzt/gelesen.
+  const uploadTypeRef = useRef<string | null>(null);
 
   const sichtbar = types.filter(
     (t) =>
@@ -49,17 +50,18 @@ export function StagedChecklist({
   ).filter((g) => sichtbar.some((t) => t.gruppe === g));
 
   function pick(typeId: string) {
-    setUploadTypeId(typeId);
+    uploadTypeRef.current = typeId;
     fileRef.current?.click();
   }
   function onFiles(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = e.target.files;
+    // Snapshot vor dem Reset — sonst leert `e.target.value = ""` die FileList.
+    const files = e.target.files ? Array.from(e.target.files) : [];
     e.target.value = "";
-    const typeId = uploadTypeId;
-    setUploadTypeId(null);
-    if (!files?.length || !typeId) return;
+    const typeId = uploadTypeRef.current;
+    uploadTypeRef.current = null;
+    if (!files.length || !typeId) return;
     const neu: File[] = [];
-    for (const f of Array.from(files)) {
+    for (const f of files) {
       if (f.size > MAX_BYTES) {
         toast.error(`„${f.name}" ist zu groß (max. 15 MB).`);
         continue;
