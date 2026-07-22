@@ -243,3 +243,28 @@ Nicht „… Andy", kein Kontaktname — nur der Typ.
 
 Alle Entscheidungen sind geklärt. Ich setze in dieser Reihenfolge um und melde
 mich nach jedem Punkt zurück.
+
+---
+
+## Backlog — später besprechen, NICHT jetzt umsetzen
+
+### Tippgeber-Vertrag digital unterschreiben (E-Signatur)
+Kunden-Wunsch (22.07.): Beim Anlegen eines Tippgebers soll dieser erst final
+freigegeben werden, nachdem er einen Vertrag **digital unterschrieben** hat.
+
+Vorgesehener Ablauf (machbar, aber bewusst zurückgestellt):
+- Neuer Tippgeber-Status **„wartet_unterschrift"** (statt sofort aktiv) — zählt
+  noch nicht in Provisionen/Struktur; UI zeigt „Wartet auf Vertragsunterzeichnung".
+- Beim Anlegen automatisch Vertrag per E-Mail über einen **E-Signatur-Dienst**
+  senden (EU/DSGVO: **Yousign**, **Skribble** (eIDAS) oder DocuSign EU).
+- **Webhook** des Anbieters → bei erfolgter Unterschrift Status auf **„aktiv"**,
+  unterschriebenes PDF in die Tippgeber-Akte.
+
+Aufwand: mittel. Braucht einen (kostenpflichtigen) Anbieter-Account + API-Key +
+Webhook-Endpunkt. Anbieter-Entscheidung steht noch aus.
+
+### Offene organisatorische Punkte (Betreiber, nicht Code)
+- DSGVO: Supabase-Region EU (Frankfurt) bestätigen, AVV mit Supabase + Netlify,
+  Datenschutzerklärung, Löschkonzept, produktive Passwörter statt Demo.
+- Übergabe: Deployment/Repo auf Estera-Accounts, alle Schlüssel rotieren, eigene
+  Zugänge entfernen.
