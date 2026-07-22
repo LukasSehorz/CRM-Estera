@@ -30,6 +30,10 @@ export default async function DashboardLayout({
     .eq("empfaenger_id", user.id)
     .eq("gelesen", false);
 
+  // Finanzierer (Kunden-Feedback 22.07.): stark eingeschränkte Rolle — hat im
+  // normalen CRM-Bereich nichts zu suchen, wird auf die eigene Ansicht geleitet.
+  if (profile?.rolle === "finanzierer") redirect("/finanzierer");
+
   const isGf = profile?.rolle === "geschaeftsfuehrung";
   // Backoffice (2.5): Admin ohne Provisionsrechte — sieht beide Sparten.
   const isBackoffice = profile?.rolle === "backoffice";

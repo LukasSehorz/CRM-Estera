@@ -67,7 +67,9 @@
       "Bash(node .p2shot.mjs)",
       "Bash(node scripts/run-migration.mjs supabase/migrations/0025_benachrichtigungen.sql)",
       "Bash(awk '/export async function addTask/,/^}/' \"src/app/\\(dashboard\\)/kontakte/actions.ts\")",
-      "Bash(node scripts/run-migration.mjs supabase/migrations/0026_aufgaben_zuweisung.sql)"
+      "Bash(node scripts/run-migration.mjs supabase/migrations/0026_aufgaben_zuweisung.sql)",
+      "Bash(node scripts/run-migration.mjs supabase/migrations/0027_rolle_finanzierer.sql)",
+      "Bash(node scripts/run-migration.mjs supabase/migrations/0028_finanzierer_freigaben.sql)"
     ]
   }
 }

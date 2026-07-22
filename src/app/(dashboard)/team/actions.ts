@@ -141,7 +141,7 @@ export async function setBeraterAnbindung(
   return { ok: true };
 }
 
-type Rolle = "berater" | "backoffice";
+type Rolle = "berater" | "backoffice" | "finanzierer";
 
 /**
  * Ändert die Rolle zwischen Berater und Backoffice (2.5). Nutzt den Admin-
@@ -301,7 +301,12 @@ export async function createBerater(
     };
   }
 
-  const rolle: Rolle = input.rolle === "backoffice" ? "backoffice" : "berater";
+  const rolle: Rolle =
+    input.rolle === "backoffice"
+      ? "backoffice"
+      : input.rolle === "finanzierer"
+        ? "finanzierer"
+        : "berater";
   const { error: profileError } = await admin.from("profiles").insert({
     id: created.user.id,
     vorname,

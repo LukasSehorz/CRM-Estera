@@ -8,6 +8,7 @@ import { formatEUR } from "@/lib/format";
 import { dealVolumen } from "@/lib/provision";
 import { ContactForm, type FormState } from "../contact-form";
 import { DocumentChecklist, type DocType } from "../document-checklist";
+import { FinanziererFreigabe } from "../finanzierer-freigabe";
 import { groupDocsByType } from "@/lib/dokumente";
 import { ContactTimeline, type ActivityRow } from "../contact-timeline";
 import { ContactTasks, type TaskRow } from "../contact-tasks";
@@ -88,11 +89,35 @@ export default async function KontaktDetailPage({
   ]);
 
   let beraterOptions: { id: string; name: string }[] = [];
+  let finanziererListe: { id: string; name: string }[] = [];
+  const freigabenMap: Record<string, string[]> = {};
   if (isGf) {
     beraterOptions = (profiles ?? []).map((p) => ({
       id: p.id,
       name: `${p.vorname} ${p.nachname}`,
     }));
+    // Finanzierer-Freigabe (Kunden-Feedback 22.07.): welche Dokumente sind
+    // welchem Finanzierer freigeschaltet?
+    const docIds = (docs ?? []).map((d) => d.id);
+    const { data: fins } = await supabase
+      .from("profiles")
+      .select("id, vorname, nachname")
+      .eq("rolle", "finanzierer")
+      .eq("aktiv", true)
+      .order("vorname");
+    finanziererListe = (fins ?? []).map((f) => ({
+      id: f.id,
+      name: `${f.vorname} ${f.nachname}`,
+    }));
+    if (docIds.length > 0) {
+      const { data: fg } = await supabase
+        .from("document_freigaben")
+        .select("document_id, finanzierer_id")
+        .in("document_id", docIds);
+      for (const r of fg ?? []) {
+        (freigabenMap[r.document_id] ??= []).push(r.finanzierer_id);
+      }
+    }
   }
 
   // „Auf Objekt belegt" (15.2): nur Immobilien-Deals dieses Kontakts.
@@ -210,6 +235,21 @@ export default async function KontaktDetailPage({
               vorhanden={vorhandenMap}
               filesByType={filesByType}
             />
+            {/* Finanzierer-Freigabe (nur GF): einzelne Dokumente oder alle
+                auf einmal für einen Finanzierer freischalten. */}
+            {isGf && (
+              <FinanziererFreigabe
+                contactId={c.id}
+                kundenName={`${c.vorname} ${c.nachname}`}
+                docs={(docs ?? []).map((d) => ({
+                  id: d.id,
+                  dateiname: d.dateiname,
+                  kategorie: d.kategorie,
+                }))}
+                finanzierer={finanziererListe}
+                freigaben={freigabenMap}
+              />
+            )}
           </div>
 
           {/* Rechte Spalte: Schnellaktionen, Deals, Aufgaben, Timeline */}

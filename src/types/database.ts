@@ -17,6 +17,30 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      document_freigaben: {
+        Row: {
+          id: string;
+          document_id: string;
+          finanzierer_id: string;
+          freigegeben_von: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          document_id: string;
+          finanzierer_id: string;
+          freigegeben_von?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          document_id?: string;
+          finanzierer_id?: string;
+          freigegeben_von?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       notifications: {
         Row: {
           id: string;
@@ -700,9 +724,29 @@ export type Database = {
         Args: { p_modus: string };
         Returns: undefined;
       };
+      is_finanzierer: {
+        Args: Record<string, never>;
+        Returns: boolean;
+      };
+      finanzierer_kunden: {
+        Args: Record<string, never>;
+        Returns: { contact_id: string; name: string }[];
+      };
+      finanzierer_dokumente: {
+        Args: { p_contact_id: string };
+        Returns: {
+          id: string;
+          dateiname: string;
+          kategorie: string;
+          document_type_id: string | null;
+          storage_path: string;
+          groesse: number | null;
+          created_at: string;
+        }[];
+      };
     };
     Enums: {
-      rolle_enum: "berater" | "geschaeftsfuehrung" | "backoffice";
+      rolle_enum: "berater" | "geschaeftsfuehrung" | "backoffice" | "finanzierer";
       bereich_enum: "immobilien" | "vv";
       finanzierungsstatus_enum: "offen" | "in_pruefung" | "zugesagt";
       dokument_gruppe_enum: "allgemein" | "selbststaendig" | "immobilienbesitzer";
@@ -757,7 +801,7 @@ export type Enums<T extends keyof PublicSchema["Enums"]> =
 export const Constants = {
   public: {
     Enums: {
-      rolle_enum: ["berater", "geschaeftsfuehrung", "backoffice"],
+      rolle_enum: ["berater", "geschaeftsfuehrung", "backoffice", "finanzierer"],
       bereich_enum: ["immobilien", "vv"],
       kontakt_status_enum: [
         "Neu",

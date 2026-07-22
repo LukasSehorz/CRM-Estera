@@ -484,7 +484,9 @@ export function NeuerBeraterForm() {
     immoAnteil: "5",
   });
   const [bereiche, setBereiche] = useState<Bereich[]>(["immobilien", "vv"]);
-  const [rolle, setRolleState] = useState<"berater" | "backoffice">("berater");
+  const [rolle, setRolleState] = useState<
+    "berater" | "backoffice" | "finanzierer"
+  >("berater");
   const [pending, start] = useTransition();
 
   function set<K extends keyof typeof v>(key: K, value: string) {
@@ -519,7 +521,7 @@ export function NeuerBeraterForm() {
         return;
       }
       toast.success(
-        `${rolle === "backoffice" ? "Backoffice" : "Berater"} ${v.vorname} ${v.nachname} angelegt`,
+        `${rolle === "backoffice" ? "Backoffice" : rolle === "finanzierer" ? "Finanzierer" : "Berater"} ${v.vorname} ${v.nachname} angelegt`,
       );
       setV({
         vorname: "",
@@ -596,7 +598,9 @@ export function NeuerBeraterForm() {
           <Label htmlFor="nb-rolle">Rolle</Label>
           <Select
             value={rolle}
-            onValueChange={(val) => setRolleState(val as "berater" | "backoffice")}
+            onValueChange={(val) =>
+              setRolleState(val as "berater" | "backoffice" | "finanzierer")
+            }
           >
             <SelectTrigger id="nb-rolle">
               <SelectValue />
@@ -604,6 +608,9 @@ export function NeuerBeraterForm() {
             <SelectContent>
               <SelectItem value="berater">Berater</SelectItem>
               <SelectItem value="backoffice">Backoffice (ohne Provision)</SelectItem>
+              <SelectItem value="finanzierer">
+                Finanzierer (nur freigegebene Dokumente)
+              </SelectItem>
             </SelectContent>
           </Select>
         </div>
