@@ -5,6 +5,7 @@ import { NeuerBeraterForm, type BeraterRow } from "./stufe-table";
 import { NeuerSubBeraterForm } from "./neuer-sub-berater-form";
 import { type TippgeberRow } from "./tippgeber-section";
 import { TeamDirectory } from "./team-directory";
+import { type FinKunde } from "./finanzierer-verwaltung";
 import {
   DecisionTree,
   type TreeNode,
@@ -73,7 +74,7 @@ export default async function TeamPage() {
   // auch die GF als Wurzel. Zyklen verhindert set_berater_anbindung
   // serverseitig (is_ancestor); der Berater selbst wird pro Zeile ausgenommen.
   const partnerKandidaten = (profiles ?? [])
-    .filter((p) => p.aktiv && p.rolle !== "backoffice")
+    .filter((p) => p.aktiv && p.rolle !== "backoffice" && p.rolle !== "finanzierer")
     .map((p) => ({
       id: p.id,
       name: `${p.vorname} ${p.nachname}${p.rolle === "geschaeftsfuehrung" ? " (GF)" : ""}`,
@@ -100,7 +101,11 @@ export default async function TeamPage() {
     )[],
   }));
 
-  const rows: BeraterRow[] = (profiles ?? []).map((p) => {
+  // Finanzierer erscheinen NICHT in der Berater-Tabelle/Struktur (eigene
+  // Kategorie, Kunden-Feedback 22.07.) — sie haben weder Stufe noch Downline.
+  const rows: BeraterRow[] = (profiles ?? [])
+    .filter((p) => p.rolle !== "finanzierer")
+    .map((p) => {
     const z = zielMap.get(p.id);
     return {
       id: p.id,
@@ -120,6 +125,42 @@ export default async function TeamPage() {
       zielVv: z?.monatsziel_vv == null ? "" : String(Number(z.monatsziel_vv)),
     };
   });
+
+  // Finanzierer (eigene Kategorie) + Zugriffsverwaltung (nur GF): welche
+  // Kunden/Dokumente sind welchem Finanzierer freigeschaltet?
+  const finanziererListe = (profiles ?? [])
+    .filter((p) => p.rolle === "finanzierer" && p.aktiv)
+    .map((p) => ({ id: p.id, name: `${p.vorname} ${p.nachname}` }));
+  let finanziererKunden: FinKunde[] = [];
+  const finanziererFreigaben: Record<string, string[]> = {};
+  if (isGf && finanziererListe.length > 0) {
+    const [{ data: kdocs }, { data: fg }] = await Promise.all([
+      supabase
+        .from("contact_documents")
+        .select("id, contact_id, kategorie, dateiname, contacts(vorname, nachname)")
+        .order("created_at", { ascending: false }),
+      supabase.from("document_freigaben").select("document_id, finanzierer_id"),
+    ]);
+    const byContact = new Map<string, FinKunde>();
+    for (const d of kdocs ?? []) {
+      const k = d.contacts as unknown as
+        | { vorname: string; nachname: string }
+        | { vorname: string; nachname: string }[]
+        | null;
+      const kontakt = Array.isArray(k) ? k[0] : k;
+      const name = kontakt ? `${kontakt.vorname} ${kontakt.nachname}` : "—";
+      const cur = byContact.get(d.contact_id) ?? {
+        contactId: d.contact_id,
+        name,
+        docs: [],
+      };
+      cur.docs.push({ id: d.id, dateiname: d.dateiname, kategorie: d.kategorie });
+      byContact.set(d.contact_id, cur);
+    }
+    finanziererKunden = [...byContact.values()];
+    for (const r of fg ?? [])
+      (finanziererFreigaben[r.finanzierer_id] ??= []).push(r.document_id);
+  }
 
   // Performance je Berater (Hover-Anzeige im Organigramm): Volumen = Kaufpreis
   // (Immo) bzw. BWS (VV); gewonnen vs. offen.
@@ -163,8 +204,9 @@ export default async function TeamPage() {
   }
 
   // Organigramm: Profile mehrstufig (parent_berater_id) + Tippgeber als Blätter.
+  // Finanzierer gehören nicht in die Vertriebsstruktur.
   const nodeMap = new Map<string, TreeNode>();
-  for (const p of profiles ?? []) {
+  for (const p of (profiles ?? []).filter((p) => p.rolle !== "finanzierer")) {
     nodeMap.set(p.id, {
       id: p.id,
       name: `${p.vorname} ${p.nachname}`,
@@ -272,6 +314,9 @@ export default async function TeamPage() {
           ownerOptions={ownerOptions}
           isGf={isGf}
           currentUserId={user.id}
+          finanziererListe={finanziererListe}
+          finanziererKunden={finanziererKunden}
+          finanziererFreigaben={finanziererFreigaben}
         />
       </div>
     </>

@@ -6,10 +6,15 @@ import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { StufeTable, type BeraterRow } from "./stufe-table";
 import { TippgeberSection, type TippgeberRow } from "./tippgeber-section";
+import {
+  FinanziererVerwaltung,
+  type FinKunde,
+  type FinOpt,
+} from "./finanzierer-verwaltung";
 
 type PartnerOption = { id: string; name: string };
 type OwnerOption = { id: string; name: string };
-type Filter = "alle" | "berater" | "tippgeber";
+type Filter = "alle" | "berater" | "tippgeber" | "finanzierer";
 
 /**
  * Team-Verzeichnis (Call SJ 3.3 / F6): ein Filter für Berater- und
@@ -22,6 +27,9 @@ export function TeamDirectory({
   ownerOptions,
   isGf = true,
   currentUserId,
+  finanziererListe = [],
+  finanziererKunden = [],
+  finanziererFreigaben = {},
 }: {
   beraterRows: BeraterRow[];
   partnerKandidaten: PartnerOption[];
@@ -32,6 +40,10 @@ export function TeamDirectory({
   isGf?: boolean;
   /** Eigene ID: Ziele der DIREKTEN Berater darf ein Berater setzen. */
   currentUserId?: string;
+  /** Finanzierer als eigene Kategorie (nur GF verwaltet Freigaben). */
+  finanziererListe?: FinOpt[];
+  finanziererKunden?: FinKunde[];
+  finanziererFreigaben?: Record<string, string[]>;
 }) {
   const [filter, setFilter] = useState<Filter>("alle");
   const [q, setQ] = useState("");
@@ -81,13 +93,32 @@ export function TeamDirectory({
     return m;
   }, [beraterRows, tippgeberRows]);
 
-  const showBerater = filter !== "tippgeber";
-  const showTippgeber = filter !== "berater";
+  const zeigtFinanzierer = isGf && finanziererListe.length > 0;
+  const showBerater = filter === "alle" || filter === "berater";
+  const showTippgeber = filter === "alle" || filter === "tippgeber";
+  const showFinanzierer =
+    zeigtFinanzierer && (filter === "alle" || filter === "finanzierer");
 
   const tabs: { key: Filter; label: string; count: number }[] = [
-    { key: "alle", label: "Alle", count: beraterRows.length + tippgeberRows.length },
+    {
+      key: "alle",
+      label: "Alle",
+      count:
+        beraterRows.length +
+        tippgeberRows.length +
+        (zeigtFinanzierer ? finanziererListe.length : 0),
+    },
     { key: "berater", label: "Berater", count: beraterRows.length },
     { key: "tippgeber", label: "Tippgeber", count: tippgeberRows.length },
+    ...(zeigtFinanzierer
+      ? [
+          {
+            key: "finanzierer" as Filter,
+            label: "Finanzierer",
+            count: finanziererListe.length,
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -161,6 +192,21 @@ export function TeamDirectory({
         ) : (
           <EmptyHint text="Kein Tippgeber gefunden." />
         ))}
+
+      {showFinanzierer && (
+        <div className="space-y-2">
+          <p className="max-w-2xl text-sm text-muted-foreground">
+            Finanzierer haben einen stark eingeschränkten Zugang: Sie sehen
+            ausschließlich die ihnen freigeschalteten Kundendokumente (+ den
+            Kundennamen). Hier legst du fest, welche Kunden und Dokumente das sind.
+          </p>
+          <FinanziererVerwaltung
+            finanzierer={finanziererListe}
+            kunden={finanziererKunden}
+            freigaben={finanziererFreigaben}
+          />
+        </div>
+      )}
     </div>
   );
 }
