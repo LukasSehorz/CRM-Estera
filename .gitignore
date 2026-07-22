@@ -45,3 +45,6 @@ supabase/.temp
 # Local Netlify folder
 .netlify
 tailwindcss-*.log
+
+# Claude Code lokale Einstellungen (maschinenspezifisch)
+.claude/
