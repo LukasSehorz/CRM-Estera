@@ -69,7 +69,9 @@ export async function setDokumentFreigabe(input: {
         finanzierer_id: input.finanziererId,
         freigegeben_von: user.id,
       },
-      { onConflict: "document_id,finanzierer_id" },
+      // Bei bestehender Freigabe nichts tun (kein UPDATE — dafür gibt es keine
+      // RLS-Policy; die Freigabe muss ohnehin nicht geändert werden).
+      { onConflict: "document_id,finanzierer_id", ignoreDuplicates: true },
     );
     if (error) return { error: ERR };
     // Erste Freigabe für diesen Kunden -> eine Benachrichtigung.
@@ -114,7 +116,8 @@ export async function setAlleFreigaben(input: {
         finanzierer_id: input.finanziererId,
         freigegeben_von: user.id,
       })),
-      { onConflict: "document_id,finanzierer_id" },
+      // Bereits freigegebene Dokumente überspringen (kein UPDATE nötig).
+      { onConflict: "document_id,finanzierer_id", ignoreDuplicates: true },
     );
     if (error) return { error: ERR };
     if (vorher === 0)
