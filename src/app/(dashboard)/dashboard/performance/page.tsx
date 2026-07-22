@@ -147,6 +147,7 @@ export default async function PerformanceDashboardPage({
         dealId: d.dealId,
         dealname: d.dealname,
         kaufpreis: d.kaufpreis,
+        datum: d.datum,
         status: d.abgeschlossen
           ? ("abgeschlossen" as const)
           : d.verbrieft

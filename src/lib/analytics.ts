@@ -703,6 +703,9 @@ export type ReserviertVerbrieftDeal = {
   verbrieft: boolean;
   /** true, wenn der Deal gewonnen ist (Kauf abgeschlossen = Umsatz). */
   abgeschlossen: boolean;
+  /** Status-relevantes Datum (Feedback 22.07.): Reserviert = Eintritt „Objekt
+   *  reserviert"; Verbrieft = Eintritt „Notartermin"; Abgeschlossen = closed_at. */
+  datum: string | null;
 };
 export type ReserviertVerbrieft = {
   id: string;
@@ -730,6 +733,20 @@ export function reserviertVerbrieft(a: AnalyticsData): ReserviertVerbrieft[] {
   const notarStage = a.stages.find(
     (s) => s.bereich === "immobilien" && s.name === "Notartermin",
   );
+  // Frühester Eintritt je Deal in „Objekt reserviert" bzw. „Notartermin"
+  // (Feedback 22.07.: Datum je Deal bei Reserviert/Verbrieft/Abgeschlossen).
+  const reservAt = new Map<string, string>();
+  const notarAt = new Map<string, string>();
+  for (const h of a.history) {
+    if (reservStage && h.stage_id === reservStage.id) {
+      const p = reservAt.get(h.deal_id);
+      if (!p || h.entered_at < p) reservAt.set(h.deal_id, h.entered_at);
+    }
+    if (notarStage && h.stage_id === notarStage.id) {
+      const p = notarAt.get(h.deal_id);
+      if (!p || h.entered_at < p) notarAt.set(h.deal_id, h.entered_at);
+    }
+  }
   const acc = new Map<
     string,
     {
@@ -749,6 +766,12 @@ export function reserviertVerbrieft(a: AnalyticsData): ReserviertVerbrieft[] {
     const istVerbrieft = notarStage != null && s.position >= notarStage.position;
     const istAbgeschlossen = s.is_won;
     const vol = d.kaufpreis ?? 0;
+    // Status-relevantes Datum.
+    const datum = istAbgeschlossen
+      ? (d.closed_at ?? notarAt.get(d.id) ?? reservAt.get(d.id) ?? null)
+      : istVerbrieft
+        ? (notarAt.get(d.id) ?? reservAt.get(d.id) ?? null)
+        : (reservAt.get(d.id) ?? d.created_at ?? null);
     const cur = acc.get(d.berater_id) ?? {
       umsatz: 0,
       reserviert: 0,
@@ -764,6 +787,7 @@ export function reserviertVerbrieft(a: AnalyticsData): ReserviertVerbrieft[] {
       kaufpreis: vol,
       verbrieft: istVerbrieft,
       abgeschlossen: istAbgeschlossen,
+      datum,
     });
     acc.set(d.berater_id, cur);
   }
