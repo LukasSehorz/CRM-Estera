@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { DOKUMENT_UPLOAD_AKTIV } from "@/config/enums";
 import { formatBytes, formatDate } from "@/lib/format";
+import { dokumentAnzeigename } from "@/lib/dokumente";
 import { buildZip, uniqueName } from "@/lib/zip";
 import { setDocumentStatus } from "./actions";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -407,18 +408,26 @@ export function DocumentChecklist({
                           Lukas): mehrere je Punkt, jederzeit nachreichbar. */}
                       {dateien.length > 0 && openTypes.has(t.id) && (
                         <ul className="ml-7 mt-1.5 space-y-1">
-                          {dateien.map((f) => (
+                          {dateien.map((f, i) => (
                             <li
                               key={f.id}
                               className="flex items-center gap-3 rounded-md border border-border bg-background/50 px-3 py-2"
                             >
                               <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
                               <div className="min-w-0 flex-1">
+                                {/* Automatischer Name nach Slot-Typ (Kunden-
+                                    Feedback): z. B. „Personalausweis". Original-
+                                    dateiname als Zusatz. */}
                                 <div className="truncate text-sm">
-                                  {f.dateiname}
+                                  {dokumentAnzeigename(
+                                    t.name,
+                                    f.dateiname,
+                                    i,
+                                    dateien.length,
+                                  )}
                                 </div>
                                 <div className="truncate text-xs tabular-nums text-muted-foreground">
-                                  {formatBytes(f.groesse)}
+                                  {f.dateiname} · {formatBytes(f.groesse)}
                                   {f.created_at ? ` · ${formatDate(f.created_at)}` : ""}
                                 </div>
                               </div>

@@ -14,6 +14,40 @@ const LEGACY_KAT: Record<string, string> = {
     "Personalausweis / Reisepass + Aufenthaltstitel (Vorder- und Rückseite)",
 };
 
+/**
+ * Prägnanter Kurzname eines (oft langen) Dokumenttyp-Namens.
+ * „Personalausweis / Reisepass + Aufenthaltstitel (Vorder- und Rückseite)"
+ * → „Personalausweis". Schneidet am ersten Zusatz ab.
+ */
+export function kurzTypname(name: string): string {
+  const s = name
+    .split(" (")[0]
+    .split(" / ")[0]
+    .split(" + ")[0]
+    .split(" oder ")[0]
+    .trim();
+  return s || name;
+}
+
+/**
+ * Automatischer Anzeigename eines Kundendokuments (Kunden-Feedback 22.07.):
+ * Wird eine Datei in einen Checklisten-Slot geladen, heißt sie nach dem Typ
+ * (z. B. „Personalausweis"), bei mehreren nummeriert. Ohne Typ bzw. bei
+ * „Sonstige" bleibt der Originaldateiname (ohne Endung).
+ */
+export function dokumentAnzeigename(
+  typName: string | null | undefined,
+  dateiname: string,
+  index = 0,
+  anzahl = 1,
+): string {
+  if (!typName || typName === "Sonstige") {
+    return dateiname.replace(/\.[^.]+$/, "");
+  }
+  const kurz = kurzTypname(typName);
+  return anzahl > 1 ? `${kurz} (${index + 1})` : kurz;
+}
+
 /** Liefert die document_type_id, unter der ein Dokument einsortiert wird. */
 export function resolveDocTypeId(
   doc: { document_type_id: string | null; kategorie: string },
