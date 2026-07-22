@@ -20,6 +20,7 @@ import {
   betragOf,
   isOpen,
   isWon,
+  isLost,
   type FunnelStep,
   type AnalyticsData,
 } from "@/lib/analytics";
@@ -115,27 +116,65 @@ export default async function PipelineDashboardPage({
   const offeneD = a.deals.filter((d) => isOpen(d, a.sMap));
   const volumenDetails = [
     ...funnelScopes.map((b) => {
-      const teil = offeneD.filter((d) => d.bereich === b);
+      const teil = offeneD
+        .filter((d) => d.bereich === b)
+        .sort((x, y) => betragOf(y) - betragOf(x));
       return {
         label: `${bereichLabel(b)} (${teil.length} offen)`,
         value: formatEUR(teil.reduce((s, d) => s + betragOf(d), 0)),
         tone: b === "immobilien" ? "primary" : "info",
+        // Deal-Ebene: welche offenen Deals machen das Volumen aus?
+        deals: teil.map((d) => ({ name: d.dealname, value: formatEUR(betragOf(d)) })),
       };
     }),
     { label: "Offene Deals gesamt", value: String(offeneD.length) },
   ];
   const dealTimeDetails = funnelScopes.map((b) => {
-    const v = dealTimeTage(scopeToBereich(aFull, b));
+    const ab = scopeToBereich(aFull, b);
+    const v = dealTimeTage(ab);
+    const realis = ab.deals
+      .filter((d) => ab.istRealisiert(d))
+      .map((d) => {
+        const am = ab.realisiertAm(d);
+        const t = am
+          ? Math.max(
+              0,
+              Math.round(
+                (new Date(am).getTime() - new Date(d.created_at).getTime()) /
+                  86_400_000,
+              ),
+            )
+          : 0;
+        return { name: d.dealname, value: `${t} Tage`, _t: t };
+      })
+      .sort((x, y) => y._t - x._t)
+      .map((r) => ({ name: r.name, value: r.value }));
     return {
       label: bereichLabel(b),
       value: v != null ? `${Math.round(v)} Tage` : "— (noch kein Abschluss)",
+      deals: realis,
     };
   });
   const closingDetails = funnelScopes.map((b) => {
-    const v = closingRate(scopeToBereich(aFull, b));
+    const ab = scopeToBereich(aFull, b);
+    const v = closingRate(ab);
+    const won = ab.deals.filter((d) => isWon(d, ab.sMap));
+    const lost = ab.deals.filter((d) => isLost(d, ab.sMap));
     return {
       label: bereichLabel(b),
       value: v != null ? formatProzent(v, 0) : "— (noch kein erster Termin)",
+      deals: [
+        ...won.map((d) => ({
+          name: d.dealname,
+          value: formatEUR(betragOf(d)),
+          sub: "gewonnen",
+        })),
+        ...lost.map((d) => ({
+          name: d.dealname,
+          value: formatEUR(betragOf(d)),
+          sub: "verloren",
+        })),
+      ],
     };
   });
   const gewonneneDeals = a.deals

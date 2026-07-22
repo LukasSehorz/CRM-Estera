@@ -1,12 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import {
-  ArrowLeft,
-  Ruler,
-  Trophy,
-  Users,
-  type LucideIcon,
-} from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Topbar } from "@/components/layout/topbar";
 import { Pill } from "@/components/ui/pill";
@@ -36,6 +30,7 @@ import {
   betragOf,
   isOpen,
   isWon,
+  isLost,
 } from "@/lib/analytics";
 
 /**
@@ -100,13 +95,50 @@ export default async function BeraterDrilldownPage({
     value: formatEUR(a.umsatzOf(d)),
   }));
   const volumenDetails = funnelScopes.map((b) => {
-    const teil = a.deals.filter((d) => d.bereich === b && isOpen(d, a.sMap));
+    const teil = a.deals
+      .filter((d) => d.bereich === b && isOpen(d, a.sMap))
+      .sort((x, y) => betragOf(y) - betragOf(x));
     return {
       label: `${bereichLabel(b)} (${teil.length} offen)`,
       value: formatEUR(teil.reduce((s, d) => s + betragOf(d), 0)),
       tone: b === "immobilien" ? "primary" : "info",
+      deals: teil.map((d) => ({ name: d.dealname, value: formatEUR(betragOf(d)) })),
     };
   });
+  // Deal-Ebene für Closing / Deal-Time / Storno (Feedback SJ: jede KPI tief).
+  const toDealVol = (d: (typeof a.deals)[number]) => ({
+    name: `${d.dealname} · ${bereichLabel(d.bereich)}`,
+    value: formatEUR(betragOf(d)),
+  });
+  const wonD = a.deals.filter((d) => isWon(d, a.sMap));
+  const lostD = a.deals.filter((d) => isLost(d, a.sMap));
+  const dealTimeDeals = realisierte
+    .map((d) => {
+      const am = a.realisiertAm(d);
+      const t = am
+        ? Math.max(
+            0,
+            Math.round(
+              (new Date(am).getTime() - new Date(d.created_at).getTime()) /
+                86_400_000,
+            ),
+          )
+        : 0;
+      return { name: d.dealname, value: `${t} Tage`, _t: t };
+    })
+    .sort((x, y) => y._t - x._t)
+    .map((r) => ({ name: r.name, value: r.value }));
+  const closingDetails = [
+    { label: "Gewonnen", value: String(wonD.length), tone: "success", deals: wonD.map(toDealVol) },
+    { label: "Verloren", value: String(lostD.length), tone: "muted", deals: lostD.map(toDealVol) },
+  ];
+  const dealTimeDetails = [
+    { label: "Realisierte Deals", value: String(dealTimeDeals.length), tone: "info", deals: dealTimeDeals },
+  ];
+  const stornoDetails = [
+    { label: "Storniert", value: String(lostD.length), tone: "muted", deals: lostD.map(toDealVol) },
+    { label: "Gewonnen (kein Storno)", value: String(wonD.length), tone: "success" },
+  ];
 
   // Offene Deals mit Tagen in der Phase (Frist-Überschreitung markiert)
   const offeneDeals = a.deals.filter((d) => isOpen(d, a.sMap));
@@ -158,6 +190,30 @@ export default async function BeraterDrilldownPage({
     .map((b) => bereichLabel(b))
     .join(" · ");
 
+  // Drill-down für die Seiten-Stats (Feedback SJ: auch hier bis zum Deal/Kunden).
+  const gewonnSorted = [...gewonneneDeals].sort(
+    (x, y) => betragOf(y) - betragOf(x),
+  );
+  const abschluesseDetails = [
+    {
+      label: "Gewonnene Deals",
+      value: String(abschluesse),
+      tone: "success",
+      deals: gewonnSorted.map(toDealVol),
+    },
+  ];
+  const kundenDetails = [
+    {
+      label: "Kunden",
+      value: String(aBerater.contacts.length),
+      tone: "primary",
+      deals: aBerater.contacts.map((c) => ({
+        name: `${c.vorname} ${c.nachname}`,
+        value: "",
+      })),
+    },
+  ];
+
   return (
     <>
       <Topbar
@@ -207,21 +263,24 @@ export default async function BeraterDrilldownPage({
             value={closing != null ? formatProzent(closing, 0) : "—"}
             iconKey="percent"
             tone="success"
-            info="Gewonnene Deals ÷ Deals, die mindestens den ersten Termin erreicht haben (Immobilien: T1 Konzept, VV: Termin vereinbart)."
+            details={closingDetails}
+            info="Gewonnene Deals ÷ Deals, die mindestens den ersten Termin erreicht haben (Immobilien: T1 Konzept, VV: Termin vereinbart). Aufklappen zeigt gewonnene und verlorene Deals einzeln."
           />
           <ExpandableStat
             label="Ø Deal-Time"
             value={dealTime != null ? `${Math.round(dealTime)} Tage` : "—"}
             iconKey="timer"
             tone="warning"
-            info="Ø Zeit vom ersten Termin bis zum gewonnenen Abschluss — nur gewonnene Deals zählen."
+            details={dealTimeDetails}
+            info="Ø Zeit vom ersten Termin bis zum gewonnenen Abschluss — nur gewonnene Deals zählen. Aufklappen zeigt die Deal-Time jedes realisierten Deals."
           />
           <ExpandableStat
             label="Stornoquote"
             value={storno != null ? formatProzent(storno, 0) : "—"}
             iconKey="undo"
             tone="danger"
-            info="Verlorene Deals ÷ entschiedene Deals (gewonnen + verloren). Offene Deals zählen nicht mit."
+            details={stornoDetails}
+            info="Verlorene Deals ÷ entschiedene Deals (gewonnen + verloren). Aufklappen zeigt, welche Deals storniert wurden."
           />
         </div>
 
@@ -234,23 +293,29 @@ export default async function BeraterDrilldownPage({
             <AreaTrend data={trend} />
           </ChartCard>
           <div className="grid gap-4">
-            <SideStat
+            <ExpandableStat
               label="Gewonnene Abschlüsse"
               value={String(abschluesse)}
-              icon={Trophy}
+              iconKey="check"
               tone="success"
+              details={abschluesseDetails}
+              info="Alle gewonnenen Deals dieses Beraters — aufklappen zeigt jeden Abschluss mit Volumen."
             />
-            <SideStat
+            <ExpandableStat
               label="Ø Deal-Größe (Volumen)"
               value={avgGroesse ? formatEUR(avgGroesse) : "—"}
-              icon={Ruler}
+              iconKey="ruler"
               tone="info"
+              details={abschluesseDetails}
+              info="Ø Transaktionsvolumen der gewonnenen Deals — aufklappen zeigt die einzelnen Abschlüsse."
             />
-            <SideStat
+            <ExpandableStat
               label="Kunden"
               value={String(aBerater.contacts.length)}
-              icon={Users}
-              tone="primary"
+              iconKey="layers"
+              tone="accent"
+              details={kundenDetails}
+              info="Alle diesem Berater zugeordneten Kunden — aufklappen zeigt die Namen."
             />
           </div>
         </div>
@@ -352,35 +417,3 @@ export default async function BeraterDrilldownPage({
   );
 }
 
-const SIDE_TONE = {
-  success: "bg-success/10 text-success",
-  info: "bg-info/10 text-info",
-  primary: "bg-primary/10 text-primary",
-} as const;
-
-/** Kompakte Kennzahl-Karte für die Seitenspalte neben der Umsatzentwicklung. */
-function SideStat({
-  label,
-  value,
-  icon: Icon,
-  tone,
-}: {
-  label: string;
-  value: string;
-  icon: LucideIcon;
-  tone: keyof typeof SIDE_TONE;
-}) {
-  return (
-    <div className="flex flex-col justify-center rounded-xl border border-border bg-surface p-5">
-      <div className="flex items-center justify-between">
-        <span className="text-sm text-muted-foreground">{label}</span>
-        <span className={`grid h-9 w-9 place-items-center rounded-lg ${SIDE_TONE[tone]}`}>
-          <Icon className="h-4 w-4" />
-        </span>
-      </div>
-      <div className="mt-3 text-3xl font-bold tracking-tight tabular-nums">
-        {value}
-      </div>
-    </div>
-  );
-}
