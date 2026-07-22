@@ -205,6 +205,7 @@ export async function addActivity(
 /** Aufgabe anlegen (4.3 — Datenbasis; das Cockpit folgt in Phase 12). */
 export async function addTask(input: {
   titel: string;
+  beschreibung?: string | null;
   faellig_am: string | null;
   contact_id?: string | null;
   deal_id?: string | null;
@@ -222,6 +223,7 @@ export async function addTask(input: {
   const assignedTo = input.assigned_to ?? user.id;
   const { error } = await supabase.from("tasks").insert({
     titel,
+    beschreibung: input.beschreibung?.trim() || null,
     faellig_am: input.faellig_am,
     contact_id: input.contact_id ?? null,
     deal_id: input.deal_id ?? null,

@@ -29,7 +29,7 @@ export default async function AufgabenPage({
       supabase
         .from("tasks")
         .select(
-          "id, titel, faellig_am, erledigt, contact_id, deal_id, owner_id, assigned_to",
+          "id, titel, beschreibung, faellig_am, erledigt, contact_id, deal_id, owner_id, assigned_to",
         )
         .order("faellig_am", { ascending: true, nullsFirst: false }),
       supabase
@@ -38,7 +38,7 @@ export default async function AufgabenPage({
         .order("nachname"),
       supabase
         .from("deals")
-        .select("id, dealname")
+        .select("id, dealname, contact_id")
         .order("created_at", { ascending: false }),
       supabase
         .from("profiles")
@@ -57,6 +57,7 @@ export default async function AufgabenPage({
   const rows: AufgabeRow[] = (tasks ?? []).map((t) => ({
     id: t.id,
     titel: t.titel,
+    beschreibung: t.beschreibung,
     faellig_am: t.faellig_am,
     erledigt: t.erledigt,
     contact_id: t.contact_id,
@@ -93,6 +94,7 @@ export default async function AufgabenPage({
           dealOptionen={(deals ?? []).map((d) => ({
             id: d.id,
             name: d.dealname,
+            contactId: d.contact_id,
           }))}
           beraterOptionen={beraterOptionen}
         />

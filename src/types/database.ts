@@ -588,6 +588,7 @@ export type Database = {
         Row: {
           id: string;
           titel: string;
+          beschreibung: string | null;
           faellig_am: string | null;
           erledigt: boolean;
           contact_id: string | null;
@@ -599,6 +600,7 @@ export type Database = {
         Insert: {
           id?: string;
           titel: string;
+          beschreibung?: string | null;
           faellig_am?: string | null;
           erledigt?: boolean;
           contact_id?: string | null;
@@ -610,6 +612,7 @@ export type Database = {
         Update: {
           id?: string;
           titel?: string;
+          beschreibung?: string | null;
           faellig_am?: string | null;
           erledigt?: boolean;
           contact_id?: string | null;

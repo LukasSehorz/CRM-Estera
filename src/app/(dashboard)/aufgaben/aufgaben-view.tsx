@@ -23,6 +23,7 @@ import {
 export type AufgabeRow = {
   id: string;
   titel: string;
+  beschreibung: string | null;
   faellig_am: string | null;
   erledigt: boolean;
   contact_id: string | null;
@@ -34,6 +35,8 @@ export type AufgabeRow = {
   assignedName: string | null;
   ownerName: string | null;
 };
+
+type DealOption = { id: string; name: string; contactId: string | null };
 
 const NONE = "__none";
 
@@ -101,17 +104,34 @@ export function AufgabenView({
   rows: AufgabeRow[];
   currentUserId: string;
   kontaktOptionen: { id: string; name: string }[];
-  dealOptionen: { id: string; name: string }[];
+  dealOptionen: DealOption[];
   /** Zuweisbare Personen (Downline bzw. alle für GF). */
   beraterOptionen?: { id: string; name: string }[];
 }) {
   const router = useRouter();
   const [titel, setTitel] = useState("");
+  const [beschreibung, setBeschreibung] = useState("");
   const [faellig, setFaellig] = useState("");
   const [kontakt, setKontakt] = useState(NONE);
   const [deal, setDeal] = useState(NONE);
   const [zuweisung, setZuweisung] = useState(NONE);
   const [pending, start] = useTransition();
+  const [openInfo, setOpenInfo] = useState<string | null>(null);
+
+  // Deal + Kunde gehören zusammen (Kunden-Feedback): erst Kunde wählen, dann
+  // stehen nur DESSEN Deals zur Auswahl — so kann kein fremder Deal an einen
+  // anderen Kunden gehängt werden.
+  const passendeDeals =
+    kontakt === NONE
+      ? []
+      : dealOptionen.filter((d) => d.contactId === kontakt);
+  function setKontaktUndReset(val: string) {
+    setKontakt(val);
+    // Deal zurücksetzen, wenn er nicht zum neuen Kunden gehört.
+    if (deal !== NONE && !dealOptionen.some((d) => d.id === deal && d.contactId === val)) {
+      setDeal(NONE);
+    }
+  }
   // Auf-/zuklappbare Gruppen — „Erledigt" startet eingeklappt (Wunsch Lukas).
   const [zu, setZu] = useState<Record<string, boolean>>({ erledigt: true });
   const toggleGruppe = (key: string) =>
@@ -125,6 +145,7 @@ export function AufgabenView({
     start(async () => {
       const res = await addTask({
         titel,
+        beschreibung: beschreibung || null,
         faellig_am: faellig || null,
         contact_id: kontakt === NONE ? null : kontakt,
         deal_id: deal === NONE ? null : deal,
@@ -135,6 +156,7 @@ export function AufgabenView({
         return;
       }
       setTitel("");
+      setBeschreibung("");
       setFaellig("");
       setKontakt(NONE);
       setDeal(NONE);
@@ -188,7 +210,7 @@ export function AufgabenView({
             value={faellig}
             onChange={(e) => setFaellig(e.target.value)}
           />
-          <Select value={kontakt} onValueChange={setKontakt}>
+          <Select value={kontakt} onValueChange={setKontaktUndReset}>
             <SelectTrigger>
               <SelectValue placeholder="Kunde (optional)" />
             </SelectTrigger>
@@ -201,13 +223,22 @@ export function AufgabenView({
               ))}
             </SelectContent>
           </Select>
-          <Select value={deal} onValueChange={setDeal}>
+          {/* Deal gehört zum gewählten Kunden — erst Kunde wählen. */}
+          <Select
+            value={deal}
+            onValueChange={setDeal}
+            disabled={kontakt === NONE}
+          >
             <SelectTrigger>
-              <SelectValue placeholder="Deal (optional)" />
+              <SelectValue
+                placeholder={
+                  kontakt === NONE ? "Erst Kunde wählen" : "Deal (optional)"
+                }
+              />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={NONE}>Ohne Deal</SelectItem>
-              {dealOptionen.map((d) => (
+              {passendeDeals.map((d) => (
                 <SelectItem key={d.id} value={d.id}>
                   {d.name}
                 </SelectItem>
@@ -235,6 +266,15 @@ export function AufgabenView({
             {zuweisung === NONE ? "Anlegen" : "Zuweisen"}
           </Button>
         </div>
+        {/* Beschreibung (Kunden-Feedback): Details zur Tätigkeit, in der Liste
+            per Dropdown sichtbar. */}
+        <textarea
+          value={beschreibung}
+          onChange={(e) => setBeschreibung(e.target.value)}
+          placeholder="Beschreibung (optional) — Details zur Tätigkeit"
+          rows={2}
+          className="mt-3 w-full resize-y rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary"
+        />
       </form>
 
       {gruppen.length === 0 ? (
@@ -278,7 +318,8 @@ export function AufgabenView({
                 const ueberfaellig =
                   !r.erledigt && r.faellig_am != null && r.faellig_am < heute;
                 return (
-                  <li key={r.id} className="flex items-center gap-3 py-2.5 text-sm">
+                  <li key={r.id} className="py-2.5 text-sm">
+                    <div className="flex items-center gap-3">
                     <Checkbox
                       checked={r.erledigt}
                       disabled={pending}
@@ -314,6 +355,25 @@ export function AufgabenView({
                         </>
                       )}
                     </span>
+                    {/* Beschreibung per Dropdown ein-/ausklappen. */}
+                    {r.beschreibung && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setOpenInfo((v) => (v === r.id ? null : r.id))
+                        }
+                        aria-expanded={openInfo === r.id}
+                        aria-label="Beschreibung anzeigen"
+                        className="shrink-0 rounded-md p-1 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                      >
+                        <ChevronDown
+                          className={cn(
+                            "h-4 w-4 transition-transform",
+                            openInfo === r.id && "rotate-180",
+                          )}
+                        />
+                      </button>
+                    )}
                     {(() => {
                       const delegiert =
                         r.assignedTo != null && r.assignedTo !== r.ownerId;
@@ -354,6 +414,12 @@ export function AufgabenView({
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
+                    </div>
+                    {r.beschreibung && openInfo === r.id && (
+                      <p className="ml-8 mt-1.5 whitespace-pre-wrap rounded-md bg-surface-2/60 px-3 py-2 text-xs text-muted-foreground">
+                        {r.beschreibung}
+                      </p>
+                    )}
                   </li>
                 );
               })}
