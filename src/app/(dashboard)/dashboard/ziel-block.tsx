@@ -134,7 +134,7 @@ function ZielKarte({
           {formatEUR(Math.round(animiert))}
         </span>
         <span className="text-sm text-muted-foreground">
-          von {formatEUR(ziel)} · {Math.round(pctZiel)} %
+          von {formatEUR(ziel)} Ziel · {Math.round(pctZiel)} % erreicht
         </span>
       </div>
 
