@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -22,12 +22,6 @@ import { createClient } from "@/lib/supabase/client";
 import { formatBytes, formatDate } from "@/lib/format";
 import { bereichLabel } from "@/config/enums";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-} from "@/components/ui/select";
 import { DocumentChecklist, type DocType } from "../kontakte/document-checklist";
 import { groupDocsByType } from "@/lib/dokumente";
 
@@ -99,6 +93,19 @@ export function PortalView({
   // Manuell hinzugefügte Kunden (ohne Dokumente) — erscheinen in den
   // Kundenunterlagen, damit man dort Dokumente hochladen kann.
   const [hinzugefuegt, setHinzugefuegt] = useState<string[]>([]);
+  // Eigenes „Kunde hinzufügen"-Dropdown (mit Suche) — zuverlässiger als ein
+  // Radix-Select in der Tab-Leiste.
+  const [pickerOffen, setPickerOffen] = useState(false);
+  const [pickerQ, setPickerQ] = useState("");
+  const pickerRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!pickerOffen) return;
+    const onDoc = (e: MouseEvent) => {
+      if (!pickerRef.current?.contains(e.target as Node)) setPickerOffen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [pickerOffen]);
 
   const tabs: { key: Tab; label: string; icon: typeof FileText; count: number }[] = [
     { key: "vorlagen", label: "Vorlagen", icon: FileText, count: vorlagen.length },
@@ -143,30 +150,65 @@ export function PortalView({
             Kein Neu-Anlegen — das passiert im Kundenbereich. */}
         {(() => {
           const mitDocs = new Set(kunden.map((k) => k.contactId));
-          const hinzufuegbar = alleKunden.filter(
-            (k) => !mitDocs.has(k.contactId) && !hinzugefuegt.includes(k.contactId),
-          );
+          const nadel = pickerQ.trim().toLowerCase();
+          const hinzufuegbar = alleKunden
+            .filter(
+              (k) =>
+                !mitDocs.has(k.contactId) && !hinzugefuegt.includes(k.contactId),
+            )
+            .filter((k) => (nadel ? k.name.toLowerCase().includes(nadel) : true));
           return (
-            <Select
-              value=""
-              onValueChange={(id) => {
-                setHinzugefuegt((prev) => [...prev, id]);
-                setTab("kunden");
-              }}
-              disabled={hinzufuegbar.length === 0}
-            >
-              <SelectTrigger className="mb-1.5 gap-1.5 border-0 bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 disabled:opacity-60 data-[placeholder]:text-primary-foreground [&>svg]:text-primary-foreground/80">
+            <div ref={pickerRef} className="relative mb-1.5">
+              <button
+                type="button"
+                onClick={() => setPickerOffen((o) => !o)}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
+              >
                 <UserPlus className="h-4 w-4" />
                 Kunde hinzufügen
-              </SelectTrigger>
-              <SelectContent>
-                {hinzufuegbar.map((k) => (
-                  <SelectItem key={k.contactId} value={k.contactId}>
-                    {k.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                <ChevronDown className="h-3.5 w-3.5 opacity-80" />
+              </button>
+              {pickerOffen && (
+                <div className="absolute right-0 z-50 mt-1 w-72 overflow-hidden rounded-lg border border-border bg-surface shadow-2xl">
+                  <div className="border-b border-border p-2">
+                    <Input
+                      autoFocus
+                      value={pickerQ}
+                      onChange={(e) => setPickerQ(e.target.value)}
+                      placeholder="Kunde suchen …"
+                      className="h-8"
+                    />
+                  </div>
+                  <ul className="max-h-72 overflow-y-auto py-1">
+                    {hinzufuegbar.length === 0 ? (
+                      <li className="px-3 py-3 text-sm text-muted-foreground">
+                        {alleKunden.length === 0
+                          ? "Keine Kunden vorhanden."
+                          : "Alle Kunden haben bereits Dokumente."}
+                      </li>
+                    ) : (
+                      hinzufuegbar.slice(0, 100).map((k) => (
+                        <li key={k.contactId}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setHinzugefuegt((prev) => [...prev, k.contactId]);
+                              setTab("kunden");
+                              setPickerOffen(false);
+                              setPickerQ("");
+                            }}
+                            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-surface-2"
+                          >
+                            <Users className="h-4 w-4 shrink-0 text-muted-foreground" />
+                            <span className="truncate">{k.name}</span>
+                          </button>
+                        </li>
+                      ))
+                    )}
+                  </ul>
+                </div>
+              )}
+            </div>
           );
         })()}
       </div>
