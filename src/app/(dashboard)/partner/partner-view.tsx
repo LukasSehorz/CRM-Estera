@@ -92,7 +92,7 @@ function bereichGruppen<T extends { bereich: "immobilien" | "vv" }>(
 }
 
 const OVERHEAD_INFO =
-  "Differenzmodell über alle Ebenen: Bei jedem Abschluss in deiner Downline verdienst du die Differenz zwischen deiner Anbindung und der deines direkten Partners in diesem Ast — bei VV über die Stufe (% der Provisionsbasis), bei Immobilien über den Immo-Anteil (% vom Kaufpreis). In der Aufschlüsselung zeigt ein Klick auf den Berater die Rechnung je Deal.";
+  "Differenzmodell über alle Ebenen: Bei jedem Abschluss in deiner Downline verdienst du die Differenz zwischen deiner Anbindung und der deines direkten Partners in diesem Ast — bei VV über die Stufe (% der Provisionsbasis), bei Immobilien über den Provisionsanteil (% vom Kaufpreis). In der Aufschlüsselung zeigt ein Klick auf den Berater die Rechnung je Deal.";
 
 const cardVariants = {
   hidden: { opacity: 0, y: 12 },

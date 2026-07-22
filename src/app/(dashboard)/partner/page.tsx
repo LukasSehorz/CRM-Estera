@@ -321,7 +321,7 @@ export default async function PartnerPage() {
       }) × ${diff} % — deine Stufe ${meStufe} % − ${ankerStufe} % (${anker.vorname} ${anker.nachname})`;
     } else {
       const diff = Math.max(0, (meImmo ?? 0) - (ankerImmo ?? 0));
-      formel = `Kaufpreis ${formatEUR(Number(d.kaufpreis ?? 0))} × ${diff} % — dein Immo-Anteil ${meImmo ?? 0} % − ${ankerImmo ?? 0} % (${anker.vorname} ${anker.nachname})`;
+      formel = `Kaufpreis ${formatEUR(Number(d.kaufpreis ?? 0))} × ${diff} % — dein Provisionsanteil ${meImmo ?? 0} % − ${ankerImmo ?? 0} % (${anker.vorname} ${anker.nachname})`;
     }
 
     const cur = ohMap.get(anker.id) ?? { betrag: 0, deals: [] };

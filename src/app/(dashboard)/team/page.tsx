@@ -23,7 +23,7 @@ export default async function TeamPage() {
 
   const { data: me } = await supabase
     .from("profiles")
-    .select("rolle, bereich")
+    .select("rolle, bereich, immo_anteil_default, vertriebler_stufe")
     .eq("id", user.id)
     .single();
   // Backoffice hat kein Team; Berater sehen ihre EIGENE Struktur (3.9),
@@ -33,6 +33,10 @@ export default async function TeamPage() {
   const meineBereiche = (
     me.bereich?.length ? me.bereich : ["immobilien", "vv"]
   ) as ("immobilien" | "vv")[];
+  // Ein Berater darf seiner Downline höchstens den EIGENEN Satz vergeben
+  // (Call SJ: „auf 7 % eingestellt → kann max. 7 % vergeben; bei 20 % → 20 %").
+  const maxProvision = Number(me.immo_anteil_default ?? 10) || 10;
+  const maxStufe = Number(me.vertriebler_stufe ?? 100) || 100;
 
   const [
     { data: profiles },
@@ -244,7 +248,11 @@ export default async function TeamPage() {
         {isGf ? (
           <NeuerBeraterForm />
         ) : (
-          <NeuerSubBeraterForm meineBereiche={meineBereiche} />
+          <NeuerSubBeraterForm
+            meineBereiche={meineBereiche}
+            maxProvision={maxProvision}
+            maxStufe={maxStufe}
+          />
         )}
         <div className="rounded-xl border border-border bg-surface p-5">
           <h2 className="text-base font-semibold">

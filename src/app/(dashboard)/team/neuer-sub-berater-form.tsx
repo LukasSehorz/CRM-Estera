@@ -20,18 +20,25 @@ type Bereich = "immobilien" | "vv";
  */
 export function NeuerSubBeraterForm({
   meineBereiche,
+  maxProvision = 10,
+  maxStufe = 100,
 }: {
   meineBereiche: Bereich[];
+  /** Obergrenze für den vergebbaren Provisionsanteil = eigener Satz (Call SJ). */
+  maxProvision?: number;
+  /** Obergrenze für die vergebbare VV-Stufe = eigene Stufe. */
+  maxStufe?: number;
 }) {
   const router = useRouter();
-  const [v, setV] = useState({
+  const leer = {
     vorname: "",
     nachname: "",
     email: "",
     passwort: "",
-    stufe: "30",
-    immoAnteil: "5",
-  });
+    stufe: String(Math.min(30, maxStufe)),
+    immoAnteil: String(Math.min(5, maxProvision)),
+  };
+  const [v, setV] = useState(leer);
   const [bereiche, setBereiche] = useState<Bereich[]>(meineBereiche);
   const [pending, start] = useTransition();
 
@@ -65,14 +72,7 @@ export function NeuerSubBeraterForm({
         return;
       }
       toast.success(`Berater ${v.vorname} ${v.nachname} angelegt`);
-      setV({
-        vorname: "",
-        nachname: "",
-        email: "",
-        passwort: "",
-        stufe: "30",
-        immoAnteil: "5",
-      });
+      setV(leer);
       setBereiche(meineBereiche);
       router.refresh();
     });
@@ -145,30 +145,32 @@ export function NeuerSubBeraterForm({
             id="sb-stufe"
             type="number"
             min={0}
-            max={100}
+            max={maxStufe}
             inputMode="decimal"
             value={v.stufe}
             onChange={(e) => set("stufe", e.target.value)}
           />
           <p className="text-xs text-muted-foreground">
-            Deine Differenz zu dieser Stufe ist dein Overhead.
+            Max. {maxStufe} % (deine eigene Stufe) · deine Differenz dazu ist dein
+            Overhead.
           </p>
         </div>
         {zeigeImmo && (
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="sb-immo">Immo-Anteil — {v.immoAnteil} %</Label>
+            <Label htmlFor="sb-immo">Provisionsanteil — {v.immoAnteil} %</Label>
             <input
               id="sb-immo"
               type="range"
               min={1}
-              max={7}
+              max={maxProvision}
               step={0.5}
               value={v.immoAnteil}
               onChange={(e) => set("immoAnteil", e.target.value)}
               className="h-9 w-full cursor-pointer accent-primary"
             />
             <p className="text-xs text-muted-foreground">
-              Regler 1–7 % · Anteil vom Kaufpreis bei Immobilien-Deals.
+              Regler 1–{maxProvision} % (max. dein eigener Satz) · Anteil vom
+              Kaufpreis bei Immobilien-Deals.
             </p>
           </div>
         )}

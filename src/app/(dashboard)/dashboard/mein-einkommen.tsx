@@ -217,7 +217,7 @@ export function MeinEinkommen({
             betrag={gehalt.overheadSumme}
             leer={false}
             anzahl={gehalt.overheadPosten.length}
-            info="Differenzmodell: Schließt jemand aus deiner Downline ab, bekommst du die Differenz zwischen deiner Anbindung und der deines direkten Partners in diesem Ast — bei VV über die Stufe, bei Immobilien über den Immo-Anteil. Gilt über alle Ebenen, also auch für Abschlüsse unter deinen Partnern."
+            info="Differenzmodell: Schließt jemand aus deiner Downline ab, bekommst du die Differenz zwischen deiner Anbindung und der deines direkten Partners in diesem Ast — bei VV über die Stufe, bei Immobilien über den Provisionsanteil. Gilt über alle Ebenen, also auch für Abschlüsse unter deinen Partnern."
           >
             <ul className="mt-3 space-y-1.5">
               {gehalt.overheadPosten.map((o) => (

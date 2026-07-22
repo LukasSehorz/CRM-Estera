@@ -81,7 +81,7 @@ export function StufeTable({
             <th className="px-4 py-3 font-medium">Rolle</th>
             <th className="px-4 py-3 font-medium">Sichtbare Sparten</th>
             <th className="px-4 py-3 font-medium">Stufe VV (%)</th>
-            <th className="px-4 py-3 font-medium">Immo-Anteil (%)</th>
+            <th className="px-4 py-3 font-medium">Provisionsanteil (%)</th>
             <th className="px-4 py-3 font-medium">Übergeordneter Partner</th>
             <th className="px-4 py-3 font-medium">Ziel Immo (€)</th>
             <th className="px-4 py-3 font-medium">Ziel VV (€)</th>
@@ -156,7 +156,7 @@ function StufeRow({
       if (anbindungDirty) {
         const immo = immoDefault.trim() === "" ? null : Number(immoDefault.replace(",", "."));
         if (immo != null && (Number.isNaN(immo) || immo < 0 || immo > 100)) {
-          toast.error("Immo-Anteil muss zwischen 0 und 100 liegen (oder leer).");
+          toast.error("Provisionsanteil muss zwischen 0 und 100 liegen (oder leer).");
           return;
         }
         const res = await setBeraterAnbindung(
@@ -615,7 +615,7 @@ export function NeuerBeraterForm() {
             Immobilien-Deals, vom Kaufpreis. */}
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="nb-immo">
-            Immo-Anteil — {v.immoAnteil} %
+            Provisionsanteil — {v.immoAnteil} %
           </Label>
           <input
             id="nb-immo"

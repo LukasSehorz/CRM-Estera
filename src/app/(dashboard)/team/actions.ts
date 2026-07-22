@@ -403,11 +403,15 @@ export async function createSubBerater(
 
   const { data: me } = await supabase
     .from("profiles")
-    .select("rolle")
+    .select("rolle, immo_anteil_default, vertriebler_stufe")
     .eq("id", user.id)
     .single();
   if (me?.rolle === "backoffice")
     return { error: "Backoffice darf keine Berater anlegen." };
+  // Ein Berater darf seiner Downline höchstens den EIGENEN Satz vergeben
+  // (Call SJ: dynamische Grenze statt fixem 7 %). GF hat den eigenen Wert.
+  const maxProvision = Number(me?.immo_anteil_default ?? 10) || 10;
+  const maxStufe = Number(me?.vertriebler_stufe ?? 100) || 100;
 
   const vorname = input.vorname.trim();
   const nachname = input.nachname.trim();
@@ -417,22 +421,23 @@ export async function createSubBerater(
     return { error: "Bitte eine gültige E-Mail-Adresse angeben." };
   if (input.passwort.length < 8)
     return { error: "Das Startpasswort braucht mindestens 8 Zeichen." };
-  if (Number.isNaN(input.stufe) || input.stufe < 0 || input.stufe > 100)
-    return { error: "Stufe muss zwischen 0 und 100 liegen." };
+  if (Number.isNaN(input.stufe) || input.stufe < 0 || input.stufe > maxStufe)
+    return { error: `Stufe muss zwischen 0 und ${maxStufe} % liegen.` };
   if (input.bereiche.length < 1)
     return { error: "Mindestens eine Sparte auswählen." };
-  // Immo-Anteil nur relevant, wenn die Immobilien-Sparte gewählt ist. Ein
-  // Berater darf seiner Downline 1–7 % vergeben (die GF bis 10 %, eigene
-  // Action) — echte Grenze mit Fehler-Return statt stillem Cappen, damit ein
-  // direkter Call den Slider nicht umgeht (Call SJ Fine-Tuning).
+  // Provisionsanteil nur relevant, wenn die Immobilien-Sparte gewählt ist.
+  // Echte Grenze (max. eigener Satz) mit Fehler-Return statt stillem Cappen,
+  // damit ein direkter Call den Slider nicht umgeht (Call SJ Fine-Tuning).
   let immoAnteil: number | null = null;
   if (input.bereiche.includes("immobilien")) {
     if (
       Number.isNaN(input.immoAnteil) ||
       input.immoAnteil < 1 ||
-      input.immoAnteil > 7
+      input.immoAnteil > maxProvision
     )
-      return { error: "Immo-Anteil muss zwischen 1 und 7 % liegen." };
+      return {
+        error: `Provisionsanteil muss zwischen 1 und ${maxProvision} % liegen.`,
+      };
     immoAnteil = input.immoAnteil;
   }
 

@@ -541,7 +541,7 @@ export function DecisionTree({ root }: { root: TreeNode }) {
                     ) : null}
                     {hoveredNode.immoAnteil ? (
                       <Detail
-                        label="Immo-Anteil"
+                        label="Provisionsanteil"
                         value={`${hoveredNode.immoAnteil} %`}
                       />
                     ) : null}
