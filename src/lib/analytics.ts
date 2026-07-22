@@ -11,6 +11,7 @@
 //                   EIGENE Provision (nie den Hausanteil, Kap. 2.2).
 //   Storno (1.3):   verlorene Deals zählen in KEINEM "gewonnen"-Zähler.
 // =====================================================================
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import {
   dealVolumen,
@@ -260,7 +261,7 @@ const ERSTER_TERMIN: Record<string, string> = {
   vv: "Termin vereinbart",
 };
 
-export async function loadAnalytics(): Promise<AnalyticsData> {
+async function loadAnalyticsImpl(): Promise<AnalyticsData> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -414,6 +415,14 @@ export async function loadAnalytics(): Promise<AnalyticsData> {
     realisiertAm,
   };
 }
+
+/**
+ * Request-weit dedupliziert (React cache): dieselbe schwere Analytics-Abfrage
+ * wird pro Server-Request nur EINMAL ausgeführt, auch wenn Seite + mehrere
+ * Komponenten (z. B. HeuteBlock) sie parallel anfordern. Spürbar schnelleres
+ * Dashboard.
+ */
+export const loadAnalytics = cache(loadAnalyticsImpl);
 
 // ── Grundhelfer ──────────────────────────────────────────────────────────
 /** Transaktionsvolumen des Deals (1.1) — NICHT der Umsatz. */
