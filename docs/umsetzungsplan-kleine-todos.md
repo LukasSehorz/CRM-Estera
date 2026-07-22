@@ -176,18 +176,13 @@ Keine Deals, keine Finanzzahlen, keine Kontaktdaten, keine sonstigen Infos.
    Dokumente zu Kunde X prüfen") — mit direktem Link auf die freigeschalteten
    Dokumente. Kein voller Aufgaben-Bereich für ihn.
 
-> ❓ **ENTSCHEIDUNG 5 — Freigabe-Granularität bestätigen:** Freigabe **pro
-> einzelnem Dokument** (GF hakt gezielt Dokumente an), richtig? Alternative wäre
-> „ganzer Kunde = alle seine Dokumente auf einmal". **Empfehlung:** pro Dokument
-> (wie oben), weil du „nur die freigeschalteten Dokumente" gesagt hast — mit
-> einem „alle auswählen"-Shortcut fürs bequeme Freigeben.
+> ✅ **ENTSCHIEDEN 5 — Beides.** Die GF kann **einzelne** Dokumente eines Kunden
+> freigeben **oder** per „Alle auswählen" **alle auf einmal**. Technisch bleibt
+> es pro-Dokument gespeichert (Tabelle `document_freigaben`); „alle" legt einfach
+> für jedes aktuelle Dokument eine Freigabe an.
 
-> ℹ️ **Hinweis zu „Tippgeber":** Du hast Tippgeber als Rolle genannt. Aktuell
-> ist Tippgeber im System **keine Login-Rolle**, sondern ein Feld am Deal
-> (`tippgeber`/`tippgeber_satz`). Falls Tippgeber ebenfalls eine eigene
-> Login-Rolle mit eigener Ansicht werden soll, ist das ein separates Thema —
-> sag kurz Bescheid, dann nehme ich es auf. Für die aktuellen To-dos lasse ich
-> Tippgeber wie bisher.
+> ✅ **Tippgeber bleibt wie bisher** (Entscheidung Kunde): kein neuer Rollen-/
+> Login-Umbau, Tippgeber bleibt das Feld am Deal.
 
 ---
 
@@ -211,29 +206,29 @@ automatisch zu „Personalausweis …".
   der **Typ ist beim Upload schon bekannt**, ebenso der **Kontakt** (die Person).
 
 ### Soll / Umsetzung
-1. **DB**: `contact_documents` bekommt `anzeigename text` (die generierte
-   Bezeichnung). Der Originaldateiname bleibt in `dateiname` erhalten (für den
-   Download). Migration `00xx_dokument_anzeigename.sql`.
-2. **Ableitungslogik** (`src/lib/dokumente.ts`, neue Funktion
-   `ableitAnzeigename(typ, kontaktname, dateiname)`):
-   - **Primär (robust):** Wird in einen Slot hochgeladen, ist der Typ bekannt →
-     `anzeigename = "<Kurzname des Typs> — <Kontaktname>"`, z. B.
-     „Personalausweis — Andreas Müller". (Kurzname = griffige Kurzform des
-     teils langen Katalognamens, z. B. „Personalausweis" statt „Personalausweis
-     / Reisepass (Vorder- und Rückseite)".)
-   - **Fallback (freier Upload/„Sonstige"):** kein Slot → Schlagwort-Erkennung
-     aus dem Dateinamen über eine erweiterte Mapping-Tabelle („Perso"/„Ausweis"
-     → Personalausweis, „Gehalt"/„Lohn" → Gehaltsnachweis, „Steuer" →
-     Steuerbescheid …). Rest (Person) aus dem Kontaktnamen bzw. dem Dateinamen.
-3. **UI**: In der Dokumentenliste wird der `anzeigename` angezeigt; der
-   Originalname bleibt als kleiner Zusatz/Tooltip sichtbar. Bei mehreren Dateien
-   pro Typ automatische Nummerierung („… (2)").
+**Klarstellung Kunde (22.07.):** _Kein Name, keine KI._ Wenn ein Dokument in
+einen Slot (z. B. „Personalausweis") hochgeladen wird, heißt es in den
+Dokumenten automatisch einfach **„Personalausweis"** (= der Name des Slots).
+Nicht „… Andy", kein Kontaktname — nur der Typ.
 
-> ✅ **ENTSCHIEDEN 4 — Woraus kommt der Name?** Im Regelfall **Slot +
-> Kontaktname** („Personalausweis — Andreas Müller"); bei freien Uploads ohne
-> Slot **Schlagwort-Erkennung aus dem Dateinamen** als Netz.
-> _(Format „Typ — Person" nehme ich als Standard an; falls du z. B. „Typ Person"
-> ohne Bindestrich willst, ist das eine Zeile.)_
+1. **DB**: `contact_documents` bekommt `anzeigename text` (die Bezeichnung, die
+   angezeigt wird). Der Originaldateiname bleibt in `dateiname` (für den
+   Download). Migration `00xx_dokument_anzeigename.sql`.
+2. **Ableitungslogik** (`src/lib/dokumente.ts`, `ableitAnzeigename(typ, index)`):
+   - **In einen Slot hochgeladen (Regelfall):** `anzeigename = <Kurzname des
+     Typs>`, z. B. „Personalausweis" (Kurzform des teils langen Katalognamens
+     „Personalausweis / Reisepass (Vorder- und Rückseite)").
+   - **Mehrere Dateien im selben Slot:** automatische Nummerierung
+     „Personalausweis (2)", „Personalausweis (3)" …
+   - **Freier Upload ohne Slot / „Sonstige":** es gibt keinen Typ → der
+     Originaldateiname (ohne Endung) bleibt als Anzeigename. Keine
+     Schlagwort-Erkennung nötig (Kunde will rein Slot-basiert).
+3. **UI**: In der Dokumentenliste wird der `anzeigename` angezeigt; der
+   Originalname bleibt als kleiner Zusatz/Tooltip sichtbar.
+
+> ✅ **ENTSCHIEDEN 4 (angepasst) — Name = reiner Slot-Typ.** Upload in Slot
+> „Personalausweis" → Dokument heißt „Personalausweis" (bei mehreren nummeriert).
+> Ohne Slot bleibt der Dateiname. Kein Kontaktname, keine KI/Erkennung.
 
 ---
 
@@ -246,6 +241,5 @@ automatisch zu „Personalausweis …".
    Rolle, Freigabe-Tabelle, RPCs, eigener Minimal-Bereich, GF-Freigabe-UI) —
    inkl. Aufgabe/Benachrichtigung an Finanzierer.
 
-Offen ist nur noch **Entscheidung 5** (Freigabe pro Dokument — meine Empfehlung).
-Sobald du die bestätigst bzw. korrigierst, setze ich in dieser Reihenfolge um und
-melde mich nach jedem Punkt.
+Alle Entscheidungen sind geklärt. Ich setze in dieser Reihenfolge um und melde
+mich nach jedem Punkt zurück.
