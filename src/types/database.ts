@@ -569,6 +569,7 @@ export type Database = {
           contact_id: string | null;
           deal_id: string | null;
           owner_id: string;
+          assigned_to: string | null;
           created_at: string;
         };
         Insert: {
@@ -579,6 +580,7 @@ export type Database = {
           contact_id?: string | null;
           deal_id?: string | null;
           owner_id: string;
+          assigned_to?: string | null;
           created_at?: string;
         };
         Update: {
@@ -589,6 +591,7 @@ export type Database = {
           contact_id?: string | null;
           deal_id?: string | null;
           owner_id?: string;
+          assigned_to?: string | null;
           created_at?: string;
         };
         Relationships: [];

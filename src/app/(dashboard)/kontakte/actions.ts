@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
+import { createNotification } from "@/lib/notifications";
 import type { Database } from "@/types/database";
 
 type Enums = Database["public"]["Enums"];
@@ -204,6 +205,8 @@ export async function addTask(input: {
   faellig_am: string | null;
   contact_id?: string | null;
   deal_id?: string | null;
+  /** Optional: Aufgabe jemandem zuweisen (Kunden-Feedback 22.07.). Default = selbst. */
+  assigned_to?: string | null;
 }): Promise<ActionResult> {
   const supabase = await createClient();
   const {
@@ -212,15 +215,37 @@ export async function addTask(input: {
   if (!user) return { error: "Nicht angemeldet." };
   if (!input.titel.trim()) return { error: "Bitte einen Titel eingeben." };
 
+  const titel = input.titel.trim();
+  const assignedTo = input.assigned_to ?? user.id;
   const { error } = await supabase.from("tasks").insert({
-    titel: input.titel.trim(),
+    titel,
     faellig_am: input.faellig_am,
     contact_id: input.contact_id ?? null,
     deal_id: input.deal_id ?? null,
     owner_id: user.id,
+    assigned_to: assignedTo,
   });
   if (error) return { error: SAVE_ERROR };
+
+  // Zugewiesener bekommt eine In-App-Benachrichtigung (nicht bei Selbst-Aufgabe).
+  if (assignedTo !== user.id) {
+    const link = input.contact_id
+      ? `/kontakte/${input.contact_id}`
+      : input.deal_id
+        ? `/deals/${input.deal_id}`
+        : "/aufgaben";
+    await createNotification(supabase, {
+      empfaengerId: assignedTo,
+      erzeugtVon: user.id,
+      typ: "aufgabe",
+      titel: `Neue Aufgabe: ${titel}`,
+      text: input.faellig_am ? `Fällig bis ${input.faellig_am}` : null,
+      link,
+    });
+  }
+
   if (input.contact_id) revalidatePath(`/kontakte/${input.contact_id}`);
+  revalidatePath("/aufgaben");
   return { ok: true };
 }
 

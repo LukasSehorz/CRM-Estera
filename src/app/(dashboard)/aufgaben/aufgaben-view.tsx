@@ -4,7 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ChevronDown, Plus, Trash2 } from "lucide-react";
+import { ChevronDown, Plus, Trash2, UserCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDate } from "@/lib/format";
 import { addTask, deleteTask, toggleTask } from "../kontakte/actions";
@@ -29,6 +29,10 @@ export type AufgabeRow = {
   deal_id: string | null;
   kontaktName: string | null;
   dealName: string | null;
+  ownerId: string;
+  assignedTo: string | null;
+  assignedName: string | null;
+  ownerName: string | null;
 };
 
 const NONE = "__none";
@@ -89,18 +93,24 @@ function gruppieren(rows: AufgabeRow[]): Gruppe[] {
 
 export function AufgabenView({
   rows,
+  currentUserId,
   kontaktOptionen,
   dealOptionen,
+  beraterOptionen = [],
 }: {
   rows: AufgabeRow[];
+  currentUserId: string;
   kontaktOptionen: { id: string; name: string }[];
   dealOptionen: { id: string; name: string }[];
+  /** Zuweisbare Personen (Downline bzw. alle für GF). */
+  beraterOptionen?: { id: string; name: string }[];
 }) {
   const router = useRouter();
   const [titel, setTitel] = useState("");
   const [faellig, setFaellig] = useState("");
   const [kontakt, setKontakt] = useState(NONE);
   const [deal, setDeal] = useState(NONE);
+  const [zuweisung, setZuweisung] = useState(NONE);
   const [pending, start] = useTransition();
   // Auf-/zuklappbare Gruppen — „Erledigt" startet eingeklappt (Wunsch Lukas).
   const [zu, setZu] = useState<Record<string, boolean>>({ erledigt: true });
@@ -118,6 +128,7 @@ export function AufgabenView({
         faellig_am: faellig || null,
         contact_id: kontakt === NONE ? null : kontakt,
         deal_id: deal === NONE ? null : deal,
+        assigned_to: zuweisung === NONE ? null : zuweisung,
       });
       if ("error" in res) {
         toast.error(res.error);
@@ -127,7 +138,10 @@ export function AufgabenView({
       setFaellig("");
       setKontakt(NONE);
       setDeal(NONE);
-      toast.success("Aufgabe angelegt");
+      setZuweisung(NONE);
+      toast.success(
+        zuweisung === NONE ? "Aufgabe angelegt" : "Aufgabe zugewiesen",
+      );
       router.refresh();
     });
   }
@@ -157,7 +171,14 @@ export function AufgabenView({
         onSubmit={submit}
         className="rounded-xl border border-border bg-surface p-5"
       >
-        <div className="grid gap-3 lg:grid-cols-[1fr_170px_220px_220px_auto]">
+        <div
+          className={cn(
+            "grid gap-3",
+            beraterOptionen.length > 0
+              ? "lg:grid-cols-[1fr_150px_190px_190px_200px_auto]"
+              : "lg:grid-cols-[1fr_170px_220px_220px_auto]",
+          )}
+        >
           <Input
             value={titel}
             onChange={(e) => setTitel(e.target.value)}
@@ -193,9 +214,25 @@ export function AufgabenView({
               ))}
             </SelectContent>
           </Select>
+          {/* Zuweisen (Kunden-Feedback): an einen Berater; Standard = mir selbst. */}
+          {beraterOptionen.length > 0 && (
+            <Select value={zuweisung} onValueChange={setZuweisung}>
+              <SelectTrigger>
+                <SelectValue placeholder="Zuweisen an" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NONE}>Mir selbst</SelectItem>
+                {beraterOptionen.map((b) => (
+                  <SelectItem key={b.id} value={b.id}>
+                    {b.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           <Button type="submit" disabled={pending || !titel.trim()}>
             <Plus className="mr-1 h-4 w-4" />
-            Anlegen
+            {zuweisung === NONE ? "Anlegen" : "Zuweisen"}
           </Button>
         </div>
       </form>
@@ -277,6 +314,26 @@ export function AufgabenView({
                         </>
                       )}
                     </span>
+                    {(() => {
+                      const delegiert =
+                        r.assignedTo != null && r.assignedTo !== r.ownerId;
+                      if (!delegiert) return null;
+                      const label =
+                        currentUserId === r.ownerId
+                          ? `an ${r.assignedName ?? "—"}`
+                          : currentUserId === r.assignedTo
+                            ? `von ${r.ownerName ?? "—"}`
+                            : `${r.ownerName ?? "—"} → ${r.assignedName ?? "—"}`;
+                      return (
+                        <span
+                          title="Zuweisung"
+                          className="inline-flex shrink-0 items-center gap-1 rounded-full bg-info/10 px-2 py-0.5 text-[11px] font-medium text-info"
+                        >
+                          <UserCheck className="h-3 w-3" aria-hidden />
+                          {label}
+                        </span>
+                      );
+                    })()}
                     {r.faellig_am && (
                       <span
                         className={cn(

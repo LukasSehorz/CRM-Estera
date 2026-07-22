@@ -24,11 +24,13 @@ export default async function AufgabenPage({
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const [{ data: tasks }, { data: contacts }, { data: deals }] =
+  const [{ data: tasks }, { data: contacts }, { data: deals }, { data: profiles }] =
     await Promise.all([
       supabase
         .from("tasks")
-        .select("id, titel, faellig_am, erledigt, contact_id, deal_id")
+        .select(
+          "id, titel, faellig_am, erledigt, contact_id, deal_id, owner_id, assigned_to",
+        )
         .order("faellig_am", { ascending: true, nullsFirst: false }),
       supabase
         .from("contacts")
@@ -38,12 +40,19 @@ export default async function AufgabenPage({
         .from("deals")
         .select("id, dealname")
         .order("created_at", { ascending: false }),
+      supabase
+        .from("profiles")
+        .select("id, vorname, nachname, rolle, aktiv")
+        .order("vorname"),
     ]);
 
   const contactMap = new Map(
     (contacts ?? []).map((c) => [c.id, `${c.vorname} ${c.nachname}`]),
   );
   const dealMap = new Map((deals ?? []).map((d) => [d.id, d.dealname]));
+  const nameMap = new Map(
+    (profiles ?? []).map((p) => [p.id, `${p.vorname} ${p.nachname}`]),
+  );
 
   const rows: AufgabeRow[] = (tasks ?? []).map((t) => ({
     id: t.id,
@@ -54,7 +63,17 @@ export default async function AufgabenPage({
     deal_id: t.deal_id,
     kontaktName: t.contact_id ? (contactMap.get(t.contact_id) ?? null) : null,
     dealName: t.deal_id ? (dealMap.get(t.deal_id) ?? null) : null,
+    ownerId: t.owner_id,
+    assignedTo: t.assigned_to,
+    assignedName: t.assigned_to ? (nameMap.get(t.assigned_to) ?? null) : null,
+    ownerName: nameMap.get(t.owner_id) ?? null,
   }));
+
+  // Zuweisbare Personen: sichtbare aktive Profile außer man selbst. Für einen
+  // Berater sind das (per RLS) genau seine Downline, für die GF alle.
+  const beraterOptionen = (profiles ?? [])
+    .filter((p) => p.aktiv && p.id !== user.id && p.rolle !== "geschaeftsfuehrung")
+    .map((p) => ({ id: p.id, name: `${p.vorname} ${p.nachname}` }));
 
   return (
     <>
@@ -66,6 +85,7 @@ export default async function AufgabenPage({
       <div className="px-6 py-6">
         <AufgabenView
           rows={rows}
+          currentUserId={user.id}
           kontaktOptionen={(contacts ?? []).map((c) => ({
             id: c.id,
             name: `${c.vorname} ${c.nachname}`,
@@ -74,6 +94,7 @@ export default async function AufgabenPage({
             id: d.id,
             name: d.dealname,
           }))}
+          beraterOptionen={beraterOptionen}
         />
       </div>
     </>
