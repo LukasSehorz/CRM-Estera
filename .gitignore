@@ -51,3 +51,6 @@ tailwindcss-*.log
 
 dev.log
 prod.log
+
+# Lokale Stresstest-Skripte
+.stress-*.mjs
