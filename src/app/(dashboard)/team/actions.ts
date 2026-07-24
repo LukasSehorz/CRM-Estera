@@ -412,10 +412,13 @@ export async function createSubBerater(
     .single();
   if (me?.rolle === "backoffice")
     return { error: "Backoffice darf keine Berater anlegen." };
-  // Ein Berater darf seiner Downline höchstens den EIGENEN Satz vergeben
-  // (Call SJ: dynamische Grenze statt fixem 7 %). GF hat den eigenen Wert.
-  const maxProvision = Number(me?.immo_anteil_default ?? 10) || 10;
-  const maxStufe = Number(me?.vertriebler_stufe ?? 100) || 100;
+  // Ein Berater darf seiner Downline NIEMALS mehr Provision vergeben, als er
+  // selbst hat (Kunden-Feedback 22.07.). Ohne eigenen Satz (null) = 0 → er kann
+  // keinen Immobilien-Provisionsanteil vergeben, bis die GF ihm einen zuweist.
+  const maxProvision =
+    me?.immo_anteil_default != null ? Number(me.immo_anteil_default) : 0;
+  const maxStufe =
+    me?.vertriebler_stufe != null ? Number(me.vertriebler_stufe) : 0;
 
   const vorname = input.vorname.trim();
   const nachname = input.nachname.trim();
@@ -434,13 +437,18 @@ export async function createSubBerater(
   // damit ein direkter Call den Slider nicht umgeht (Call SJ Fine-Tuning).
   let immoAnteil: number | null = null;
   if (input.bereiche.includes("immobilien")) {
+    if (maxProvision < 1)
+      return {
+        error:
+          "Für dich ist noch kein Provisionsanteil hinterlegt — die Geschäftsführung muss dir zuerst einen Satz zuweisen, bevor du Immobilien-Berater anlegen kannst.",
+      };
     if (
       Number.isNaN(input.immoAnteil) ||
       input.immoAnteil < 1 ||
       input.immoAnteil > maxProvision
     )
       return {
-        error: `Provisionsanteil muss zwischen 1 und ${maxProvision} % liegen.`,
+        error: `Provisionsanteil muss zwischen 1 und ${maxProvision} % liegen (dein eigener Satz).`,
       };
     immoAnteil = input.immoAnteil;
   }

@@ -34,10 +34,12 @@ export default async function TeamPage() {
   const meineBereiche = (
     me.bereich?.length ? me.bereich : ["immobilien", "vv"]
   ) as ("immobilien" | "vv")[];
-  // Ein Berater darf seiner Downline höchstens den EIGENEN Satz vergeben
-  // (Call SJ: „auf 7 % eingestellt → kann max. 7 % vergeben; bei 20 % → 20 %").
-  const maxProvision = Number(me.immo_anteil_default ?? 10) || 10;
-  const maxStufe = Number(me.vertriebler_stufe ?? 100) || 100;
+  // Ein Berater darf seiner Downline NIEMALS mehr vergeben, als er selbst hat
+  // („7 % → max. 7 %; 4 % → max. 4 %"). Ohne eigenen Satz (null) = 0.
+  const maxProvision =
+    me.immo_anteil_default != null ? Number(me.immo_anteil_default) : 0;
+  const maxStufe =
+    me.vertriebler_stufe != null ? Number(me.vertriebler_stufe) : 0;
 
   const [
     { data: profiles },

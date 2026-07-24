@@ -3,7 +3,11 @@
 import { useState } from "react";
 import { Bell, ClipboardList, FolderOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { FinanziererView, type FinKunde } from "./finanzierer-view";
+import {
+  FinanziererView,
+  type FinKunde,
+  type FinType,
+} from "./finanzierer-view";
 import { FinanziererAufgaben, type FinTask } from "./finanzierer-aufgaben";
 import {
   BenachrichtigungenListe,
@@ -14,10 +18,12 @@ type Tab = "dokumente" | "aufgaben" | "benachrichtigungen";
 
 export function FinanziererHome({
   kunden,
+  types,
   aufgaben,
   benachrichtigungen,
 }: {
   kunden: FinKunde[];
+  types: FinType[];
   aufgaben: FinTask[];
   benachrichtigungen: NotificationItem[];
 }) {
@@ -82,7 +88,7 @@ export function FinanziererHome({
               Ansehen einen Kunden aufklappen.
             </p>
           </div>
-          <FinanziererView kunden={kunden} />
+          <FinanziererView kunden={kunden} types={types} />
         </div>
       )}
 

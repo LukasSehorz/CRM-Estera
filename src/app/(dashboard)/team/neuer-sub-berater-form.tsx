@@ -51,10 +51,18 @@ export function NeuerSubBeraterForm({
     );
   }
 
+  const kannImmo = maxProvision >= 1;
+
   function submit(e: React.FormEvent) {
     e.preventDefault();
     if (bereiche.length === 0) {
       toast.error("Mindestens eine Sparte auswählen.");
+      return;
+    }
+    if (bereiche.includes("immobilien") && !kannImmo) {
+      toast.error(
+        "Für dich ist kein Provisionsanteil hinterlegt — bitte von der Geschäftsführung setzen lassen, bevor du Immobilien-Berater anlegst.",
+      );
       return;
     }
     start(async () => {
@@ -155,25 +163,35 @@ export function NeuerSubBeraterForm({
             Overhead.
           </p>
         </div>
-        {zeigeImmo && (
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="sb-immo">Provisionsanteil — {v.immoAnteil} %</Label>
-            <input
-              id="sb-immo"
-              type="range"
-              min={1}
-              max={maxProvision}
-              step={0.5}
-              value={v.immoAnteil}
-              onChange={(e) => set("immoAnteil", e.target.value)}
-              className="h-9 w-full cursor-pointer accent-primary"
-            />
-            <p className="text-xs text-muted-foreground">
-              Regler 1–{maxProvision} % (max. dein eigener Satz) · Anteil vom
-              Kaufpreis bei Immobilien-Deals.
-            </p>
-          </div>
-        )}
+        {zeigeImmo &&
+          (kannImmo ? (
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="sb-immo">Provisionsanteil — {v.immoAnteil} %</Label>
+              <input
+                id="sb-immo"
+                type="range"
+                min={1}
+                max={maxProvision}
+                step={0.5}
+                value={v.immoAnteil}
+                onChange={(e) => set("immoAnteil", e.target.value)}
+                className="h-9 w-full cursor-pointer accent-primary"
+              />
+              <p className="text-xs text-muted-foreground">
+                Regler 1–{maxProvision} % (max. dein eigener Satz) · Anteil vom
+                Kaufpreis bei Immobilien-Deals.
+              </p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-1.5">
+              <Label>Provisionsanteil</Label>
+              <p className="rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning">
+                Für dich ist noch kein eigener Provisionsanteil hinterlegt. Die
+                Geschäftsführung muss dir zuerst einen Satz zuweisen, bevor du
+                Immobilien-Berater anlegen kannst.
+              </p>
+            </div>
+          ))}
         <div className="flex flex-col gap-1.5">
           <Label>Sichtbare Sparten *</Label>
           <div className="flex h-9 items-center gap-4">

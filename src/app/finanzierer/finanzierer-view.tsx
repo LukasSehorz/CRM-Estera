@@ -6,15 +6,17 @@ import { ChevronDown, Download, FileText, Loader2, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { formatBytes, formatDate } from "@/lib/format";
-import { dokumentAnzeigename } from "@/lib/dokumente";
+import { dokumentAnzeigename, groupDocsByType } from "@/lib/dokumente";
 
 export type FinKunde = { contactId: string; name: string };
+export type FinType = { id: string; name: string };
 
 type FinDoc = {
   id: string;
   dateiname: string;
   anzeigename: string | null;
   kategorie: string;
+  document_type_id: string | null;
   storage_path: string;
   groesse: number | null;
   created_at: string;
@@ -22,7 +24,13 @@ type FinDoc = {
 
 const BUCKET = "kundendokumente";
 
-export function FinanziererView({ kunden }: { kunden: FinKunde[] }) {
+export function FinanziererView({
+  kunden,
+  types,
+}: {
+  kunden: FinKunde[];
+  types: FinType[];
+}) {
   const supabase = useMemo(() => createClient(), []);
   const [offen, setOffen] = useState<string | null>(null);
   const [docsByKunde, setDocsByKunde] = useState<Record<string, FinDoc[]>>({});
@@ -51,7 +59,7 @@ export function FinanziererView({ kunden }: { kunden: FinKunde[] }) {
     }
   }
 
-  async function download(d: FinDoc) {
+  async function download(d: { storage_path: string }) {
     const { data, error } = await supabase.storage
       .from(BUCKET)
       .createSignedUrl(d.storage_path, 60);
@@ -78,6 +86,9 @@ export function FinanziererView({ kunden }: { kunden: FinKunde[] }) {
       {kunden.map((k) => {
         const auf = offen === k.contactId;
         const docs = docsByKunde[k.contactId] ?? [];
+        // Nach Checklisten-Typ gruppieren (gleiche Struktur wie beim Berater/GF).
+        const grouped = groupDocsByType(docs, types);
+        const sichtbareTypen = types.filter((t) => (grouped[t.id]?.length ?? 0) > 0);
         return (
           <li
             key={k.contactId}
@@ -109,38 +120,58 @@ export function FinanziererView({ kunden }: { kunden: FinKunde[] }) {
                     <Loader2 className="h-4 w-4 animate-spin" /> Lädt …
                   </p>
                 ) : docs.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    Keine Dokumente.
-                  </p>
+                  <p className="text-sm text-muted-foreground">Keine Dokumente.</p>
                 ) : (
-                  <ul className="space-y-1">
-                    {docs.map((d) => (
-                      <li
-                        key={d.id}
-                        className="flex items-center gap-3 rounded-md border border-border bg-background/50 px-3 py-2"
-                      >
-                        <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
-                        <div className="min-w-0 flex-1">
-                          <div className="truncate text-sm">
-                            {d.anzeigename ||
-                              dokumentAnzeigename(d.kategorie, d.dateiname)}
-                          </div>
-                          <div className="truncate text-xs tabular-nums text-muted-foreground">
-                            {formatBytes(d.groesse)}
-                            {d.created_at ? ` · ${formatDate(d.created_at)}` : ""}
-                          </div>
+                  <div className="space-y-4">
+                    {sichtbareTypen.map((t) => {
+                      const dateien = grouped[t.id] ?? [];
+                      return (
+                        <div key={t.id}>
+                          {/* Checklisten-Punkt als Überschrift, darunter die
+                              zugehörigen Dokumente (gleiche Struktur wie beim
+                              Berater/GF). */}
+                          <p className="mb-1.5 text-sm font-medium text-foreground">
+                            {t.name}
+                          </p>
+                          <ul className="space-y-1">
+                            {dateien.map((d, i) => (
+                              <li
+                                key={d.id}
+                                className="flex items-center gap-3 rounded-md border border-border bg-background/50 px-3 py-2"
+                              >
+                                <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                                <div className="min-w-0 flex-1">
+                                  <div className="truncate text-sm">
+                                    {d.anzeigename ||
+                                      dokumentAnzeigename(
+                                        t.name,
+                                        d.dateiname,
+                                        i,
+                                        dateien.length,
+                                      )}
+                                  </div>
+                                  <div className="truncate text-xs tabular-nums text-muted-foreground">
+                                    {formatBytes(d.groesse)}
+                                    {d.created_at
+                                      ? ` · ${formatDate(d.created_at)}`
+                                      : ""}
+                                  </div>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => download(d)}
+                                  title="Herunterladen / Ansehen"
+                                  className="shrink-0 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-surface-2 hover:text-foreground"
+                                >
+                                  <Download className="h-4 w-4" />
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => download(d)}
-                          title="Herunterladen / Ansehen"
-                          className="shrink-0 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-surface-2 hover:text-foreground"
-                        >
-                          <Download className="h-4 w-4" />
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
+                      );
+                    })}
+                  </div>
                 )}
               </div>
             )}
