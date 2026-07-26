@@ -16,11 +16,20 @@ nach Art. 30 Abs. 1 DSGVO · **ENTWURF** — Stand 26.07.2026
 | Feld | Angabe |
 |---|---|
 | Name | Estera GmbH |
-| Anschrift | `[AUSFÜLLEN]` |
-| Handelsregister | `[AUSFÜLLEN]` |
-| Geschäftsführung | Ioannis Orfanidis `[bestätigen]` |
-| Kontakt Datenschutz | `[AUSFÜLLEN — E-Mail für Betroffenenanfragen]` |
+| Anschrift | Leopoldstraße 156, 80804 München |
+| Handelsregister | HRB 303242, Amtsgericht München |
+| USt-IdNr. | DE457539048 |
+| Geschäftsführung | Sebastian Meilbeck, Ioannis Orfanidis |
+| Kontakt Datenschutz | datenschutz@estera.immobilien |
+| Gewerbeerlaubnis | § 34c GewO (Immobilienmakler), IHK für München und Oberbayern |
 | Datenschutzbeauftragter | Nicht benannt — unter 20 Personen mit automatisierter Verarbeitung (§ 38 BDSG). Siehe [Schwellwertanalyse](02-schwellwertanalyse-dsfa.md). |
+
+> **Hinweis zur Geldwäsche-Verpflichteteneigenschaft:** Als Immobilienmakler
+> nach § 34c GewO ist die Estera GmbH nach § 2 Abs. 1 Nr. 14 GwG
+> voraussichtlich **Verpflichtete**. Daraus folgen die Identifizierungspflicht
+> (§ 10 GwG) und die fünfjährige Aufbewahrung der Identifizierungsunterlagen
+> (§ 8 Abs. 4 GwG). Die Löschfristen unten sind entsprechend gesetzt.
+> `[Bitte anwaltlich bestätigen]`
 
 ---
 
@@ -29,7 +38,7 @@ nach Art. 30 Abs. 1 DSGVO · **ENTWURF** — Stand 26.07.2026
 | Feld | Angabe |
 |---|---|
 | **Zweck** | Gewinnung, Betreuung und Vermittlung von Interessenten für Kapitalanlage-Immobilien; Nachverfolgung des Vertriebsprozesses vom Erstkontakt bis zum Notartermin |
-| **Rechtsgrundlage** | Art. 6 Abs. 1 lit. b (Vertragsanbahnung und -durchführung); für die Erstansprache je nach Leadherkunft lit. a oder f — `[AUSFÜLLEN: Herkunft der Leads]` |
+| **Rechtsgrundlage** | Art. 6 Abs. 1 lit. b (Vertragsanbahnung und -durchführung); für die Erstansprache je nach Leadherkunft lit. a oder f — `[AUSFÜLLEN: Herkunft der Leads — einzige verbleibende Lücke]` |
 | **Betroffene** | Interessenten, Kunden |
 | **Datenkategorien** | Vor-/Nachname, E-Mail, Telefon, Interessengebiet, Leadquelle, Kontaktstatus, Terminstatus |
 | | **Finanzdaten:** monatlicher Nettoverdienst, Eigenkapital, Finanzierungsrahmen, Finanzierungseinschätzung samt Betrag und Status |
@@ -37,7 +46,7 @@ nach Art. 30 Abs. 1 DSGVO · **ENTWURF** — Stand 26.07.2026
 | **Empfänger** | Zuständiger Berater; Geschäftsführung; übergeordnete Struktur-Partner (nur Deal-Daten, siehe Hinweis unten); Backoffice |
 | **Auftragsverarbeiter** | Supabase (Datenbank/Speicher, AWS Frankfurt); Hosting-Anbieter `[AUSFÜLLEN nach Umstellung]` |
 | **Drittlandtransfer** | Datenbank: nein (EU/Frankfurt). Anwendungsserver: `[AUSFÜLLEN — derzeit offen, siehe docs/dsgvo.md Abschnitt 4.2]` |
-| **Löschfrist** | `[AUSFÜLLEN]` — abhängig von der GwG-Prüfung. Vorschlag: Kunden 5 Jahre nach Vertragsende; nicht zustande gekommene Interessenten 2 Jahre nach letztem Kontakt |
+| **Löschfrist** | Kunden: 5 Jahre nach Ende der Geschäftsbeziehung (§ 8 Abs. 4 GwG); Interessenten ohne Abschluss: 2 Jahre nach letztem Kontakt; reine Anfragen: 6 Monate. Abrechnungsrelevante Unterlagen 10 Jahre (§ 147 AO, § 257 HGB). `[anwaltlich bestätigen]` |
 | **Technische Maßnahmen** | Siehe [TOM-Dokumentation](../dsgvo.md) Abschnitt 2 |
 
 > **Hinweis zur Sichtbarkeit in der Struktur:** Ein übergeordneter Partner
@@ -60,7 +69,7 @@ nach Art. 30 Abs. 1 DSGVO · **ENTWURF** — Stand 26.07.2026
 | **Empfänger** | wie V1 |
 | **Auftragsverarbeiter** | wie V1 |
 | **Drittlandtransfer** | wie V1 |
-| **Löschfrist** | `[AUSFÜLLEN]` |
+| **Löschfrist** | wie V1 |
 | **Technische Maßnahmen** | siehe TOM |
 
 ---
@@ -70,7 +79,7 @@ nach Art. 30 Abs. 1 DSGVO · **ENTWURF** — Stand 26.07.2026
 | Feld | Angabe |
 |---|---|
 | **Zweck** | Zusammenstellung der Finanzierungsunterlagen und deren Bereitstellung für Finanzierungspartner (Banken) zur Bonitätsprüfung |
-| **Rechtsgrundlage** | Art. 6 Abs. 1 lit. b für die Zusammenstellung. **Für die Weitergabe an die Bank ist eine gesonderte Grundlage erforderlich** — regelmäßig eine Einwilligung nach lit. a. `[AUSFÜLLEN: Wird eine solche Erklärung eingeholt?]` |
+| **Rechtsgrundlage** | Art. 6 Abs. 1 lit. b für die Zusammenstellung sowie Art. 6 Abs. 1 lit. c i.V.m. § 10 GwG für die Identifizierung. **Für die Weitergabe an den Finanzierungspartner** gilt lit. b, soweit ein schriftlicher Vermittlungsauftrag vorliegt — andernfalls Einwilligung nach lit. a. Zwei fertige Varianten: [Dokument 05](05-weitergabe-finanzierungspartner.md) |
 | **Betroffene** | Kunden, deren Finanzierung geprüft wird |
 | **Datenkategorien** | **Ausweisdokumente:** Personalausweis, Reisepass, Aufenthaltstitel (Vorder- und Rückseite) |
 | | **Einkommensnachweise:** die letzten drei Gehaltsabrechnungen, Lohnsteuerbescheinigung, Einkommensteuerbescheid |
@@ -81,7 +90,7 @@ nach Art. 30 Abs. 1 DSGVO · **ENTWURF** — Stand 26.07.2026
 | **Finanzierungspartner** | `[AUSFÜLLEN — Name und Anschrift je Institut]` |
 | **Auftragsverarbeiter** | Supabase (privater Speicher, Frankfurt) |
 | **Drittlandtransfer** | nein für die Speicherung |
-| **Löschfrist** | `[AUSFÜLLEN]` — **hier greift voraussichtlich § 8 GwG mit 5 Jahren.** Vor Festlegung anwaltlich klären. |
+| **Löschfrist** | **5 Jahre** nach Ende der Geschäftsbeziehung — § 8 Abs. 4 GwG. Die Aufbewahrungspflicht geht dem Löschanspruch nach Art. 17 vor. `[anwaltlich bestätigen]` |
 | **Technische Maßnahmen** | Privater Speicher ohne öffentlichen Zugriff; Zugriff über Rechteprüfung in der Datenbank; Download nur über Links mit 60 Sekunden Gültigkeit; **vollständige Protokollierung jedes Zugriffs**; Freigabe an Finanzierer einzeln durch die Geschäftsführung und jederzeit widerrufbar. Details: [TOM](../dsgvo.md) Abschnitte 2.2–2.4 |
 
 ---
@@ -97,7 +106,7 @@ nach Art. 30 Abs. 1 DSGVO · **ENTWURF** — Stand 26.07.2026
 | | **Tippgeber:** Name, Provisionssatz, zugeordneter Betreuer |
 | **Empfänger** | Geschäftsführung; übergeordnete Partner sehen ihre Downline |
 | **Auftragsverarbeiter** | wie V1 |
-| **Löschfrist** | `[AUSFÜLLEN]` — üblich: Löschung bzw. Sperrung des Zugangs bei Ausscheiden, Aufbewahrung der abrechnungsrelevanten Daten nach handels- und steuerrechtlichen Fristen (regelmäßig 10 Jahre) |
+| **Löschfrist** | Zugang wird bei Ausscheiden sofort gesperrt; abrechnungsrelevante Daten 10 Jahre (§ 147 AO, § 257 HGB) |
 | **Technische Maßnahmen** | siehe TOM; ausgeschiedene Personen werden gesperrt und verlieren sofort jeden Datenzugriff |
 
 ---
@@ -111,7 +120,7 @@ nach Art. 30 Abs. 1 DSGVO · **ENTWURF** — Stand 26.07.2026
 | **Betroffene** | Mitarbeiter und Finanzierer (als Handelnde), Kunden (als Bezug des Dokuments) |
 | **Datenkategorien** | Zeitpunkt, handelnde Person, deren Rolle, Art des Zugriffs (Upload, Ansicht, Löschung, Sammelexport, Freigabe), Dateiname, Zuordnung zu Dokument und Kunde. **Keine Dateiinhalte.** |
 | **Empfänger** | ausschließlich die Geschäftsführung |
-| **Löschfrist** | `[AUSFÜLLEN]` — Vorschlag: 12 Monate. Muss mindestens die Frist für Auskunftsersuchen abdecken, darf aber nicht zur Dauerüberwachung von Mitarbeitern werden. **Vor Festlegung mit dem Anwalt und ggf. der Mitarbeitervertretung abstimmen.** |
+| **Löschfrist** | 12 Monate. Muss mindestens die Frist für Auskunftsersuchen abdecken, darf aber nicht zur Dauerüberwachung von Mitarbeitern werden. **Vor Festlegung mit dem Anwalt und ggf. der Mitarbeitervertretung abstimmen.** |
 | **Technische Maßnahmen** | Einträge sind für niemanden änderbar oder löschbar; das Protokoll übersteht auch die Löschung des zugehörigen Dokuments |
 
 > **Hinweis:** Diese Verarbeitung ist selbst zustimmungsrelevant, weil sie das
