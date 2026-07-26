@@ -13,8 +13,25 @@ Informationen nach Art. 13 und 14 DSGVO · Stand: Juli 2026
 > **Abgrenzung:** Die bestehende Datenschutzerklärung auf
 > estera.immobilien/datenschutz betrifft **Website-Besucher** (Cookies,
 > Server-Logs, Kontaktformular) und bleibt unverändert bestehen. Dieses
-> Dokument betrifft die **Beratung und Vermittlung** — es wird dem Interessenten
-> beim Erstkontakt ausgehändigt und zusätzlich auf der Website veröffentlicht.
+> Dokument betrifft die **Beratung und Vermittlung**.
+>
+> **Wann und wie es zugehen muss:** Die Pflicht nach Art. 13 hängt nicht am
+> Medium, sondern am Zeitpunkt — informiert werden muss die Person **dann,
+> wenn ihre Daten bei ihr erhoben werden**, also im Beratungsgespräch. Ein
+> reiner Website-Besucher ist davon nicht betroffen; für ihn gilt weiterhin
+> allein die bestehende Website-Erklärung.
+>
+> Empfohlener Weg, weil er Zustellung **und** Nachweis abdeckt:
+> 1. Veröffentlichung unter einer eigenen, stabilen Adresse (z. B.
+>    `estera.immobilien/datenschutz-beratung`) — damit gibt es einen festen
+>    Link, den man versenden kann.
+> 2. Link in der E-Mail oder Nachricht vor bzw. nach dem Erstgespräch.
+> 3. Im Vermittlungsauftrag die Zeile ergänzen: *„Die Datenschutzhinweise
+>    habe ich erhalten."* Das ist der belastbarste Nachweis, weil unterschrieben.
+>
+> Kommt der Kontakt über eine **Empfehlung** zustande, gilt Art. 14: Die
+> Information muss spätestens einen Monat nach Erhalt der Daten erfolgen —
+> in der Praxis also beim ersten Anruf oder der ersten Nachricht.
 
 ---
 

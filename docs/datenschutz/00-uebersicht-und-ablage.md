@@ -23,14 +23,36 @@ Anwalt oder Datenschutzbeauftragter sie nur noch prüfen und freigeben muss.
 | **[Verarbeitungsverzeichnis](01-verarbeitungsverzeichnis.md)** | Datenschutz-Ordner, gepflegt | intern | Muss der Aufsichtsbehörde **auf Anfrage** vorgelegt werden (Art. 30 Abs. 4). Lebendes Dokument. |
 | **[TOM-Dokumentation](../dsgvo.md)** | Anlage zum AVV | intern | Nachweis der Schutzmaßnahmen. Entscheidend nach einem Vorfall. |
 | **[Schwellwertanalyse](02-schwellwertanalyse-dsfa.md)** | Datenschutz-Ordner | intern | Nachweis, dass geprüft wurde, ob eine Folgenabschätzung nötig ist. |
-| **Datenschutzhinweise** | **Website + Kundenkontakt** | **öffentlich** | Muss dem Kunden **bei Erhebung** ausgehändigt werden (Art. 13). Einziges öffentliches Dokument. |
+| **Datenschutzhinweise** | **beim Kunden** — Link auf der Website als fester Bezugspunkt | **öffentlich** | Muss die Person erreichen, **wenn ihre Daten bei ihr erhoben werden** (Art. 13) — also im Beratungsgespräch, nicht schon beim Website-Besuch. Die Veröffentlichung dient dazu, einen stabilen Link zu haben. Nachweis am besten über eine Zeile im Vermittlungsauftrag. |
 | **[Verpflichtung Datengeheimnis](03-verpflichtung-datengeheimnis.md)** | Personalakte, je Mitarbeiter | intern | Nachweis, dass Mitarbeiter belehrt wurden. |
 | **Einwilligung Finanzierer-Weitergabe** | Kundenakte | Kunde unterschreibt | Rechtsgrundlage für die Übermittlung an die Bank. |
 
 **Faustregel zur Ablage:** Ein einziger Ordner „Datenschutz" beim Mandanten —
-digital oder physisch — mit allem außer den Datenschutzhinweisen (die gehören
-auf die Website) und den Verpflichtungserklärungen (die gehören in die
+digital oder physisch — mit allem außer den Datenschutzhinweisen (die müssen
+zum Kunden) und den Verpflichtungserklärungen (die gehören in die
 Personalakten).
+
+---
+
+## Wer unterschreibt was — die häufigste Verwechslung
+
+Bei der Weitergabe an Finanzierungspartner sind **zwei verschiedene Dokumente**
+im Spiel. Sie werden nie von derselben Person unterschrieben:
+
+| | Der **Kunde** unterschreibt | Der **Finanzierer** unterschreibt |
+|---|---|---|
+| Dokument | 05 — Weitergabe an Finanzierungspartner | 03 — Verpflichtung auf das Datengeheimnis |
+| Inhalt | erlaubt die Weitergabe seiner Unterlagen | verpflichtet ihn zur Vertraulichkeit |
+| Wann | beim Vermittlungsauftrag | bevor er seinen Zugang bekommt |
+| Wie oft | einmal je Kunde | einmal je Finanzierer |
+| Ablage | Kundenakte bzw. im Vermittlungsauftrag | Vertragsordner beim Partner |
+
+Dokument 03 ist derselbe Vordruck, den auch die **eigenen Mitarbeiter**
+unterschreiben — jede Person unterschreibt ihr eigenes Exemplar.
+
+**Im laufenden Betrieb fällt kein weiteres Papier an.** Die Freigabe einzelner
+Dokumente an einen Finanzierer erfolgt per Klick im CRM und wird dort
+protokolliert.
 
 ---
 
