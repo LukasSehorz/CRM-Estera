@@ -35,7 +35,26 @@ nicht bestellt. Ihre Anfragen richten Sie bitte an die oben genannte Adresse.
 
 ---
 
-## 2. Welche Daten verarbeiten wir?
+## 2. Woher haben wir Ihre Daten?
+
+Sie haben uns Ihre Daten in den meisten Fällen selbst gegeben — über ein
+Formular auf unserer Website, über eine Anzeige in sozialen Netzwerken oder im
+persönlichen Gespräch.
+
+**Wenn Sie uns empfohlen wurden:** Ein Teil unserer Kontakte entsteht über
+Empfehlungen. In diesem Fall haben wir Ihren Namen und Ihre Kontaktdaten von
+der Person erhalten, die Sie empfohlen hat — einem Kunden oder einem
+Empfehlungspartner. Verarbeitet werden dann zunächst nur Ihr Name und Ihre
+Kontaktdaten. Wir stützen die erste Kontaktaufnahme auf unser berechtigtes
+Interesse an der Geschäftsanbahnung (Art. 6 Abs. 1 lit. f DSGVO).
+
+**Sie können dem jederzeit widersprechen.** Eine kurze Nachricht an
+datenschutz@estera.immobilien genügt, und wir löschen Ihre Daten und melden uns
+nicht wieder.
+
+---
+
+## 3. Welche Daten verarbeiten wir?
 
 Je nachdem, wie weit unsere Zusammenarbeit fortgeschritten ist, verarbeiten wir:
 
@@ -60,7 +79,7 @@ Objektadresse, Kaufpreis, Notartermin und der Stand der Abwicklung.
 
 ---
 
-## 3. Wofür verwenden wir Ihre Daten und auf welcher Grundlage?
+## 4. Wofür verwenden wir Ihre Daten und auf welcher Grundlage?
 
 | Wofür | Rechtsgrundlage |
 |---|---|
@@ -72,14 +91,14 @@ Objektadresse, Kaufpreis, Notartermin und der Stand der Abwicklung.
 | Protokollierung der Zugriffe auf Ihre Unterlagen | Art. 6 Abs. 1 lit. c DSGVO in Verbindung mit Art. 5 Abs. 2 und Art. 32 DSGVO |
 | Geltendmachung oder Abwehr von Rechtsansprüchen | Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse) |
 
-**Wenn Sie uns Ihre Daten nicht geben:** Die Angaben in Abschnitt 2 sind
+**Wenn Sie uns Ihre Daten nicht geben:** Die Angaben in Abschnitt 3 sind
 gesetzlich oder vertraglich erforderlich, um Sie beraten und eine Vermittlung
 durchführen zu können. Ohne sie können wir Sie nicht betreuen. Die
 Ausweisunterlagen sind gesetzlich vorgeschrieben und nicht verhandelbar.
 
 ---
 
-## 4. Wer bekommt Ihre Daten zu sehen?
+## 5. Wer bekommt Ihre Daten zu sehen?
 
 **Innerhalb der Estera GmbH** erhält nur der für Sie zuständige Berater sowie
 die Geschäftsführung Zugriff auf Ihre Daten. Andere Berater sehen Ihre Daten
@@ -121,7 +140,7 @@ weitergegeben.
 
 ---
 
-## 5. Wie lange speichern wir Ihre Daten?
+## 6. Wie lange speichern wir Ihre Daten?
 
 | Daten | Speicherdauer |
 |---|---|
@@ -138,7 +157,7 @@ schränken die Verarbeitung dann auf die Aufbewahrung ein.
 
 ---
 
-## 6. Welche Rechte haben Sie?
+## 7. Welche Rechte haben Sie?
 
 Sie haben uns gegenüber folgende Rechte:
 
@@ -174,7 +193,7 @@ beschweren. Für uns zuständig ist das
 
 ---
 
-## 7. Automatisierte Entscheidungen
+## 8. Automatisierte Entscheidungen
 
 Eine automatisierte Entscheidungsfindung oder ein Profiling im Sinne des
 Art. 22 DSGVO findet **nicht** statt. Die Entscheidung über eine Finanzierung
@@ -182,7 +201,7 @@ trifft ausschließlich der jeweilige Finanzierungspartner, nicht unser System.
 
 ---
 
-## 8. Wie schützen wir Ihre Daten?
+## 9. Wie schützen wir Ihre Daten?
 
 Ihre Unterlagen werden verschlüsselt übertragen und gespeichert. Der Zugriff
 ist technisch auf den zuständigen Berater und die Geschäftsführung begrenzt.
@@ -192,7 +211,7 @@ Zugriff. Die Wirksamkeit dieser Maßnahmen wurde zuletzt im Juli 2026 überprüf
 
 ---
 
-## 9. Änderungen
+## 10. Änderungen
 
 Wir passen diese Hinweise an, wenn sich unsere Verarbeitung ändert. Die jeweils
 aktuelle Fassung finden Sie unter estera.immobilien/datenschutz.

@@ -38,7 +38,9 @@ nach Art. 30 Abs. 1 DSGVO · **ENTWURF** — Stand 26.07.2026
 | Feld | Angabe |
 |---|---|
 | **Zweck** | Gewinnung, Betreuung und Vermittlung von Interessenten für Kapitalanlage-Immobilien; Nachverfolgung des Vertriebsprozesses vom Erstkontakt bis zum Notartermin |
-| **Rechtsgrundlage** | Art. 6 Abs. 1 lit. b (Vertragsanbahnung und -durchführung); für die Erstansprache je nach Leadherkunft lit. a oder f — `[AUSFÜLLEN: Herkunft der Leads — einzige verbleibende Lücke]` |
+| **Rechtsgrundlage** | Art. 6 Abs. 1 lit. b (Vertragsanbahnung und -durchführung). Für die **Erstansprache** je nach Herkunft des Kontakts — siehe Aufschlüsselung unten. |
+| **Herkunft der Kontaktdaten** | **1. Empfehlungen (Hauptquelle):** Die Daten stammen von einem Dritten (Bestandskunde oder Tippgeber), nicht von der betroffenen Person selbst. Rechtsgrundlage der Erstansprache: Art. 6 Abs. 1 lit. f (berechtigtes Interesse an der Geschäftsanbahnung). **Es gilt die Informationspflicht nach Art. 14** — der Kontakt ist spätestens einen Monat nach Erfassung, jedenfalls aber beim ersten Kontakt zu informieren. |
+| | **2. Social Media und Anzeigen:** Die betroffene Person füllt selbst ein Formular aus. Rechtsgrundlage: Art. 6 Abs. 1 lit. b (Anfrage der betroffenen Person) bzw. lit. a, soweit eine Einwilligung eingeholt wird. Informationspflicht nach **Art. 13** bei der Erhebung. |
 | **Betroffene** | Interessenten, Kunden |
 | **Datenkategorien** | Vor-/Nachname, E-Mail, Telefon, Interessengebiet, Leadquelle, Kontaktstatus, Terminstatus |
 | | **Finanzdaten:** monatlicher Nettoverdienst, Eigenkapital, Finanzierungsrahmen, Finanzierungseinschätzung samt Betrag und Status |
