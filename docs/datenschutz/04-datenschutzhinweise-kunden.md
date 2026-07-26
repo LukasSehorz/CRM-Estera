@@ -144,13 +144,17 @@ sind.
 **Technische Dienstleister**, die für uns tätig werden und mit denen wir Verträge
 zur Auftragsverarbeitung nach Art. 28 DSGVO geschlossen haben:
 
-- Supabase — Betrieb der Datenbank und Speicherung Ihrer Unterlagen.
+- **Supabase** — Betrieb der Datenbank und Speicherung Ihrer Unterlagen.
   Serverstandort: Frankfurt am Main, Deutschland.
-- `[PRÜFEN: Hosting-Anbieter der Anwendung eintragen]` — Betrieb der Anwendung.
-  Serverstandort: `[eintragen]`.
+- **Netlify** — Betrieb der Anwendung.
+  Serverstandort: Frankfurt am Main, Deutschland.
 
-**Eine Übermittlung in Länder außerhalb der EU findet nicht statt.**
-`[PRÜFEN: gilt erst nach der Umstellung des Hostings]`
+**Ihre Daten werden in Deutschland gespeichert und verarbeitet.** Beide
+Dienstleister sind fest auf den Standort Frankfurt eingestellt. Netlify Inc. ist
+ein US-amerikanisches Unternehmen; sollte im Rahmen der technischen Betreuung
+ein Zugriff aus den USA erfolgen, ist dieser über die Zertifizierung nach dem
+EU-US Data Privacy Framework sowie ergänzend über Standardvertragsklauseln der
+EU-Kommission abgesichert.
 
 Ihre Daten werden **nicht verkauft** und nicht zu Werbezwecken an Dritte
 weitergegeben.
@@ -246,5 +250,4 @@ aktuelle Fassung finden Sie unter estera.immobilien/datenschutz.
    Wortlaut des Vermittlungsauftrags, siehe Dokument 05.
 3. **Frist für Interessenten ohne Geschäftsabschluss** — Vorschlag 2 Jahre.
 4. **Frist für das Zugriffsprotokoll** — Vorschlag 12 Monate.
-5. **Hosting-Anbieter und Serverstandort** — nach der Umstellung eintragen.
-6. **Finanzierungspartner** — namentlich nennen oder Formulierung „auf Anfrage".
+5. **Finanzierungspartner** — namentlich nennen oder Formulierung „auf Anfrage".

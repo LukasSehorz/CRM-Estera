@@ -46,8 +46,8 @@ nach Art. 30 Abs. 1 DSGVO · **ENTWURF** — Stand 26.07.2026
 | | **Finanzdaten:** monatlicher Nettoverdienst, Eigenkapital, Finanzierungsrahmen, Finanzierungseinschätzung samt Betrag und Status |
 | | **Deal-Daten:** Objektadresse, Kaufpreis, Notartermin, Objektstatus, freie Bemerkungen |
 | **Empfänger** | Zuständiger Berater; Geschäftsführung; übergeordnete Struktur-Partner (nur Deal-Daten, siehe Hinweis unten); Backoffice |
-| **Auftragsverarbeiter** | Supabase (Datenbank/Speicher, AWS Frankfurt); Hosting-Anbieter `[AUSFÜLLEN nach Umstellung]` |
-| **Drittlandtransfer** | Datenbank: nein (EU/Frankfurt). Anwendungsserver: `[AUSFÜLLEN — derzeit offen, siehe docs/dsgvo.md Abschnitt 4.2]` |
+| **Auftragsverarbeiter** | Supabase (Datenbank und Dokumentenspeicher, AWS Frankfurt / eu-central-1); Netlify (Betrieb der Anwendung, Functions-Region Frankfurt / `fra`) |
+| **Drittlandtransfer** | Verarbeitung und Speicherung finden **in der EU** statt (beide Dienste auf Frankfurt festgelegt). Netlify Inc. ist ein US-Unternehmen; ein etwaiger Zugriff im Rahmen des Supports ist über die Zertifizierung nach dem **EU-US Data Privacy Framework** (Angemessenheitsbeschluss der EU-Kommission vom 10.07.2023) sowie ergänzend über **Standardvertragsklauseln** nach Durchführungsbeschluss 2021/914 abgesichert. |
 | **Löschfrist** | Kunden: 5 Jahre nach Ende der Geschäftsbeziehung (§ 8 Abs. 4 GwG); Interessenten ohne Abschluss: 2 Jahre nach letztem Kontakt; reine Anfragen: 6 Monate. Abrechnungsrelevante Unterlagen 10 Jahre (§ 147 AO, § 257 HGB). `[anwaltlich bestätigen]` |
 | **Technische Maßnahmen** | Siehe [TOM-Dokumentation](../dsgvo.md) Abschnitt 2 |
 

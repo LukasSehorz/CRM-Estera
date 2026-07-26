@@ -185,7 +185,13 @@ strukturell ausgeschlossen.
 | Dienst | Zweck | Ort |
 |---|---|---|
 | Supabase (Datenbank + Storage) | alle Daten, alle Dokumente | **AWS eu-central-1, Frankfurt** ✅ |
-| Netlify (Anwendung) | Auslieferung, Server Actions | **derzeit unbestimmt — siehe 4.2** ⚠️ |
+| Netlify (Anwendung) | Auslieferung, Server Actions | **Functions-Region `fra`, Frankfurt** ✅ |
+
+Beide Dienste sind fest auf Frankfurt eingestellt; Verarbeitung und Speicherung
+finden in der EU statt. Netlify Inc. ist ein US-Unternehmen — ein etwaiger
+Support-Zugriff ist über die Zertifizierung nach dem **EU-US Data Privacy
+Framework** (Angemessenheitsbeschluss vom 10.07.2023) sowie ergänzend über
+**Standardvertragsklauseln** nach Beschluss 2021/914 abgesichert.
 
 ---
 
@@ -210,32 +216,37 @@ für den konkreten Fall feststellen.
 
 Sobald die Fristen feststehen, ist die Umsetzung eine Konfiguration, kein Umbau.
 
-### 4.2 Hosting-Region der Anwendung 🔴
+### 4.2 Hosting-Region der Anwendung ✅ *(erledigt)*
 
-Die Datenbank liegt in Frankfurt. Für die **Anwendung** ist in `netlify.toml`
-keine Region festgelegt — Netlify-Functions laufen dann standardmäßig in
-`us-east-1` (USA). Server Actions verarbeiten dort Kundendaten im Klartext.
-Das wäre ein Drittlandtransfer nach Art. 44 ff. und würde den EU-Standort der
-Datenbank weitgehend entwerten.
+Ursprünglicher Befund: In `netlify.toml` war keine Region festgelegt —
+Netlify-Functions laufen dann standardmäßig in `us-east-1` (USA), und die
+Server Actions hätten dort Kundendaten im Klartext verarbeitet. Das wäre ein
+Drittlandtransfer nach Art. 44 ff. gewesen und hätte den EU-Standort der
+Datenbank weitgehend entwertet.
 
-Drei Wege, alle gangbar:
+**Umgesetzt:** Die Functions-Region ist auf **`fra` (Frankfurt)** festgelegt
+— einstellbar über *Project configuration → Build & deploy → Continuous
+deployment → Functions region*. Diese projektweite Einstellung ist bei Next.js
+zwingend, weil die Functions erst zur Build-Zeit erzeugt werden und daher keine
+Region im Code tragen können. Voraussetzung ist mindestens der Pro-Tarif.
 
-| Option | Aufwand | Anmerkung |
-|---|---|---|
-| **Vercel, Region Frankfurt** | gering | Region frei wählbar, auch im kleinen Tarif; Next.js-Heimat |
-| Netlify mit Region-Pinning | gering–mittel | Function-Region nur in höheren Tarifen wählbar — beim Anbieter bestätigen lassen |
-| Hetzner / eigener Server | höher | volle Kontrolle, dafür eigener Betrieb (Updates, Backups, Monitoring) |
+Ein Anbieterwechsel ist damit **nicht erforderlich**. Netlify Inc. ist nach dem
+EU-US Data Privacy Framework zertifiziert; seit dem Angemessenheitsbeschluss
+vom 10.07.2023 sind Übermittlungen an zertifizierte US-Unternehmen ohne
+zusätzliche Garantien zulässig. Ergänzend gelten die Standardvertragsklauseln
+nach Beschluss 2021/914.
 
-**Empfehlung: Vercel mit Region Frankfurt.** Kleinste Umstellung, kein
-Betriebsaufwand, Region vertraglich zusicherbar. In jedem Fall muss die
-gewählte Region **schriftlich** festgehalten werden.
+> **Restrisiko, bewusst benannt:** Der Data Privacy Framework steht — wie zuvor
+> Safe Harbor und Privacy Shield — unter juristischer Beobachtung. Sollte er
+> fallen, greifen die Standardvertragsklauseln weiter; durch die Region
+> Frankfurt bleiben Verarbeitung und Speicherung ohnehin in der EU. Bei einem
+> Wechsel des Hosting-Anbieters ist dieser Abschnitt neu zu bewerten.
 
 ### 4.3 Organisatorische Pflichten — nur der Verantwortliche kann sie erfüllen 🟡
 
 Ohne diese Punkte ist das System **nicht konform**, egal wie gut die Technik ist:
 
-- [ ] **AVV nach Art. 28** mit Supabase **und** dem Hosting-Anbieter
-- [ ] **SCC + Transfer-Impact-Assessment**, falls Verarbeitung außerhalb der EU bleibt
+- [ ] **AVV nach Art. 28** mit Supabase **und** Netlify
 - [ ] **Verzeichnis von Verarbeitungstätigkeiten** (Art. 30) — Abschnitt 1 ist die Vorlage
 - [ ] **TOM-Dokumentation** (Art. 32) — Abschnitt 2 ist die Vorlage
 - [ ] **Datenschutz-Folgenabschätzung** (Art. 35) — bei Ausweiskopien plus Bonitätsdaten in diesem Umfang mit hoher Wahrscheinlichkeit pflichtig
@@ -274,7 +285,7 @@ Abschnitt 1 des Verarbeitungsverzeichnisses festhalten.
 ## 5. Checkliste vor der Übergabe
 
 - [ ] Löschfristen geklärt (4.1) und umgesetzt
-- [ ] Hosting-Region festgelegt, umgestellt und schriftlich bestätigt (4.2)
+- [x] Hosting-Region auf Frankfurt festgelegt (4.2) — erledigt
 - [ ] AVV mit allen Auftragsverarbeitern abgeschlossen
 - [ ] **Alle Demo-Zugänge entfernt** — die aktuellen Demo-Logins nutzen ein
       gemeinsam bekanntes Passwort
