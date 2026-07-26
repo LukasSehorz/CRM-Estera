@@ -17,7 +17,13 @@ import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { DOKUMENT_UPLOAD_AKTIV } from "@/config/enums";
 import { formatBytes, formatDate } from "@/lib/format";
-import { dokumentAnzeigename, slotOptionen } from "@/lib/dokumente";
+import {
+  dokumentAnzeigename,
+  pruefeDatei,
+  slotOptionen,
+  UPLOAD_ACCEPT,
+} from "@/lib/dokumente";
+import { logDokumentZugriff } from "@/lib/audit";
 import { buildZip, uniqueName } from "@/lib/zip";
 import { setDocumentStatus } from "./actions";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -170,12 +176,19 @@ export function DocumentChecklist({
           toast.error(`„${file.name}" ist zu groß (max. 15 MB).`);
           continue;
         }
+        // Dateityp prüfen und Content-Type serverseitig festlegen — die
+        // Angabe des Browsers ist fälschbar (siehe lib/dokumente.ts).
+        const pruefung = pruefeDatei(file.name);
+        if (!pruefung.ok) {
+          toast.error(pruefung.grund);
+          continue;
+        }
         const path = `${contactId}/${crypto.randomUUID()}_${safeName(file.name)}`;
         const { error: upErr } = await supabase.storage
           .from(BUCKET)
           .upload(path, file, {
             upsert: false,
-            contentType: file.type || undefined,
+            contentType: pruefung.contentType,
           });
         if (upErr) {
           // Echte Ursache zeigen statt generischem Toast (Call SJ P5:
@@ -208,6 +221,11 @@ export function DocumentChecklist({
           );
           continue;
         }
+        await logDokumentZugriff(supabase, {
+          contactId,
+          aktion: "upload",
+          dateiname: file.name,
+        });
         ok++;
       }
       if (ok > 0) {
@@ -244,11 +262,24 @@ export function DocumentChecklist({
       toast.error("Download nicht möglich.");
       return;
     }
+    await logDokumentZugriff(supabase, {
+      documentId: f.id,
+      contactId,
+      aktion: "download",
+      dateiname: f.dateiname,
+    });
     window.open(data.signedUrl, "_blank");
   }
 
   async function removeFile(f: DocFile) {
     if (!confirm(`Datei „${f.dateiname}" wirklich löschen?`)) return;
+    // Vor dem Löschen protokollieren — danach ist die Zuordnung weg.
+    await logDokumentZugriff(supabase, {
+      documentId: f.id,
+      contactId,
+      aktion: "delete",
+      dateiname: f.dateiname,
+    });
     const { error } = await supabase
       .from("contact_documents")
       .delete()
@@ -283,6 +314,13 @@ export function DocumentChecklist({
         toast.error("Keine Dateien zum Herunterladen.");
         return;
       }
+      // Sammel-Export separat protokollieren: hier verlässt die komplette
+      // Kundenakte auf einmal das System (Art. 33 — relevanter Vorgang).
+      await logDokumentZugriff(supabase, {
+        contactId,
+        aktion: "zip_export",
+        dateiname: `${entries.length} Dateien`,
+      });
       const blob = buildZip(entries);
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -337,6 +375,7 @@ export function DocumentChecklist({
         ref={fileRef}
         type="file"
         multiple
+        accept={UPLOAD_ACCEPT}
         className="hidden"
         onChange={onFile}
       />

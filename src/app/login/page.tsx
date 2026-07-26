@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { login, type LoginState } from "./actions";
 import { BrandMark } from "@/components/layout/brand-mark";
@@ -20,6 +20,17 @@ export default function LoginPage() {
     login,
     null,
   );
+  // Gesperrtes Konto: die Layouts melden ab und hängen ?gesperrt=1 an, damit
+  // der Nutzer den Grund sieht statt kommentarlos wieder hier zu landen.
+  // Bewusst über window statt useSearchParams(): letzteres würde für diese
+  // Seite eine Suspense-Grenze erzwingen (Next 15) — unnötiger Umbau für
+  // einen reinen Hinweistext.
+  const [gesperrt, setGesperrt] = useState(false);
+  useEffect(() => {
+    setGesperrt(
+      new URLSearchParams(window.location.search).get("gesperrt") === "1",
+    );
+  }, []);
   const jahr = new Date().getFullYear();
 
   // Login bewusst IMMER dunkel — auch wenn der User den Hellmodus nutzt: die
@@ -198,13 +209,14 @@ export default function LoginPage() {
                 />
               </div>
 
-              {state?.error && (
+              {(state?.error || gesperrt) && (
                 <div
                   role="alert"
                   className="flex items-start gap-2 rounded-md bg-danger/10 px-3 py-2.5 text-sm text-danger"
                 >
                   <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-                  {state.error}
+                  {state?.error ??
+                    "Dieser Zugang wurde gesperrt. Bitte wenden Sie sich an die Geschäftsführung."}
                 </div>
               )}
 

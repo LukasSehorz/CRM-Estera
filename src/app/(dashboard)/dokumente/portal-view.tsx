@@ -23,7 +23,7 @@ import { formatBytes, formatDate } from "@/lib/format";
 import { bereichLabel } from "@/config/enums";
 import { Input } from "@/components/ui/input";
 import { DocumentChecklist, type DocType } from "../kontakte/document-checklist";
-import { groupDocsByType } from "@/lib/dokumente";
+import { groupDocsByType, pruefeDatei, UPLOAD_ACCEPT } from "@/lib/dokumente";
 
 export type PortalDoc = {
   id: string;
@@ -277,12 +277,18 @@ function PortalLibrary({
           toast.error(`„${file.name}" ist zu groß (max. 25 MB).`);
           continue;
         }
+        // Dateityp prüfen, Content-Type serverseitig festlegen (lib/dokumente.ts).
+        const pruefung = pruefeDatei(file.name);
+        if (!pruefung.ok) {
+          toast.error(pruefung.grund);
+          continue;
+        }
         const path = `${sichtbarkeit}/${crypto.randomUUID()}_${safeName(file.name)}`;
         const { error: upErr } = await supabase.storage
           .from(PORTAL_BUCKET)
           .upload(path, file, {
             upsert: false,
-            contentType: file.type || undefined,
+            contentType: pruefung.contentType,
           });
         if (upErr) {
           toast.error(`Upload von „${file.name}" fehlgeschlagen.`);
@@ -352,7 +358,14 @@ function PortalLibrary({
 
       {isGf && (
         <div className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed border-border bg-surface-2 p-3">
-          <input ref={fileRef} type="file" multiple className="hidden" onChange={onFile} />
+          <input
+            ref={fileRef}
+            type="file"
+            multiple
+            accept={UPLOAD_ACCEPT}
+            className="hidden"
+            onChange={onFile}
+          />
           <span className="text-sm text-muted-foreground">Bereich:</span>
           {(["", "immobilien", "vv"] as const).map((b) => (
             <button

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createNotification } from "@/lib/notifications";
+import { logDokumentZugriff } from "@/lib/audit";
 
 type Result = { ok: true } | { error: string };
 const ERR = "Speichern fehlgeschlagen. Bitte erneut versuchen.";
@@ -74,6 +75,11 @@ export async function setDokumentFreigabe(input: {
       { onConflict: "document_id,finanzierer_id", ignoreDuplicates: true },
     );
     if (error) return { error: ERR };
+    await logDokumentZugriff(supabase, {
+      documentId: input.documentId,
+      contactId: input.contactId,
+      aktion: "freigabe_erteilt",
+    });
     // Erste Freigabe für diesen Kunden -> eine Benachrichtigung.
     if (vorher === 0)
       await benachrichtige(supabase, user.id, input.finanziererId, input.kundenName);
@@ -84,6 +90,11 @@ export async function setDokumentFreigabe(input: {
       .eq("document_id", input.documentId)
       .eq("finanzierer_id", input.finanziererId);
     if (error) return { error: ERR };
+    await logDokumentZugriff(supabase, {
+      documentId: input.documentId,
+      contactId: input.contactId,
+      aktion: "freigabe_entzogen",
+    });
   }
   revalidatePath(`/kontakte/${input.contactId}`);
   return { ok: true };
@@ -120,6 +131,13 @@ export async function setAlleFreigaben(input: {
       { onConflict: "document_id,finanzierer_id", ignoreDuplicates: true },
     );
     if (error) return { error: ERR };
+    for (const documentId of input.documentIds) {
+      await logDokumentZugriff(supabase, {
+        documentId,
+        contactId: input.contactId,
+        aktion: "freigabe_erteilt",
+      });
+    }
     if (vorher === 0)
       await benachrichtige(supabase, user.id, input.finanziererId, input.kundenName);
   } else {
@@ -129,6 +147,13 @@ export async function setAlleFreigaben(input: {
       .eq("finanzierer_id", input.finanziererId)
       .in("document_id", input.documentIds);
     if (error) return { error: ERR };
+    for (const documentId of input.documentIds) {
+      await logDokumentZugriff(supabase, {
+        documentId,
+        contactId: input.contactId,
+        aktion: "freigabe_entzogen",
+      });
+    }
   }
   revalidatePath(`/kontakte/${input.contactId}`);
   return { ok: true };

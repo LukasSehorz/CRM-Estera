@@ -55,5 +55,8 @@ prod.log
 # Lokale Stresstest-Skripte
 .stress-*.mjs
 
+# Lokales DB-Hilfsskript (liest .env.local)
+.dsgvo-run.cjs
+
 # Lokale Screenshot-/Verifikationsskripte
 .shot-*.mjs

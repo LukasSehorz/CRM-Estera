@@ -7,6 +7,74 @@
  */
 type TypeLite = { id: string; name: string };
 
+// ── Upload-Sicherheit (DSGVO Art. 32) ──────────────────────────────────
+//
+// Zwei Probleme werden hier gelöst:
+//
+// 1) Bisher wurde JEDER Dateityp angenommen. Eine hochgeladene HTML- oder
+//    SVG-Datei wird beim Öffnen der signierten URL vom Browser AUSGEFÜHRT —
+//    auf der Supabase-Domain. Damit ließe sich Schadcode einschleusen oder
+//    eine täuschend echte Phishing-Seite unter der Adresse des Systems
+//    ausliefern.
+//
+// 2) Der Content-Type kam bisher vom Client (`file.type`) und war damit frei
+//    fälschbar. Wir leiten ihn deshalb IMMER aus der Dateiendung ab und
+//    ignorieren die Angabe des Browsers.
+//
+// Bewusst großzügige Liste: Ausweise werden oft direkt mit dem Handy
+// fotografiert (iPhone: HEIC), Nachweise kommen als PDF, Scans als TIFF.
+// Office-Dokumente sind erlaubt, weil sie im Browser nicht ausgeführt werden.
+
+/** Erlaubte Endung → verbindlicher Content-Type. */
+const ERLAUBTE_TYPEN: Record<string, string> = {
+  pdf: "application/pdf",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+  gif: "image/gif",
+  webp: "image/webp",
+  heic: "image/heic",
+  heif: "image/heif",
+  tif: "image/tiff",
+  tiff: "image/tiff",
+  bmp: "image/bmp",
+  txt: "text/plain",
+  csv: "text/csv",
+  doc: "application/msword",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  xls: "application/vnd.ms-excel",
+  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  odt: "application/vnd.oasis.opendocument.text",
+  ods: "application/vnd.oasis.opendocument.spreadsheet",
+};
+
+export const ERLAUBTE_ENDUNGEN = Object.keys(ERLAUBTE_TYPEN);
+
+/** `accept`-Attribut für den Datei-Dialog (filtert schon in der Auswahl). */
+export const UPLOAD_ACCEPT = ERLAUBTE_ENDUNGEN.map((e) => `.${e}`).join(",");
+
+export type DateiPruefung =
+  | { ok: true; contentType: string }
+  | { ok: false; grund: string };
+
+/**
+ * Prüft eine Datei vor dem Upload und liefert den verbindlichen
+ * Content-Type. Niemals `file.type` vertrauen — siehe Kommentar oben.
+ */
+export function pruefeDatei(dateiname: string): DateiPruefung {
+  const endung = dateiname.split(".").pop()?.toLowerCase() ?? "";
+  const contentType = ERLAUBTE_TYPEN[endung];
+  if (!contentType) {
+    return {
+      ok: false,
+      grund: endung
+        ? `Dateityp „.${endung}" ist aus Sicherheitsgründen nicht erlaubt. Zulässig sind PDF, Bilder (JPG, PNG, HEIC …) und Office-Dokumente.`
+        : "Datei ohne Endung kann nicht angenommen werden.",
+    };
+  }
+  return { ok: true, contentType };
+}
+
 // Alte freie Kategorien, deren Wert NICHT dem Typnamen entspricht.
 const LEGACY_KAT: Record<string, string> = {
   Gehaltsabrechnung: "Die letzten drei Gehaltsnachweise (alle Seiten)",

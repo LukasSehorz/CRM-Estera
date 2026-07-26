@@ -4,10 +4,19 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ArrowUpRight, ChevronRight, Handshake, User, UserPlus } from "lucide-react";
+import {
+  ArrowUpRight,
+  ChevronRight,
+  Handshake,
+  Lock,
+  LockOpen,
+  User,
+  UserPlus,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   createBerater,
+  setBeraterAktiv,
   setBeraterAnbindung,
   setBeraterBereiche,
   setMonatsziele,
@@ -405,17 +414,64 @@ function StufeRow({
           <span className="text-xs text-muted-foreground">—</span>
         )}
       </td>
-      <td className="px-4 py-3 text-right">
-        {(!readOnly || zielEditable) && (
-          <Button
-            size="sm"
-            variant={dirty ? "default" : "outline"}
-            disabled={!dirty || pending}
-            onClick={saveStufe}
-          >
-            {pending ? "Speichern …" : "Speichern"}
-          </Button>
-        )}
+      <td className="px-4 py-3">
+        <div className="flex items-center justify-end gap-2">
+          {/* Leaver-Prozess (DSGVO Art. 32): Zugang eines Ausgeschiedenen
+              sofort sperren. Es werden KEINE Daten gelöscht — die Kundenakten
+              bleiben der GF erhalten. Nur GF, nie für das eigene Konto. */}
+          {!readOnly && !istGf && (
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={pending}
+              title={
+                row.aktiv
+                  ? "Zugang sperren — der Nutzer kann sich nicht mehr anmelden. Daten bleiben erhalten."
+                  : "Zugang wieder freigeben"
+              }
+              onClick={() => {
+                if (
+                  row.aktiv &&
+                  !confirm(
+                    `Zugang von ${row.name} sperren?\n\nDer Zugang wird sofort entzogen. Es werden keine Daten gelöscht — die Kundenakten bleiben erhalten.`,
+                  )
+                )
+                  return;
+                start(async () => {
+                  const res = await setBeraterAktiv(row.id, !row.aktiv);
+                  if ("error" in res) toast.error(res.error);
+                  else
+                    toast.success(
+                      row.aktiv
+                        ? `Zugang von ${row.name} gesperrt`
+                        : `Zugang von ${row.name} freigegeben`,
+                    );
+                });
+              }}
+              className={
+                row.aktiv
+                  ? "text-muted-foreground hover:text-destructive"
+                  : "text-muted-foreground"
+              }
+            >
+              {row.aktiv ? (
+                <Lock className="h-4 w-4" />
+              ) : (
+                <LockOpen className="h-4 w-4" />
+              )}
+            </Button>
+          )}
+          {(!readOnly || zielEditable) && (
+            <Button
+              size="sm"
+              variant={dirty ? "default" : "outline"}
+              disabled={!dirty || pending}
+              onClick={saveStufe}
+            >
+              {pending ? "Speichern …" : "Speichern"}
+            </Button>
+          )}
+        </div>
       </td>
     </tr>
     {open && hatDownline && (

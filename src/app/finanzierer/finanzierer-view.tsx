@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { formatBytes, formatDate } from "@/lib/format";
 import { dokumentAnzeigename, groupDocsByType } from "@/lib/dokumente";
+import { logDokumentZugriff } from "@/lib/audit";
 
 export type FinKunde = { contactId: string; name: string };
 export type FinType = { id: string; name: string };
@@ -59,7 +60,10 @@ export function FinanziererView({
     }
   }
 
-  async function download(d: { storage_path: string }) {
+  async function download(
+    d: { id: string; dateiname: string; storage_path: string },
+    contactId: string,
+  ) {
     const { data, error } = await supabase.storage
       .from(BUCKET)
       .createSignedUrl(d.storage_path, 60);
@@ -67,6 +71,14 @@ export function FinanziererView({
       toast.error("Download nicht möglich.");
       return;
     }
+    // Zugriffe des Finanzierers sind besonders protokollpflichtig: hier
+    // sieht ein EXTERNER Empfänger (Bank) Kundenunterlagen ein.
+    await logDokumentZugriff(supabase, {
+      documentId: d.id,
+      contactId,
+      aktion: "download",
+      dateiname: d.dateiname,
+    });
     window.open(data.signedUrl, "_blank");
   }
 
@@ -159,7 +171,7 @@ export function FinanziererView({
                                 </div>
                                 <button
                                   type="button"
-                                  onClick={() => download(d)}
+                                  onClick={() => download(d, k.contactId)}
                                   title="Herunterladen / Ansehen"
                                   className="shrink-0 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-surface-2 hover:text-foreground"
                                 >

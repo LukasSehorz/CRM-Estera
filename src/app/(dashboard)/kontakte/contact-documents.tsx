@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import { Download, FileText, Loader2, Trash2, Upload } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { DOKUMENT_KATEGORIEN } from "@/config/enums";
+import { pruefeDatei, UPLOAD_ACCEPT } from "@/lib/dokumente";
+import { logDokumentZugriff } from "@/lib/audit";
 import { CollapsibleSection } from "@/components/collapsible-section";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/format";
@@ -71,12 +73,18 @@ export function ContactDocuments({
           toast.error(`„${file.name}" ist zu groß (max. 15 MB).`);
           continue;
         }
+        // Dateityp prüfen, Content-Type serverseitig festlegen (lib/dokumente.ts).
+        const pruefung = pruefeDatei(file.name);
+        if (!pruefung.ok) {
+          toast.error(pruefung.grund);
+          continue;
+        }
         const path = `${contactId}/${crypto.randomUUID()}_${safeName(file.name)}`;
         const { error: upErr } = await supabase.storage
           .from(BUCKET)
           .upload(path, file, {
             upsert: false,
-            contentType: file.type || undefined,
+            contentType: pruefung.contentType,
           });
         if (upErr) {
           toast.error(`Upload von „${file.name}" fehlgeschlagen.`);
@@ -97,6 +105,11 @@ export function ContactDocuments({
           toast.error(`„${file.name}" konnte nicht gespeichert werden.`);
           continue;
         }
+        await logDokumentZugriff(supabase, {
+          contactId,
+          aktion: "upload",
+          dateiname: file.name,
+        });
         ok++;
       }
       if (ok > 0) {
@@ -118,12 +131,25 @@ export function ContactDocuments({
       toast.error("Download nicht möglich.");
       return;
     }
+    await logDokumentZugriff(supabase, {
+      documentId: doc.id,
+      contactId,
+      aktion: "download",
+      dateiname: doc.dateiname,
+    });
     window.open(data.signedUrl, "_blank");
   }
 
   function remove(doc: DocRow) {
     if (!confirm(`„${doc.dateiname}" wirklich löschen?`)) return;
     startTransition(async () => {
+      // Vor dem Löschen protokollieren — danach ist die Zuordnung weg.
+      await logDokumentZugriff(supabase, {
+        documentId: doc.id,
+        contactId,
+        aktion: "delete",
+        dateiname: doc.dateiname,
+      });
       const { error: delErr } = await supabase
         .from("contact_documents")
         .delete()
@@ -164,6 +190,7 @@ export function ContactDocuments({
             ref={fileRef}
             type="file"
             multiple
+            accept={UPLOAD_ACCEPT}
             className="hidden"
             onChange={onFiles}
           />

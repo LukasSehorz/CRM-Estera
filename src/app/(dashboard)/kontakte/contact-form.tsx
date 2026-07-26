@@ -672,8 +672,17 @@ function DeleteButton({ id }: { id: string }) {
       variant="outline"
       disabled={pending}
       onClick={() => {
-        if (confirm("Diesen Kunden wirklich löschen?"))
-          startTransition(() => deleteContact(id));
+        if (
+          confirm(
+            "Diesen Kunden wirklich löschen? Alle hochgeladenen Unterlagen werden dabei ebenfalls unwiderruflich gelöscht.",
+          )
+        )
+          startTransition(async () => {
+            // Bei Erfolg leitet die Server-Action selbst um; ein Rückgabewert
+            // kommt daher nur im Fehlerfall an (z. B. Dateien nicht löschbar).
+            const res = await deleteContact(id);
+            if (res && "error" in res) toast.error(res.error);
+          });
       }}
       className="text-destructive hover:text-destructive"
     >

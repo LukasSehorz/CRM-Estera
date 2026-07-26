@@ -144,9 +144,14 @@ export async function setBeraterAnbindung(
 type Rolle = "berater" | "backoffice" | "finanzierer";
 
 /**
- * Ändert die Rolle zwischen Berater und Backoffice (2.5). Nutzt den Admin-
- * Client (Service-Role, serverseitig) nach GF-Prüfung — die GF-Rolle selbst
- * wird nie über diese Funktion vergeben oder entzogen.
+ * Ändert die Rolle zwischen Berater, Backoffice und Finanzierer (2.5).
+ *
+ * Sicherheit (DSGVO Art. 32): Die Berechtigungsprüfung erzwingt seit
+ * Migration 0032 die DATENBANK (`set_berater_rolle`, SECURITY DEFINER) —
+ * nicht mehr die App über den Service-Role-Key. Vorher war die App-Prüfung
+ * die einzige Hürde: ein Logikfehler dort hätte gereicht, um sich selbst
+ * hochzustufen. Der Service-Role-Key umgeht jede RLS und gehört daher nicht
+ * in einen Pfad, den ein normaler Nutzer auslösen kann.
  */
 export async function setRolle(
   beraterId: string,
@@ -157,36 +162,55 @@ export async function setRolle(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: "Nicht angemeldet." };
-  const { data: me } = await supabase
-    .from("profiles")
-    .select("rolle")
-    .eq("id", user.id)
-    .single();
-  if (me?.rolle !== "geschaeftsfuehrung")
-    return { error: "Nur die Geschäftsführung darf Rollen ändern." };
 
-  // Ziel darf nicht die GF sein (GF-Rolle bleibt unangetastet).
-  const { data: ziel } = await supabase
-    .from("profiles")
-    .select("rolle")
-    .eq("id", beraterId)
-    .single();
-  if (ziel?.rolle === "geschaeftsfuehrung")
-    return { error: "Die Geschäftsführungs-Rolle kann hier nicht geändert werden." };
-
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  if (!serviceKey || !url)
-    return { error: "Server nicht konfiguriert (Service-Role-Key fehlt)." };
-
-  const admin = createSupabaseAdmin<Database>(url, serviceKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
+  const { error } = await supabase.rpc("set_berater_rolle", {
+    p_target: beraterId,
+    p_rolle: rolle,
   });
-  const { error } = await admin
-    .from("profiles")
-    .update({ rolle })
-    .eq("id", beraterId);
-  if (error) return { error: "Speichern fehlgeschlagen. Bitte erneut versuchen." };
+  if (error) {
+    console.error("setRolle fehlgeschlagen:", error.message);
+    return {
+      error:
+        "Speichern fehlgeschlagen — nur die Geschäftsführung darf Rollen ändern.",
+    };
+  }
+
+  revalidatePath("/team");
+  return { ok: true };
+}
+
+/**
+ * Leaver-Prozess (DSGVO Art. 32): Zugang eines Mitarbeiters sperren oder
+ * wieder freigeben. Sperren entzieht sofort JEDEN Datenzugriff — die RLS
+ * prüft `aktiv` (Migration 0032), und die Layouts melden das Konto beim
+ * nächsten Aufruf ab.
+ *
+ * Es werden bewusst KEINE Daten gelöscht: die Kundenakten des Ausgeschiedenen
+ * bleiben der Geschäftsführung erhalten (Nachvollziehbarkeit + gesetzliche
+ * Aufbewahrungspflichten). Das Löschen von Kundendaten bleibt ein getrennter,
+ * bewusster Vorgang.
+ */
+export async function setBeraterAktiv(
+  beraterId: string,
+  aktiv: boolean,
+): Promise<StufeResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Nicht angemeldet." };
+
+  const { error } = await supabase.rpc("set_berater_aktiv", {
+    p_target: beraterId,
+    p_aktiv: aktiv,
+  });
+  if (error) {
+    console.error("setBeraterAktiv fehlgeschlagen:", error.message);
+    return {
+      error:
+        "Speichern fehlgeschlagen — nur die Geschäftsführung darf Zugänge sperren.",
+    };
+  }
 
   revalidatePath("/team");
   return { ok: true };

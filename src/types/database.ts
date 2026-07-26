@@ -17,6 +17,24 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      // Zugriffsprotokoll für Kundendokumente (Migration 0032, DSGVO Art. 30/33).
+      // Nur lesbar (GF); Einträge entstehen ausschließlich über die
+      // SECURITY-DEFINER-Funktion log_dokument_zugriff.
+      dokument_zugriff_log: {
+        Row: {
+          id: number;
+          document_id: string | null;
+          contact_id: string | null;
+          aktion: string;
+          dateiname: string | null;
+          akteur_id: string | null;
+          akteur_rolle: string | null;
+          created_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
       document_freigaben: {
         Row: {
           id: string;
@@ -750,6 +768,28 @@ export type Database = {
           groesse: number | null;
           created_at: string;
         }[];
+      };
+      // DSGVO-Härtung (Migration 0032)
+      is_aktiv: {
+        Args: Record<string, never>;
+        Returns: boolean;
+      };
+      log_dokument_zugriff: {
+        Args: {
+          p_document_id: string | null;
+          p_contact_id: string | null;
+          p_aktion: string;
+          p_dateiname?: string | null;
+        };
+        Returns: undefined;
+      };
+      set_berater_rolle: {
+        Args: { p_target: string; p_rolle: string };
+        Returns: undefined;
+      };
+      set_berater_aktiv: {
+        Args: { p_target: string; p_aktiv: boolean };
+        Returns: undefined;
       };
     };
     Enums: {

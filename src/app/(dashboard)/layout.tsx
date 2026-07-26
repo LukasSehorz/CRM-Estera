@@ -19,9 +19,19 @@ export default async function DashboardLayout({
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("vorname, nachname, rolle, bereich")
+    .select("vorname, nachname, rolle, bereich, aktiv")
     .eq("id", user.id)
     .single();
+
+  // Leaver-Sperre (DSGVO Art. 32): Ein gesperrtes Konto verliert sofort den
+  // Zugang — auch wenn die Session noch gültig ist. Die RLS verweigert einem
+  // gesperrten Konto ohnehin jeden Datenzugriff (Migration 0032); hier wird
+  // zusätzlich sauber abgemeldet, statt leere Seiten zu zeigen.
+  // Kein Profil = verwaister Auth-Nutzer -> ebenfalls kein Zugang.
+  if (!profile || !profile.aktiv) {
+    await supabase.auth.signOut();
+    redirect("/login?gesperrt=1");
+  }
 
   // Ungelesene Benachrichtigungen (Zähler-Badge in der Navigation).
   const { count: unreadCount } = await supabase

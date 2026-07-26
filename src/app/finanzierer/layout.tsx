@@ -21,11 +21,17 @@ export default async function FinanziererLayout({
   if (!user) redirect("/login");
   const { data: profile } = await supabase
     .from("profiles")
-    .select("rolle")
+    .select("rolle, aktiv")
     .eq("id", user.id)
     .single();
+  // Leaver-Sperre (DSGVO Art. 32): gesperrtes Konto = sofort kein Zugang mehr.
+  // Besonders wichtig hier — der Finanzierer ist ein EXTERNER Empfänger.
+  if (!profile || !profile.aktiv) {
+    await supabase.auth.signOut();
+    redirect("/login?gesperrt=1");
+  }
   // Nur Finanzierer — alle anderen zurück ins normale CRM.
-  if (profile?.rolle !== "finanzierer") redirect("/dashboard");
+  if (profile.rolle !== "finanzierer") redirect("/dashboard");
 
   return (
     <div className="theme-midnight min-h-screen bg-background text-foreground">

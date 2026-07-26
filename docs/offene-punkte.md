@@ -24,7 +24,7 @@ markiert), der sich mit einer einzigen Stelle umstellen lässt.
 
 | # | Thema | Frage | Aktueller Default | Umstellen bei |
 |---|---|---|---|---|
-| 1 | **DSGVO Dokumente** | Speicherort, Löschkonzept, Einwilligung | privater Bucket + signierte URLs (60 s); Upload-Schalter `DOKUMENT_UPLOAD_AKTIV` | `enums.ts` / Storage-Policies |
+| 1 | **DSGVO Dokumente** | Löschfristen + Hosting-Region (Rest ist umgesetzt) | Technik gehärtet & geprüft (Migrationen 0032–0034), **keine** automatische Löschung | siehe `docs/dsgvo.md` |
 | 2 | **Immo-Provisionskette** | Berater-Anteil vom Kaufpreis-Topf oder von der Estera-Provision? | `anteil_von_provision` | `IMMO_PROVISION_MODUS` in `provision.ts` |
 | 3 | **Overhead-Detail** | Basis = Provision vor dem Vertriebler-Anteil des Partners? (Annahme 8.2) | ja (aus Hausanteil, Partner nichts abgezogen) | `dealOverheadFuerUpline` |
 | 4 | **Tippgeber-Topf** | Aus welchem Topf wird der Tippgeber-Satz gerechnet? | vom Berater-Anteil (Vorgabe Lukas) | `dealTippgeberAnteil` |

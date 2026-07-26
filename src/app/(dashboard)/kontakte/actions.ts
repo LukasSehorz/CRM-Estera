@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { createNotification } from "@/lib/notifications";
+import { logDokumentZugriff } from "@/lib/audit";
 import type { Database } from "@/types/database";
 
 type Enums = Database["public"]["Enums"];
@@ -137,9 +138,54 @@ export async function updateContact(
   return { ok: true, id };
 }
 
-export async function deleteContact(id: string) {
+/**
+ * Löscht einen Kontakt MITSAMT seiner hochgeladenen Dateien (DSGVO Art. 17).
+ *
+ * Wichtig: `on delete cascade` räumt nur die Metadaten in contact_documents
+ * ab — die eigentlichen Dateien (Ausweis, Gehaltsnachweise, Steuerbescheide)
+ * blieben bisher unbefristet im Storage liegen, verwaist und über die
+ * Oberfläche nicht mehr auffindbar. Daher: erst Dateien löschen, dann den
+ * Kontakt. Reihenfolge bewusst so — schlägt das Löschen der Dateien fehl,
+ * bleibt der Kontakt bestehen und der Vorgang ist wiederholbar (statt
+ * unauffindbare Reste zu hinterlassen).
+ */
+export async function deleteContact(id: string): Promise<ActionResult | never> {
   const supabase = await createClient();
-  await supabase.from("contacts").delete().eq("id", id);
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Nicht angemeldet." };
+
+  const { data: docs } = await supabase
+    .from("contact_documents")
+    .select("id, dateiname, storage_path")
+    .eq("contact_id", id);
+
+  if (docs?.length) {
+    const { error: storageError } = await supabase.storage
+      .from("kundendokumente")
+      .remove(docs.map((d) => d.storage_path));
+    if (storageError) {
+      console.error("Dateien konnten nicht gelöscht werden:", storageError);
+      return {
+        error:
+          "Die hinterlegten Dateien konnten nicht gelöscht werden — der Kontakt wurde daher NICHT gelöscht. Bitte erneut versuchen.",
+      };
+    }
+    // Löschung protokollieren, bevor die Metadaten wegkaskadieren.
+    for (const d of docs) {
+      await logDokumentZugriff(supabase, {
+        documentId: d.id,
+        contactId: id,
+        aktion: "delete",
+        dateiname: d.dateiname,
+      });
+    }
+  }
+
+  const { error } = await supabase.from("contacts").delete().eq("id", id);
+  if (error) return { error: "Löschen fehlgeschlagen. Bitte erneut versuchen." };
+
   revalidatePath("/kontakte");
   redirect("/kontakte");
 }
