@@ -18,16 +18,34 @@ nach Art. 35 DSGVO · **ENTWURF zur anwaltlichen Prüfung** — Stand 26.07.2026
 Das CRM verarbeitet Kontakt-, Finanz- und Ausweisdaten von Interessenten und
 Kunden der Estera GmbH sowie Daten der eigenen Vertriebspartner.
 
-**Größenordnung zum Stichtag 26.07.2026** (aus dem Live-System ausgelesen):
+**Zeitpunkt dieser Bewertung:** Das System wurde im Juli 2026 fertiggestellt und
+für den Produktivbetrieb vorbereitet. Zum Stichtag sind **keine Echtdaten
+erfasst** — das System wurde vor der Übergabe vollständig geleert, sämtliche
+Testdaten wurden entfernt.
 
-| Kennzahl | Wert |
+Diese Bewertung ist daher **vorausschauend** angelegt. Das ist rechtlich der
+richtige Weg: Art. 35 DSGVO verlangt die Prüfung **vor Beginn** der
+Verarbeitung und stellt auf Art, Umfang, Umstände und Zwecke der
+**beabsichtigten** Verarbeitung ab — nicht auf einen Datenbestand, den es zu
+diesem Zeitpunkt naturgemäß noch nicht gibt.
+
+**Geplante Größenordnung** (Angabe der Estera GmbH):
+
+| Kennzahl | Erwartung |
 |---|---|
-| Erfasste Kontakte (Interessenten + Kunden) | 53 |
-| Erfasste Deals | 42 |
-| Hochgeladene Kundendokumente | 12 |
-| Nutzerkonten gesamt | 10 (8 Berater, 1 GF, 1 Finanzierer) |
+| Interessenten und Kunden im ersten Jahr | `[AUSFÜLLEN — Schätzung genügt]` |
+| Mit dem System arbeitende Berater | `[AUSFÜLLEN]` |
+| Weitere Nutzer (Geschäftsführung, Backoffice, Finanzierer) | `[AUSFÜLLEN]` |
+| Kundendokumente je Finanzierungsfall | etwa 5 bis 10 |
 
-Diese Größenordnung ist für die Bewertung entscheidend.
+Diese Größenordnung ist für die Bewertung entscheidend — siehe Kriterium 5 in
+Abschnitt 3 und die Abwägung in Abschnitt 4.
+
+> **Bestätigung nach Aufnahme des Betriebs:** Die Bewertung wird **vier Wochen
+> nach Produktivstart** anhand der dann tatsächlich erfassten Zahlen überprüft
+> und bestätigt oder angepasst. Das Ergebnis wird in Abschnitt 6 dieses
+> Dokuments festgehalten. Damit ist sowohl die Prüfung vor Beginn der
+> Verarbeitung als auch die Kontrolle am realen Bestand dokumentiert.
 
 ---
 
@@ -55,7 +73,7 @@ durchzuführen.
 | 2 | Automatisierte Entscheidung mit Rechtswirkung | nein |
 | 3 | Systematische Überwachung | nein — die Zugriffsprotokollierung dient der Sicherheit, nicht der Verhaltenskontrolle |
 | 4 | Vertrauliche oder höchstpersönliche Daten | **ja** — Einkommensnachweise, Steuerbescheide und Ausweisdokumente |
-| 5 | **Verarbeitung in großem Umfang** | **nein** — 53 Betroffene. Nach jeder gängigen Auslegung deutlich unterhalb der Schwelle. |
+| 5 | **Verarbeitung in großem Umfang** | **nein** — die Estera GmbH ist ein regional tätiger Immobilienmakler mit einem überschaubaren Kundenkreis und einem einstelligen bis niedrig zweistelligen Beraterteam. Die erwartete Größenordnung liegt deutlich unterhalb dessen, was als „umfangreich" gilt. Maßgeblich sind die Zahlen in Abschnitt 1. |
 | 6 | Abgleich oder Zusammenführung von Datensätzen | nein |
 | 7 | Daten schutzbedürftiger Personen | **teilweise** — Beschäftigte gelten gegenüber dem Arbeitgeber als schutzbedürftig; die Verarbeitung beschränkt sich jedoch auf übliche Vertriebs- und Abrechnungsdaten |
 | 8 | Innovative Technologien | nein — Standard-Webanwendung, keine KI-gestützte Bewertung |
@@ -75,12 +93,17 @@ Kriterien erreicht.
 
 **Was dagegen spricht — und hier ausschlaggebend ist:** Der Umfang. Die
 Kriterien des EDSA sind ausdrücklich im Zusammenspiel mit der Verarbeitungs-
-größe zu lesen. Bei 53 Betroffenen und einem Zugriffskreis von zehn Personen
+größe zu lesen. Bei einem regional tätigen Maklerbetrieb mit einem
+überschaubaren Kundenkreis und einem kleinen, klar abgegrenzten Zugriffskreis
 fehlt es an dem Breitenrisiko, das eine Folgenabschätzung adressieren soll.
+
 Hinzu kommt, dass die technischen Maßnahmen bereits über dem branchenüblichen
 Standard liegen und am 26.07.2026 wirksam geprüft wurden — insbesondere die
-lückenlose Protokollierung, die kurzlebigen Download-Links und die einzeln
-erteilte Freigabe an Finanzierungspartner.
+lückenlose Protokollierung jedes Dokumentzugriffs, die auf 60 Sekunden
+begrenzten Download-Links, die technisch in der Datenbank erzwungene
+Mandantentrennung und die einzeln erteilte, jederzeit widerrufbare Freigabe an
+Finanzierungspartner. Diese Maßnahmen senken das Risiko für die betroffenen
+Personen erheblich und fließen nach Art. 35 Abs. 1 in die Bewertung ein.
 
 ### Ergebnis
 
@@ -116,6 +139,38 @@ lit. b und die Bewertung kippt.
 
 ---
 
+## 6. Bestätigung am realen Datenbestand
+
+Die Erstbewertung erfolgte vor Aufnahme der Verarbeitung und stützt sich auf die
+in Abschnitt 1 genannte erwartete Größenordnung. Vier Wochen nach dem
+Produktivstart wird sie anhand der tatsächlich erfassten Zahlen überprüft.
+
+**Auszufüllen bei der Nachprüfung:**
+
+| Kennzahl | Tatsächlicher Wert | Stichtag |
+|---|---|---|
+| Erfasste Interessenten und Kunden | `_______` | `__________` |
+| Erfasste Kundendokumente | `_______` | |
+| Aktive Nutzerkonten | `_______` | |
+
+**Ergebnis der Nachprüfung** (Zutreffendes ankreuzen):
+
+`☐` Die Erstbewertung wird **bestätigt**. Die tatsächliche Größenordnung
+entspricht der Erwartung; eine Datenschutz-Folgenabschätzung ist weiterhin
+nicht erforderlich.
+
+`☐` Die Erstbewertung wird **angepasst**. Begründung:
+`________________________________________________________________`
+
+Durchgeführt am `__________` durch `______________________________`
+
+> **Hinweis:** Sollten die tatsächlichen Zahlen die Erwartung deutlich
+> übersteigen, greifen die in Abschnitt 5 genannten Schwellen. Die Bewertung
+> ist dann neu zu treffen — nicht nur zu bestätigen.
+
+---
+
 **Erstellt:** 26.07.2026 vom technischen Dienstleister
 **Geprüft und bestätigt:** `[Anwalt / DSB — Name, Datum, Unterschrift]`
 **Freigegeben:** `[Geschäftsführung — Name, Datum, Unterschrift]`
+**Nachgeprüft:** `[Datum, Name — vier Wochen nach Produktivstart]`

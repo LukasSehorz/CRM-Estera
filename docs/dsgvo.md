@@ -52,9 +52,11 @@ Aufrufer beschränken. Damit ist ausgeschlossen, dass er über einen
 API-Parameter mehr sieht als vorgesehen.
 
 **Geprüft am 26.07.2026** gegen die Produktivdatenbank mit einem eigens
-angelegten Testkonto (danach entfernt):
+angelegten Testkonto (danach entfernt). Der Datenbestand zum Prüfzeitpunkt
+bestand ausschließlich aus **Testdaten** — es waren zu keinem Zeitpunkt echte
+Kundendaten im System, auch nicht während der Prüfung:
 
-- Testberater sah **0 von 53** Kontakten und **0** fremde Dokumente
+- Testberater sah **0 von 53** Testkontakten und **0** fremde Dokumente
 - Anonymer Zugriff (ohne Anmeldung) auf alle 17 Tabellen: **HTTP 401**
 - Selbst-Hochstufung auf `geschaeftsfuehrung` per API: **abgewiesen (403)**
 - Rollenwechsel/Kontosperre als Berater per RPC: **abgewiesen (400)**
@@ -109,8 +111,9 @@ Einkommensnachweise unbefristet und unauffindbar im Speicher zurück (Verstoß
 gegen Art. 17). Schlägt das Löschen der Dateien fehl, bleibt der Kunde bestehen
 und der Vorgang ist wiederholbar — es entstehen keine unauffindbaren Reste.
 
-> Prüfung am 26.07.2026: **0 verwaiste Dateien** im Bucket (12 Dateien gesamt,
-> alle zugeordnet). Der Fehler hatte sich noch nicht ausgewirkt.
+> Prüfung am 26.07.2026: **0 verwaiste Dateien** im Bucket (12 Testdateien
+> gesamt, alle zugeordnet). Der Fehler hatte sich noch nicht ausgewirkt und
+> wurde vor der Aufnahme des Echtbetriebs behoben.
 
 **Automatische Löschung nach Fristen ist bewusst NICHT umgesetzt** — siehe
 Abschnitt 4.1.
@@ -293,7 +296,7 @@ geprüft. Alle Prüfungen bestanden:
 |---|---|
 | Anonymer Zugriff auf alle 17 Tabellen | abgewiesen (HTTP 401) |
 | Storage-Buckets öffentlich auflistbar | nein |
-| Mandantentrennung (Testberater vs. 53 Kontakte) | 0 fremde Kontakte, 0 fremde Dokumente |
+| Mandantentrennung (Testberater vs. 53 Testkontakte) | 0 fremde Kontakte, 0 fremde Dokumente |
 | Protokoll schreibbar mit korrektem Akteur | ja |
 | Protokoll durch Berater lesbar | nein |
 | Protokoll durch Berater löschbar | nein (HTTP 403) |
@@ -304,5 +307,10 @@ geprüft. Alle Prüfungen bestanden:
 | TRUNCATE als `authenticated` | abgewiesen |
 | RLS auf allen Tabellen im Schema `public` | aktiv |
 | Verwaiste Dateien im Dokumenten-Bucket | 0 |
+
+> **Zum Datenbestand:** Sämtliche Prüfungen liefen gegen **Testdaten**. Vor der
+> Übergabe wurde das System vollständig geleert (0 Kontakte, 0 Dokumente,
+> 0 Dateien im Speicher); die Testzugänge wurden entfernt. Echte Kundendaten
+> waren zu keinem Zeitpunkt im System.
 
 Nachvollziehbar über die Migrationen `0032`–`0034`.
