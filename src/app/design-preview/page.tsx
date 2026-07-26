@@ -31,6 +31,9 @@ const SURFACE_TOKENS = [
 // Light -> foreground (#0F1B2D), Dark -> background (#0A121E).
 const ON_GOLD = "text-foreground dark:text-background";
 
+// Diese Seite zeigt die BASIS-Token (:root/.dark) — dort ist der Akzent
+// weiterhin Gold (Login/Marketing). Der Stahlblau-Akzent gilt nur im
+// .theme-midnight-Layer des Dashboards, siehe midnight-preview.tsx.
 const BRAND_TOKENS = [
   ["--primary", "bg-primary", "text-primary-foreground"],
   ["--accent-500 (Gold)", "bg-accent-500", ON_GOLD],
@@ -38,11 +41,13 @@ const BRAND_TOKENS = [
   ["--accent-600 (Bronze)", "bg-accent-600", ON_GOLD],
 ] as const;
 
+// Weiche Tönung statt voller Fläche (wie im echten Einsatz, siehe Pill) —
+// volle Deckkraft + weißer Text riss die AA-Kontrastgrenze bei Warning/Info.
 const STATUS_TOKENS = [
-  ["success", "bg-success"],
-  ["warning", "bg-warning"],
-  ["danger", "bg-danger"],
-  ["info", "bg-info"],
+  ["success", "bg-success/15", "text-success"],
+  ["warning", "bg-warning/15", "text-warning"],
+  ["danger", "bg-danger/15", "text-danger"],
+  ["info", "bg-info/15", "text-info"],
 ] as const;
 
 const STAGES = [1, 2, 3, 4, 5, 6, 7, 8] as const;
@@ -241,8 +246,8 @@ export default function DesignPreviewPage() {
             hint="Deal gewonnen / ins Stocken / verloren / neutral — als Fläche und als Pill."
           >
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              {STATUS_TOKENS.map(([label, bg]) => (
-                <Swatch key={label} label={label} className={bg} fg="text-white" />
+              {STATUS_TOKENS.map(([label, bg, fg]) => (
+                <Swatch key={label} label={label} className={bg} fg={fg} />
               ))}
             </div>
             <div className="mt-4 flex flex-wrap gap-2">

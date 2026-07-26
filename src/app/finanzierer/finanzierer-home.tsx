@@ -68,7 +68,7 @@ export function FinanziererHome({
               <Icon className="h-4 w-4" />
               {t.label}
               {t.badge ? (
-                <span className="min-w-5 rounded-full bg-danger px-1.5 py-0.5 text-center text-[10px] font-semibold leading-none text-white tabular-nums">
+                <span className="min-w-5 rounded-full bg-danger px-1.5 py-0.5 text-center text-[10px] font-semibold leading-none text-destructive-foreground tabular-nums">
                   {t.badge > 99 ? "99+" : t.badge}
                 </span>
               ) : null}

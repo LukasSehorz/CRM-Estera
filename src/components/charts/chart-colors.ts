@@ -1,47 +1,42 @@
 // =====================================================================
 // Estera CRM — recharts-Palette (Deliverable des Farbsystems)
-// Gold-Familie + Navy/Slate, abgestuft und in Light UND Dark lesbar.
+// Ruhige Stahlblau-/Amber-Familie, abgestuft und in Light UND Dark lesbar.
 //
-// Kategoriale Serien (Donut, mehrere Reihen) nutzen die theme-abhängigen
-// CSS-Variablen --chart-1..6 aus globals.css, damit sie in beiden Modi
-// genug Kontrast haben (Dark: aufgehellt, Light: abgedunkelt). recharts
-// akzeptiert "var(--x)" direkt als fill/stroke im SVG.
-//
-// Verlaufs-Endpunkte, die programmatisch gemischt werden (lerpHex) oder in
-// einem <linearGradient><stop> sitzen, brauchen feste Hex — dafür CHART_HEX.
+// ALLES hier läuft über die theme-abhängigen CSS-Variablen aus globals.css
+// (--chart-1..6, --accent-400/600, --success/--warning/--danger/--info,
+// --border, --text-secondary). recharts akzeptiert "var(--x)" direkt als
+// fill/stroke/stopColor im SVG — keine festen Hex-Werte mehr nötig
+// (Kundenwunsch 26.07.: kein Neon/Cyan, keine hart kodierten Verläufe).
 // =====================================================================
 
 /** Kategoriale Chart-Palette — theme-abhängig (Reihenfolge = Serien-Index). */
 export const CHART_COLORS = [
-  "var(--chart-1)", // Gold tief (Light) / Gold (Dark)
-  "var(--chart-2)", // Gold (Light) / Gold Soft (Dark)
-  "var(--chart-3)", // Stahlblau
-  "var(--chart-4)", // Teal
-  "var(--chart-5)", // Slate
-  "var(--chart-6)", // Bronze
+  "var(--chart-1)",
+  "var(--chart-2)",
+  "var(--chart-3)",
+  "var(--chart-4)",
+  "var(--chart-5)",
+  "var(--chart-6)",
 ] as const;
 
-/** Feste Hex für Verläufe & lerpHex — Midnight-Redesign: Luna-Blau-Familie
- *  (Slots behalten ihre Namen, damit alle Verwender unverändert bleiben). */
-export const CHART_HEX = {
-  goldSoft: "#A7EBF2", // Luna Cyan hell
-  gold: "#54ACBF", // Luna Steel-Cyan
-  bronze: "#26658C", // Luna Tiefblau
-  steel: "#5E86B5", // hsl(212 40% 54%)
-  teal: "#3CA79A", // hsl(174 48% 44%)
-  slate: "#8B93A6", // hsl(219 12% 60%)
+/** Verlaufs-Endpunkte für Balken-/Funnel-Gradients — ruhige Akzent-Familie
+ *  (ersetzt die frühere feste Hex-Palette inkl. Neon-Cyan). */
+export const CHART_ACCENT = {
+  light: "var(--accent-400)",
+  dark: "var(--accent-600)",
 } as const;
 
-/** Semantische Statustöne für Chart-Overlays (mittlere Töne, beide Modi). */
+/** Semantische Statustöne für Chart-Overlays — theme-abhängig, wie überall
+ *  im Frontend (kein eigener, von den Layout-Tokens losgelöster Farbsatz). */
 export const CHART_STATUS = {
-  success: "#2FA76E", // gewonnen / positive Rendite
-  warning: "#D79A3A", // ins Stocken geraten
-  danger: "#DB4E62", // verloren
-  info: "#3F8FD0", // neutral
+  success: "var(--success)",
+  warning: "var(--warning)",
+  danger: "var(--danger)",
+  info: "var(--info)",
 } as const;
 
 /** Achsen/Raster ziehen ihre Farbe theme-abhängig aus den Layout-Tokens. */
 export const CHART_AXIS = {
   grid: "var(--border)",
-  axis: "var(--text-secondary)",
+  axis: "var(--muted-foreground)",
 } as const;

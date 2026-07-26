@@ -66,6 +66,48 @@ Fokusring (`--ring`), Kennzahlen-Highlights, primäre CTAs, Diagramm-Primär.
 > nie `bg-accent`. Gold als **Text auf hellem Grund** nur über `gold-contrast`
 > (das reine `#C9A24B` erreicht auf Off-White keine 4.5:1).
 
+### ⚠️ Aktive Palette im App-Shell: `.theme-midnight` (Navy-Akzent)
+Das Gold-System oben gilt für **Login/Marketing**. Der komplette Dashboard-
+Bereich läuft unter der Klasse `.theme-midnight` (gesetzt in
+`src/app/(dashboard)/layout.tsx` und `src/app/finanzierer/layout.tsx`) und
+**überschreibt dieselben Token-Slots mit einer Navy-/Stahlblau-Palette**.
+Historisch heißen die Slots weiter `--gold*` — sie tragen dort aber **kein
+Gold**, sondern den Stahlblau-Akzent. Wer im Dashboard arbeitet, nimmt diese
+Werte als Wahrheit.
+
+Stand 26.07.2026 (Kundenwunsch): **nicht „spacig", kein Pink.** Träger ist das
+Estera-Navy, unterschieden wird über ruhige Kontrastfarben.
+
+| Token | Dark (`.dark .theme-midnight`) | Light (`.theme-midnight`) | Rolle |
+|---|---|---|---|
+| `--background` | `#0A121E` Navy Deep | `#F5F7FA` | App-Fläche |
+| `--surface` | `#0F1B2D` Estera Navy | `#FFFFFF` | Karten, Panels |
+| `--surface-2` | `#17283E` | `#EFF2F6` | erhöhte Flächen, Inputs |
+| `--border` | `#26364D` | `#DCE2EA` | Ränder |
+| `--accent-500` / `--gold` | `#6E9FC4` | `#2C6489` | Akzent (Stahlblau) |
+| `--accent-400` / `--gold-soft` | `#A7C3D9` | `#3F7CA6` | Akzent hell |
+| `--accent-600` | `#41729A` | `#1F4A6B` | Akzent tief, Verlaufsfuß |
+| `--gold-contrast` | `#A7C3D9` | `#22526F` | **Akzent als Text** (AA) |
+| `--primary` | `#8BB2CF` | `#265C82` | Links, CTAs |
+| `--success` | `#58B183` | `#1E7A50` | gewonnen / positiv |
+| `--warning` | `#D3A15B` | `#925F12` | Frist/Achtung (**war Pink**) |
+| `--danger` | `#D3737F` | `#B92C42` | verloren / Fehler (**war Magenta**) |
+| `--info` | `#79A9CE` | `#246893` | neutral-informativ |
+
+**Regeln für diesen Layer:**
+- **Kein Neon.** Kein hochgesättigter Ton bei hoher Helligkeit (Richtwert:
+  nicht `S > 65 %` kombiniert mit `L > 60 %`). Der frühere `#A7EBF2` verstieß
+  dagegen.
+- **Kein Pink/Magenta.** Die Alt-Token `--pink` und `--pop` existieren nur noch
+  für Rückwärtskompatibilität und zeigen auf Stahlblau bzw. Amber. In neuem
+  Code stattdessen `accent-500` (Auszeichnung) bzw. `warning` (Signal) nutzen.
+- **Keine Farb-Glows.** Kein `box-shadow: 0 0 36px <accent>` — Elevation ist
+  gerichtet und neutral: `shadow-[0_2px_12px_-4px_rgb(0_0_0/0.28)]`,
+  Hover-Rahmen `border-accent-500/30`, Transitions `duration-200`.
+- **Kein dekoratives Füllmaterial.** Bildflächen müssen echte Information
+  tragen (z. B. eine Sparkline der Kartenkennzahl) — keine generischen
+  3D-/Sci-Fi-Renderings.
+
 ### Dark-Modus (Hauptmodus — Navy-Flächen)
 | Token | Hex | Verwendung |
 |---|---|---|

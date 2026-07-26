@@ -118,8 +118,8 @@ export async function HeuteBlock({ wide = false }: { wide?: boolean }) {
     <div
       className={
         wide
-          ? "overflow-hidden rounded-2xl border-2 border-accent-500/40 bg-gradient-to-br from-accent-500/5 via-surface to-surface p-5 shadow-[0_0_40px_-16px_color-mix(in_srgb,var(--accent-500)_55%,transparent)]"
-          : "overflow-hidden rounded-xl border border-border bg-surface p-5 transition-[border-color,box-shadow] duration-300 hover:border-accent-500/40 hover:shadow-[0_0_36px_-10px_color-mix(in_srgb,var(--accent-500)_45%,transparent)]"
+          ? "overflow-hidden rounded-2xl border border-accent-500/30 bg-surface p-5 shadow-[0_2px_12px_-4px_rgb(0_0_0/0.28)]"
+          : "overflow-hidden rounded-xl border border-border bg-surface p-5 transition-[border-color,box-shadow] duration-200 hover:border-accent-500/30 hover:shadow-[0_2px_12px_-4px_rgb(0_0_0/0.28)]"
       }
     >
       <div className="flex items-center justify-between gap-2">
@@ -148,13 +148,16 @@ export async function HeuteBlock({ wide = false }: { wide?: boolean }) {
       </div>
 
       {/* Heiße Leads (15.2): reif, aber noch kein Deal — die Zahl, bei der
-          Umsatz liegen bleibt. Steht bewusst ganz oben und ist klickbar. */}
+          Umsatz liegen bleibt. Steht bewusst ganz oben und ist klickbar.
+          Farbe = warning (Amber), nicht danger: ein heißer Lead ist eine
+          Chance mit Dringlichkeit, kein Fehlerzustand — Rot wäre falsch
+          gewichtet und färbte die halbe Kachel rötlich. */}
       {heiss > 0 && (
         <Link
           href="/listen/kontakte?preset=heiss"
-          className="mt-4 flex items-center gap-3 rounded-xl border border-danger/30 bg-danger/5 px-4 py-3 transition-colors hover:border-danger/60 hover:bg-danger/10"
+          className="mt-4 flex items-center gap-3 rounded-xl border border-warning/30 bg-warning/5 px-4 py-3 transition-colors hover:border-warning/60 hover:bg-warning/10"
         >
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-danger/15 text-danger">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-warning/15 text-warning">
             <Flame className="h-5 w-5" />
           </span>
           <span className="min-w-0 flex-1">
@@ -167,7 +170,7 @@ export async function HeuteBlock({ wide = false }: { wide?: boolean }) {
               Deal (nur Immobilien).
             </span>
           </span>
-          <ArrowRight className="h-4 w-4 shrink-0 text-danger" />
+          <ArrowRight className="h-4 w-4 shrink-0 text-warning" />
         </Link>
       )}
 

@@ -51,7 +51,7 @@ export function OverviewCard({
   return (
     <section
       className={cn(
-        "flex flex-col rounded-2xl border border-border bg-surface p-5 transition-[border-color,box-shadow] duration-300 hover:border-accent-500/40 hover:shadow-[0_0_36px_-10px_color-mix(in_srgb,var(--accent-500)_45%,transparent)]",
+        "flex flex-col rounded-2xl border border-border bg-surface p-5 transition-[border-color,box-shadow] duration-200 hover:border-accent-500/30 hover:shadow-[0_2px_12px_-4px_rgb(0_0_0/0.28)]",
         className,
       )}
     >
@@ -88,7 +88,10 @@ export function OverviewCard({
               className={cn(
                 "flex-1 cursor-pointer whitespace-nowrap rounded-full px-2.5 py-1.5 text-center transition-colors focus-visible:outline-2 focus-visible:outline-ring",
                 istAktiv
-                  ? "bg-accent-500 font-semibold text-background shadow-sm"
+                  // Eingesenkter aktiver Zustand wie bei den anderen
+                  // Segment-Schaltern (Performance, Mein Einkommen) — die
+                  // akzentgefüllte Pille stach als einziger Knallpunkt heraus.
+                  ? "bg-background font-semibold text-foreground shadow-sm"
                   : "text-muted-foreground hover:bg-surface hover:text-foreground",
               )}
             >

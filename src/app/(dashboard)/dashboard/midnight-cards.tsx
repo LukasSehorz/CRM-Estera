@@ -14,12 +14,13 @@ import { cn } from "@/lib/utils";
 import { formatDate, formatEUR } from "@/lib/format";
 import { Pill } from "@/components/ui/pill";
 import { InfoHint } from "@/components/ui/info-hint";
+import { UmsatzSparkline } from "@/components/charts/umsatz-sparkline";
 import { bereichLabel } from "@/config/enums";
 import type { Werte } from "./provision-block";
 
 /* ──────────────────────────────────────────────────────────────────────
    Midnight-Dashboard-Karten (Redesign nach Referenz-Layout):
-   Overview-Graph · Total-Balance mit 3D-Muster · Blick-nach-vorn ·
+   Overview-Graph · Total-Balance mit Umsatz-Sparkline · Blick-nach-vorn ·
    Aktuelle-Deals-Tabelle. Reine Präsentation — alle Zahlen kommen 1:1
    aus lib/analytics.
    ────────────────────────────────────────────────────────────────────── */
@@ -51,6 +52,7 @@ export function BalanceCard({
   mom,
   gewonnen,
   umsatzGesamt,
+  serie = [],
   isGf,
   className,
   fromHref = "/dashboard",
@@ -59,16 +61,21 @@ export function BalanceCard({
   mom: number | null;
   gewonnen: number;
   umsatzGesamt: number;
+  /** Tagesreihe der letzten 30 Tage für die Sparkline (statt Deko-Grafik). */
+  serie?: { label: string; value: number }[];
   isGf: boolean;
   className?: string;
   /** Zurück-Ziel für Drill-downs (Feedback SJ): führt aufs Dashboard zurück. */
   fromHref?: string;
 }) {
+  // Leerzustand: keine Sparkline zeichnen, wenn in den letzten 30 Tagen
+  // nichts abgeschlossen wurde — eine flache Nulllinie wäre irreführend.
+  const hatUmsatz = serie.some((p) => p.value > 0);
   const from = `&from=${encodeURIComponent(fromHref)}`;
   return (
     <section
       className={cn(
-        "flex flex-col overflow-hidden rounded-2xl border border-border bg-surface p-5 transition-[border-color,box-shadow] duration-300 hover:border-accent-500/40 hover:shadow-[0_0_36px_-10px_color-mix(in_srgb,var(--accent-500)_45%,transparent)]",
+        "flex flex-col overflow-hidden rounded-2xl border border-border bg-surface p-5 transition-[border-color,box-shadow] duration-200 hover:border-accent-500/30 hover:shadow-[0_2px_12px_-4px_rgb(0_0_0/0.28)]",
         className,
       )}
     >
@@ -108,20 +115,20 @@ export function BalanceCard({
         {gewonnen} gewonnene Deals · {formatEUR(umsatzGesamt)} Gesamtumsatz
       </Link>
 
-      {/* 3D-Muster (Kie AI / GPT-Image-2) — exakt im Look der Referenz */}
-      <div className="relative mt-4 min-h-44 flex-1 overflow-hidden rounded-xl border border-border">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/dashboard/balance-pattern.png"
-          alt=""
-          aria-hidden
-          className="absolute inset-0 h-full w-full object-cover object-right"
-        />
-        <div className="absolute inset-x-0 bottom-0 flex items-center gap-2 bg-gradient-to-t from-black/70 to-transparent px-4 pb-3 pt-8 text-xs text-muted-foreground">
-          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-pop motion-reduce:animate-none" aria-hidden />
-          Estera Intelligence — Zahlen aktualisieren sich live
-        </div>
+      {/* Sparkline Umsatz (30 Tage) — randlose Fläche statt Deko-Grafik */}
+      <div className="mt-4 min-h-44 flex-1">
+        {hatUmsatz ? (
+          <UmsatzSparkline serie={serie} />
+        ) : (
+          <div className="flex h-full min-h-44 items-center justify-center text-center text-xs text-muted-foreground">
+            Noch keine Abschlüsse in den letzten 30 Tagen
+          </div>
+        )}
       </div>
+      <p className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent-500 motion-reduce:animate-none" aria-hidden />
+        Estera Intelligence — Zahlen aktualisieren sich live
+      </p>
     </section>
   );
 }
@@ -173,7 +180,7 @@ export function ForecastCard({
   return (
     <section
       className={cn(
-        "flex flex-col rounded-2xl border border-border bg-surface p-5 transition-[border-color,box-shadow] duration-300 hover:border-accent-500/40 hover:shadow-[0_0_36px_-10px_color-mix(in_srgb,var(--accent-500)_45%,transparent)]",
+        "flex flex-col rounded-2xl border border-border bg-surface p-5 transition-[border-color,box-shadow] duration-200 hover:border-accent-500/30 hover:shadow-[0_2px_12px_-4px_rgb(0_0_0/0.28)]",
         className,
       )}
     >
@@ -182,22 +189,10 @@ export function ForecastCard({
         Was in der offenen Pipeline steckt
       </p>
 
-      {/* Hero: gewichtete Provision — beim GF mit dem Ziel-Pink der
-          Berater-Monatsziele als Rahmenakzent (Wunsch). */}
-      <div
-        className={cn(
-          "mt-4 rounded-xl border p-4",
-          isGf
-            ? "border-danger/40 bg-gradient-to-br from-danger/15 via-surface-2 to-surface"
-            : "border-accent-500/25 bg-gradient-to-br from-accent-500/15 via-surface-2 to-surface",
-        )}
-      >
-        <p
-          className={cn(
-            "flex items-center gap-1.5 text-xs font-medium",
-            isGf ? "text-danger" : "text-accent-400",
-          )}
-        >
+      {/* Hero: gewichtete Provision — ruhiger Akzent-Rahmen, kein Signalton
+          (Forecast ist kein Fehler, daher kein Danger/Pink mehr). */}
+      <div className="mt-4 rounded-xl border border-accent-500/25 bg-gradient-to-br from-accent-500/12 via-surface-2 to-surface p-4">
+        <p className="flex items-center gap-1.5 text-xs font-medium text-accent-400">
           <Scale className="h-3.5 w-3.5" aria-hidden />
           Forecast
           <InfoHint text="Jeder offene Deal zählt mit der Wahrscheinlichkeit seiner Phase: 500.000 € in einer 60-%-Phase fließen mit 300.000 € ein. Die Summe ist der realistische Forecast." />
@@ -266,7 +261,7 @@ export function DealsCard({
   return (
     <section
       className={cn(
-        "flex flex-col rounded-2xl border border-border bg-surface p-5 transition-[border-color,box-shadow] duration-300 hover:border-accent-500/40 hover:shadow-[0_0_36px_-10px_color-mix(in_srgb,var(--accent-500)_45%,transparent)]",
+        "flex flex-col rounded-2xl border border-border bg-surface p-5 transition-[border-color,box-shadow] duration-200 hover:border-accent-500/30 hover:shadow-[0_2px_12px_-4px_rgb(0_0_0/0.28)]",
         className,
       )}
     >
@@ -320,7 +315,7 @@ export function DealsCard({
                     <span className="flex items-center gap-1.5 truncate font-medium">
                       <span className="truncate">{d.dealname}</span>
                       {topDeal && (
-                        <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-pop/15 px-1.5 py-0.5 text-[10px] font-semibold text-pop">
+                        <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-warning/15 px-1.5 py-0.5 text-[10px] font-semibold text-warning">
                           <Flame className="h-3 w-3" aria-hidden />
                           Top-Deal
                         </span>

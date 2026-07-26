@@ -54,3 +54,6 @@ prod.log
 
 # Lokale Stresstest-Skripte
 .stress-*.mjs
+
+# Lokale Screenshot-/Verifikationsskripte
+.shot-*.mjs

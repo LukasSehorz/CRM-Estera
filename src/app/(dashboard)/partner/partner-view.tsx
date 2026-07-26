@@ -142,9 +142,9 @@ function StatCard({
         active ? "border-primary ring-1 ring-primary" : "border-border",
       )}
     >
-      {/* Farbverlauf, der beim Hover aufleuchtet */}
+      {/* Dezenter Farbtupfer beim Hover — kein starkes Leuchten mehr (Kundenwunsch) */}
       <div
-        className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full opacity-15 blur-2xl transition-opacity duration-300 group-hover:opacity-40"
+        className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full opacity-10 blur-2xl transition-opacity duration-200 group-hover:opacity-25"
         style={{ background: accent }}
       />
       <div className="flex items-center gap-2 text-xs text-muted-foreground">

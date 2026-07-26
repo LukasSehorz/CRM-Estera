@@ -14,11 +14,11 @@ export function celebrateWin(dealname: string) {
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
   const farben = [
-    "var(--gold, #c9a24a)",
-    "#4ea1ff",
-    "#3ecf8e",
-    "#ffb020",
-    "#ff6b6b",
+    "var(--accent-500)",
+    "var(--info)",
+    "var(--success)",
+    "var(--warning)",
+    "var(--danger)",
   ];
   const container = document.createElement("div");
   container.setAttribute("aria-hidden", "true");

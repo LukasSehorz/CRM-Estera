@@ -94,7 +94,7 @@ function GlobalSearch() {
 
   return (
     <div ref={boxRef} className="relative w-full max-w-md">
-      <div className="flex h-10 items-center gap-2 rounded-full border border-border bg-surface-2 px-4 transition-[border-color,box-shadow] duration-300 focus-within:border-accent-500/60 focus-within:shadow-[0_0_28px_-6px_color-mix(in_srgb,var(--accent-500)_55%,transparent)]">
+      <div className="flex h-10 items-center gap-2 rounded-full border border-border bg-surface-2 px-4 transition-colors duration-200 focus-within:border-accent-500/60">
         {laedt ? (
           <Loader2 className="h-4 w-4 shrink-0 animate-spin text-accent-500" aria-hidden />
         ) : (
@@ -235,7 +235,7 @@ export function MidnightHeader({
               <img
                 src={fotoUrl}
                 alt={name}
-                className="h-12 w-auto self-end drop-shadow-[0_4px_12px_rgba(84,172,191,0.25)]"
+                className="h-12 w-auto self-end drop-shadow-[0_4px_12px_color-mix(in_srgb,var(--accent-500)_25%,transparent)]"
               />
             ) : (
               <div className="grid h-10 w-10 place-items-center rounded-full border border-border bg-surface-2 text-sm font-semibold">

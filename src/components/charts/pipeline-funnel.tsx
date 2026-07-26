@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import { formatEUR } from "@/lib/format";
-import { lerpHex, CHART } from "./tokens";
+import { CHART } from "./tokens";
 
 export type FunnelDatum = {
   name: string;
@@ -46,11 +46,15 @@ export function PipelineFunnel({ steps }: { steps: FunnelDatum[] }) {
       <ol className="space-y-1.5">
         {steps.map((s, i) => {
           const pct = Math.max(9, (s.reached / max) * 100);
-          const color = lerpHex(
-            CHART.accent400,
-            CHART.accent600,
-            n > 1 ? i / (n - 1) : 0,
-          );
+          // Verlauf hell (oben) -> dunkel (unten) innerhalb der ruhigen
+          // Akzent-Familie, per CSS color-mix statt hart interpolierter
+          // Hex-Werte — bleibt so in jedem Theme (Light/Dark) korrekt.
+          // Rampe endet bei accent-500 (nicht accent-600): der dunkelste
+          // Balken bliebe sonst zu dunkel für den Zahlentext (~1.9:1). Die
+          // Balkenbreite trägt die Größenaussage, die Farbe ist nur Abstufung
+          // — der kürzere Bereich ist zugleich ruhiger.
+          const mixPct = n > 1 ? Math.round((1 - i / (n - 1)) * 100) : 100;
+          const color = `color-mix(in srgb, ${CHART.accent400} ${mixPct}%, var(--accent-500))`;
           const klickbar = (s.deals?.length ?? 0) > 0;
           return (
             <li
@@ -63,8 +67,16 @@ export function PipelineFunnel({ steps }: { steps: FunnelDatum[] }) {
                   onClick={() => klickbar && setSelected(s)}
                   disabled={!klickbar}
                   className="flex h-10 items-center justify-center rounded-md text-sm font-semibold shadow-sm transition-[width,box-shadow] enabled:cursor-pointer enabled:hover:ring-2 enabled:hover:ring-primary/40"
-                  // Navy-Text ist auf der ganzen Gold-Skala (hell -> bronze) lesbar
-                  style={{ width: `${pct}%`, background: color, color: "#0F1B2D" }}
+                  // Zahlentext kippt mit dem Theme: die Akzent-Rampe ist im
+                  // Light dunkel und im Dark hell — genau umgekehrt zu
+                  // --primary-foreground (Light: weiß, Dark: Navy). Damit
+                  // bleibt der Kontrast an BEIDEN Rampenenden über 4.5:1
+                  // (vorher fixes Navy: am dunklen Ende nur ~1.9:1).
+                  style={{
+                    width: `${pct}%`,
+                    background: color,
+                    color: "var(--primary-foreground)",
+                  }}
                   title={`${s.name}: ${s.reached} Deals — anklicken für Details`}
                   aria-label={`${s.name}: ${s.reached} Deals anzeigen`}
                 >

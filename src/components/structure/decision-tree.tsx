@@ -586,7 +586,15 @@ function PanelBadge({ kind }: { kind: TreeNode["kind"] }) {
       </span>
     );
   return (
-    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-gold-soft text-background">
+    <span
+      className={cn(
+        "grid h-9 w-9 shrink-0 place-items-center rounded-lg",
+        // Light: gold-soft/background läge bei ~4,2:1 (grenzwertig) → stattdessen
+        // accent-600/primary-foreground (~9:1). Dark: gold-soft/background bleibt
+        // (dunkler Text auf hellem Kreis, ~10:1) — beide Modi jetzt sicher ≥ 4.5:1.
+        "bg-accent-600 text-primary-foreground dark:bg-gold-soft dark:text-background",
+      )}
+    >
       <User className="h-4 w-4" />
     </span>
   );
@@ -601,7 +609,8 @@ function NodeShape({ node, active }: { node: TreeNode; active: boolean }) {
         className={cn(
           "grid h-14 w-14 rotate-45 place-items-center rounded-[14px] shadow-md ring-2 transition-shadow",
           "bg-primary text-primary-foreground",
-          active ? "ring-accent-400 shadow-lg shadow-accent-500/30" : "ring-transparent",
+          // Klarer, schmaler Ring statt weichem Farb-Glow (kein shadow-Leuchten mehr).
+          active ? "ring-accent-400" : "ring-transparent",
         )}
       >
         <Crown className="h-5 w-5 -rotate-45" />
@@ -629,8 +638,11 @@ function NodeShape({ node, active }: { node: TreeNode; active: boolean }) {
       whileHover={{ scale: 1.08 }}
       className={cn(
         "grid h-14 w-14 place-items-center rounded-full shadow-md ring-2 transition-shadow",
-        "bg-gold-soft text-background",
-        active ? "ring-accent-500 shadow-lg shadow-accent-500/25" : "ring-transparent",
+        // Gleiche Kontrast-Korrektur wie PanelBadge: Light nutzt accent-600/
+        // primary-foreground statt des grenzwertigen gold-soft/background.
+        "bg-accent-600 text-primary-foreground dark:bg-gold-soft dark:text-background",
+        // Klarer, schmaler Ring statt weichem Farb-Glow (kein shadow-Leuchten mehr).
+        active ? "ring-accent-500" : "ring-transparent",
       )}
     >
       <User className="h-5 w-5" />

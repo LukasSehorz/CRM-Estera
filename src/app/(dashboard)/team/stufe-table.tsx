@@ -425,7 +425,7 @@ function StufeRow({
             {downline!.berater.map((b) => {
               const inhalt = (
                 <>
-                  <span className="grid h-5 w-5 place-items-center rounded-full bg-amber-500/15 text-amber-600">
+                  <span className="grid h-5 w-5 place-items-center rounded-full bg-primary/10 text-primary">
                     <User className="h-3 w-3" />
                   </span>
                   {b.name}

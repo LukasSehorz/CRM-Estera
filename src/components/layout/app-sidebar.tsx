@@ -175,7 +175,7 @@ function NavLinks({
                   <span
                     aria-hidden
                     className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full"
-                    style={{ background: "linear-gradient(180deg, var(--accent-400), var(--pink, var(--danger)))" }}
+                    style={{ background: "linear-gradient(180deg, var(--accent-400), var(--accent-600))" }}
                   />
                 )}
                 <span className="relative shrink-0">
@@ -197,7 +197,7 @@ function NavLinks({
                 {item.href === "/benachrichtigungen" && unreadCount > 0 && (
                   <span
                     className={cn(
-                      "ml-auto min-w-5 rounded-full bg-danger px-1.5 py-0.5 text-center text-[10px] font-semibold leading-none text-white tabular-nums",
+                      "ml-auto min-w-5 rounded-full bg-danger px-1.5 py-0.5 text-center text-[10px] font-semibold leading-none text-destructive-foreground tabular-nums",
                       railText(rail),
                     )}
                   >
