@@ -58,5 +58,10 @@ prod.log
 # Lokales DB-Hilfsskript (liest .env.local)
 .dsgvo-run.cjs
 
+# Word-Fassungen fuer den Mandanten — werden aus docs/datenschutz/*.md
+# erzeugt (dort liegt die gepflegte Quelle). Binaerdateien gehoeren nicht
+# in die Historie.
+/Unterlagen für Go Live/
+
 # Lokale Screenshot-/Verifikationsskripte
 .shot-*.mjs
