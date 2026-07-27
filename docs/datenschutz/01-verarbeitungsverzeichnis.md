@@ -32,12 +32,18 @@ nach Art. 30 Abs. 1 DSGVO · **ENTWURF** — Stand 26.07.2026
 > entsprechend gesetzt.
 
 > **Bisherige Datenhaltung (Altbestand):** Vor Einführung des CRM wurden
-> Kundendaten in **Notion** und **Google Drive** geführt. Beim Übertrag in das
-> CRM ist zu klären, ob und in welchem Umfang die Altbestände dort gelöscht
-> werden — eine doppelte Haltung in mehreren Systemen erschwert sowohl
-> Auskunftsersuchen (Art. 15) als auch die Einhaltung von Löschfristen. Für
-> beide Dienste sind zudem eigene Auftragsverarbeitungsverträge erforderlich,
-> solange sie personenbezogene Daten enthalten. `[offener Punkt]`
+> Kundendaten in **Notion** und **Google Drive** geführt. Künftig läuft die
+> Kundenverwaltung ausschließlich über das CRM — eine parallele Haltung
+> entsteht also nicht.
+>
+> **Altbestand:** Die bestehenden Kundendaten werden vollständig in das CRM
+> übernommen (Angabe der Estera GmbH, Juli 2026). Damit ist das CRM das
+> alleinige führende System für Kundendaten.
+>
+> Verbleibende Aufgabe der Estera GmbH: die Altdaten nach der Übernahme in
+> Notion und Google Drive zu löschen. Solange dort noch personenbezogene Daten
+> liegen, gelten für diese Ablagen dieselben Pflichten wie für das CRM
+> (Zugriffsbeschränkung, Löschfristen, Auskunftsfähigkeit).
 
 ---
 
