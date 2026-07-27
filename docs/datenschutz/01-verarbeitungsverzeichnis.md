@@ -24,12 +24,20 @@ nach Art. 30 Abs. 1 DSGVO · **ENTWURF** — Stand 26.07.2026
 | Gewerbeerlaubnis | § 34c GewO (Immobilienmakler), IHK für München und Oberbayern |
 | Datenschutzbeauftragter | Nicht benannt — unter 20 Personen mit automatisierter Verarbeitung (§ 38 BDSG). Siehe [Schwellwertanalyse](02-schwellwertanalyse-dsfa.md). |
 
-> **Hinweis zur Geldwäsche-Verpflichteteneigenschaft:** Als Immobilienmakler
-> nach § 34c GewO ist die Estera GmbH nach § 2 Abs. 1 Nr. 14 GwG
-> voraussichtlich **Verpflichtete**. Daraus folgen die Identifizierungspflicht
-> (§ 10 GwG) und die fünfjährige Aufbewahrung der Identifizierungsunterlagen
-> (§ 8 Abs. 4 GwG). Die Löschfristen unten sind entsprechend gesetzt.
-> `[Bitte anwaltlich bestätigen]`
+> **Geldwäsche-Verpflichteteneigenschaft — von der Estera GmbH bestätigt
+> (Juli 2026):** Als Immobilienmakler nach § 34c GewO ist die Estera GmbH
+> Verpflichtete nach § 2 Abs. 1 Nr. 14 GwG. Daraus folgen die
+> Identifizierungspflicht (§ 10 GwG) und die **fünfjährige Aufbewahrung** der
+> Identifizierungsunterlagen (§ 8 Abs. 4 GwG). Die Löschfristen unten sind
+> entsprechend gesetzt.
+
+> **Bisherige Datenhaltung (Altbestand):** Vor Einführung des CRM wurden
+> Kundendaten in **Notion** und **Google Drive** geführt. Beim Übertrag in das
+> CRM ist zu klären, ob und in welchem Umfang die Altbestände dort gelöscht
+> werden — eine doppelte Haltung in mehreren Systemen erschwert sowohl
+> Auskunftsersuchen (Art. 15) als auch die Einhaltung von Löschfristen. Für
+> beide Dienste sind zudem eigene Auftragsverarbeitungsverträge erforderlich,
+> solange sie personenbezogene Daten enthalten. `[offener Punkt]`
 
 ---
 
@@ -48,7 +56,7 @@ nach Art. 30 Abs. 1 DSGVO · **ENTWURF** — Stand 26.07.2026
 | **Empfänger** | Zuständiger Berater; Geschäftsführung; übergeordnete Struktur-Partner (nur Deal-Daten, siehe Hinweis unten); Backoffice |
 | **Auftragsverarbeiter** | Supabase (Datenbank und Dokumentenspeicher, AWS Frankfurt / eu-central-1); Netlify (Betrieb der Anwendung, Functions-Region Frankfurt / `fra`) |
 | **Drittlandtransfer** | Verarbeitung und Speicherung finden **in der EU** statt (beide Dienste auf Frankfurt festgelegt). Netlify Inc. ist ein US-Unternehmen; ein etwaiger Zugriff im Rahmen des Supports ist über die Zertifizierung nach dem **EU-US Data Privacy Framework** (Angemessenheitsbeschluss der EU-Kommission vom 10.07.2023) sowie ergänzend über **Standardvertragsklauseln** nach Durchführungsbeschluss 2021/914 abgesichert. |
-| **Löschfrist** | Kunden: 5 Jahre nach Ende der Geschäftsbeziehung (§ 8 Abs. 4 GwG); Interessenten ohne Abschluss: 2 Jahre nach letztem Kontakt; reine Anfragen: 6 Monate. Abrechnungsrelevante Unterlagen 10 Jahre (§ 147 AO, § 257 HGB). `[anwaltlich bestätigen]` |
+| **Löschfrist** | Kunden: 5 Jahre nach Ende der Geschäftsbeziehung (§ 8 Abs. 4 GwG); Interessenten ohne Abschluss: 2 Jahre nach letztem Kontakt; reine Anfragen: 6 Monate. Abrechnungsrelevante Unterlagen 10 Jahre (§ 147 AO, § 257 HGB). |
 | **Technische Maßnahmen** | Siehe [TOM-Dokumentation](../dsgvo.md) Abschnitt 2 |
 
 > **Hinweis zur Sichtbarkeit in der Struktur:** Ein übergeordneter Partner
@@ -92,7 +100,7 @@ nach Art. 30 Abs. 1 DSGVO · **ENTWURF** — Stand 26.07.2026
 | **Finanzierungspartner** | `[AUSFÜLLEN — Name und Anschrift je Institut]` |
 | **Auftragsverarbeiter** | Supabase (privater Speicher, Frankfurt) |
 | **Drittlandtransfer** | nein für die Speicherung |
-| **Löschfrist** | **5 Jahre** nach Ende der Geschäftsbeziehung — § 8 Abs. 4 GwG. Die Aufbewahrungspflicht geht dem Löschanspruch nach Art. 17 vor. `[anwaltlich bestätigen]` |
+| **Löschfrist** | **5 Jahre** nach Ende der Geschäftsbeziehung — § 8 Abs. 4 GwG. Die Aufbewahrungspflicht geht dem Löschanspruch nach Art. 17 vor. Von der Estera GmbH bestätigt. |
 | **Technische Maßnahmen** | Privater Speicher ohne öffentlichen Zugriff; Zugriff über Rechteprüfung in der Datenbank; Download nur über Links mit 60 Sekunden Gültigkeit; **vollständige Protokollierung jedes Zugriffs**; Freigabe an Finanzierer einzeln durch die Geschäftsführung und jederzeit widerrufbar. Details: [TOM](../dsgvo.md) Abschnitte 2.2–2.4 |
 
 ---

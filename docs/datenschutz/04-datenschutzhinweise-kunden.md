@@ -103,7 +103,7 @@ Objektadresse, Kaufpreis, Notartermin und der Stand der Abwicklung.
 | Beantwortung Ihrer Anfrage und Vorbereitung eines Vertrags | Art. 6 Abs. 1 lit. b DSGVO (vorvertragliche Maßnahmen) |
 | Beratung, Objektauswahl und Vermittlung | Art. 6 Abs. 1 lit. b DSGVO (Vertragserfüllung) |
 | Zusammenstellung Ihrer Finanzierungsunterlagen und Weitergabe an Finanzierungspartner | Art. 6 Abs. 1 lit. b DSGVO, soweit Sie uns mit der Vermittlung beauftragt haben — andernfalls Ihre Einwilligung nach Art. 6 Abs. 1 lit. a DSGVO `[PRÜFEN: siehe Dokument 05]` |
-| Identifizierung und Aufzeichnung nach dem Geldwäschegesetz | Art. 6 Abs. 1 lit. c DSGVO in Verbindung mit §§ 10 ff. GwG `[PRÜFEN]` |
+| Identifizierung und Aufzeichnung nach dem Geldwäschegesetz | Art. 6 Abs. 1 lit. c DSGVO in Verbindung mit §§ 10 ff. GwG |
 | Aufbewahrung nach Handels- und Steuerrecht | Art. 6 Abs. 1 lit. c DSGVO |
 | Protokollierung der Zugriffe auf Ihre Unterlagen | Art. 6 Abs. 1 lit. c DSGVO in Verbindung mit Art. 5 Abs. 2 und Art. 32 DSGVO |
 | Geltendmachung oder Abwehr von Rechtsansprüchen | Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse) |
@@ -166,8 +166,8 @@ weitergegeben.
 | Daten | Speicherdauer |
 |---|---|
 | Anfragen ohne weitere Zusammenarbeit | 6 Monate nach dem letzten Kontakt |
-| Interessenten, bei denen kein Geschäft zustande kam | 2 Jahre nach dem letzten Kontakt `[PRÜFEN]` |
-| Ausweisunterlagen und Identifizierungsdaten | **5 Jahre** nach Ende der Geschäftsbeziehung — gesetzlich vorgeschrieben nach § 8 Abs. 4 GwG `[PRÜFEN]` |
+| Interessenten, bei denen kein Geschäft zustande kam | 2 Jahre nach dem letzten Kontakt |
+| Ausweisunterlagen und Identifizierungsdaten | **5 Jahre** nach Ende der Geschäftsbeziehung — gesetzlich vorgeschrieben nach § 8 Abs. 4 GwG |
 | Vertrags- und Abrechnungsunterlagen | 10 Jahre — handels- und steuerrechtliche Aufbewahrungsfristen (§ 147 AO, § 257 HGB) |
 | Protokoll der Zugriffe auf Ihre Unterlagen | 12 Monate `[PRÜFEN]` |
 

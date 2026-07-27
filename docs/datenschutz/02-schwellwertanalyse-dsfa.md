@@ -29,14 +29,19 @@ Verarbeitung und stellt auf Art, Umfang, Umstände und Zwecke der
 **beabsichtigten** Verarbeitung ab — nicht auf einen Datenbestand, den es zu
 diesem Zeitpunkt naturgemäß noch nicht gibt.
 
-**Geplante Größenordnung** (Angabe der Estera GmbH):
+**Geplante Größenordnung** (Schätzung der Estera GmbH, Stand Juli 2026):
 
 | Kennzahl | Erwartung |
 |---|---|
-| Interessenten und Kunden im ersten Jahr | `[AUSFÜLLEN — Schätzung genügt]` |
-| Mit dem System arbeitende Berater | `[AUSFÜLLEN]` |
-| Weitere Nutzer (Geschäftsführung, Backoffice, Finanzierer) | `[AUSFÜLLEN]` |
+| Interessenten und Kunden im ersten Jahr | 300 bis 400 |
+| Mit dem System arbeitende Berater | zunächst bis zu 20 |
+| Weitere Nutzer im weiteren Verlauf | 50 bis 100 `[Angabe präzisieren]` |
 | Kundendokumente je Finanzierungsfall | etwa 5 bis 10 |
+
+> **Hinweis zur Belastbarkeit:** Die Angaben sind ausdrücklich Schätzungen
+> („sehr schwer zu sagen"). Für die Bewertung genügt die Größenordnung. Die
+> Nachprüfung nach vier Wochen (Abschnitt 6) ersetzt die Schätzung durch
+> Istwerte.
 
 Diese Größenordnung ist für die Bewertung entscheidend — siehe Kriterium 5 in
 Abschnitt 3 und die Abwägung in Abschnitt 4.
@@ -73,7 +78,7 @@ durchzuführen.
 | 2 | Automatisierte Entscheidung mit Rechtswirkung | nein |
 | 3 | Systematische Überwachung | nein — die Zugriffsprotokollierung dient der Sicherheit, nicht der Verhaltenskontrolle |
 | 4 | Vertrauliche oder höchstpersönliche Daten | **ja** — Einkommensnachweise, Steuerbescheide und Ausweisdokumente |
-| 5 | **Verarbeitung in großem Umfang** | **nein** — die Estera GmbH ist ein regional tätiger Immobilienmakler mit einem überschaubaren Kundenkreis und einem einstelligen bis niedrig zweistelligen Beraterteam. Die erwartete Größenordnung liegt deutlich unterhalb dessen, was als „umfangreich" gilt. Maßgeblich sind die Zahlen in Abschnitt 1. |
+| 5 | **Verarbeitung in großem Umfang** | **nein**, aber mit geringerem Abstand als zunächst angenommen — 300 bis 400 Betroffene im ersten Jahr, regional auf den Großraum München und wenige weitere Standorte begrenzt. Das liegt unterhalb dessen, was als „umfangreich" gilt (dort geht es um Verarbeitungen mit landesweiter Reichweite oder Betroffenenzahlen in einer anderen Größenordnung). Der Abstand verringert sich jedoch mit jedem Jahr — siehe Abschnitt 5. |
 | 6 | Abgleich oder Zusammenführung von Datensätzen | nein |
 | 7 | Daten schutzbedürftiger Personen | **teilweise** — Beschäftigte gelten gegenüber dem Arbeitgeber als schutzbedürftig; die Verarbeitung beschränkt sich jedoch auf übliche Vertriebs- und Abrechnungsdaten |
 | 8 | Innovative Technologien | nein — Standard-Webanwendung, keine KI-gestützte Bewertung |
@@ -93,9 +98,18 @@ Kriterien erreicht.
 
 **Was dagegen spricht — und hier ausschlaggebend ist:** Der Umfang. Die
 Kriterien des EDSA sind ausdrücklich im Zusammenspiel mit der Verarbeitungs-
-größe zu lesen. Bei einem regional tätigen Maklerbetrieb mit einem
-überschaubaren Kundenkreis und einem kleinen, klar abgegrenzten Zugriffskreis
-fehlt es an dem Breitenrisiko, das eine Folgenabschätzung adressieren soll.
+größe zu lesen. Bei 300 bis 400 Betroffenen im ersten Jahr und regionaler
+Tätigkeit fehlt es an dem Breitenrisiko, das eine Folgenabschätzung adressieren
+soll.
+
+**Ein Punkt verdient dabei besondere Beachtung:** Der Kreis der Zugriffs-
+berechtigten soll auf bis zu 20 Berater und perspektivisch mehr wachsen. Das
+klingt nach einem weiten Zugriffskreis, ist es aber nicht: Durch die technisch
+erzwungene Mandantentrennung sieht **jeder Berater ausschließlich seine eigenen
+Kunden**. Der tatsächliche Kreis der Personen, die die Unterlagen eines
+bestimmten Kunden einsehen können, beschränkt sich auf dessen Berater und die
+Geschäftsführung — unabhängig davon, wie groß das Team insgesamt wird. Ohne
+diese Trennung wäre die Bewertung anders ausgefallen.
 
 Hinzu kommt, dass die technischen Maßnahmen bereits über dem branchenüblichen
 Standard liegen und am 26.07.2026 wirksam geprüft wurden — insbesondere die
@@ -121,7 +135,10 @@ eines Datenschutzbeauftragten (§ 38 Abs. 1 BDSG).
 
 Die Bewertung hängt maßgeblich am Umfang. Sie ist **zwingend neu zu prüfen**, wenn:
 
-- die Zahl der erfassten Kunden **1.000 deutlich überschreitet**,
+- die Zahl der erfassten Kunden **1.000 deutlich überschreitet** — bei
+  300 bis 400 Neukunden im Jahr ist das **etwa im dritten Betriebsjahr** der
+  Fall. Dieser Punkt ist also kein theoretischer Vorbehalt, sondern ein
+  absehbarer Termin,
 - der Kreis der Zugriffsberechtigten **20 Personen erreicht** (dann ohnehin
   Pflicht zur Benennung eines Datenschutzbeauftragten),
 - eine **automatisierte Bonitätsbewertung oder Scoring** im System selbst
