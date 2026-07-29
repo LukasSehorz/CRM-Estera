@@ -42,31 +42,40 @@ export default async function DashboardPage({
   searchParams: Promise<{ bereich?: string }>;
 }) {
   const { bereich: rawBereich } = await searchParams;
-  // Identität: Berater sehen ihr eigenes Profil, GF-Konten den
-  // Kontoinhaber Ioannis Orfanidis samt Porträt (Wunsch).
+  // Identität: immer das ECHTE Profil des Angemeldeten — Name und Bild.
+  // Früher stand hier für jedes GF-Konto fest „Ioannis Orfanidis" samt
+  // dessen Porträt; bei zwei Geschäftsführern wäre das schlicht falsch.
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  let profilName = "";
+  let name = "";
   let profilIstGf = false;
+  let avatarPfad: string | null = null;
   if (user) {
     const { data } = await supabase
       .from("profiles")
-      .select("vorname, nachname, rolle")
+      .select("vorname, nachname, rolle, avatar_url")
       .eq("id", user.id)
       .single();
-    profilName = data ? `${data.vorname} ${data.nachname}` : (user.email ?? "");
+    name = data ? `${data.vorname} ${data.nachname}` : (user.email ?? "");
     profilIstGf = data?.rolle === "geschaeftsfuehrung";
+    avatarPfad = data?.avatar_url ?? null;
     // Backoffice (2.5): kein Zugriff auf die provisionslastige Übersicht —
     // direkt in die Kontaktverwaltung leiten.
     if (data?.rolle === "backoffice") redirect("/kontakte");
   }
-  const name = profilIstGf ? "Ioannis Orfanidis" : profilName;
   const rolleLabel = profilIstGf
     ? ROLLE_LABEL.geschaeftsfuehrung
     : ROLLE_LABEL.berater;
-  const fotoUrl = profilIstGf ? "/dashboard/profil-ioannis.png" : null;
+  // Privater Bucket -> kurzlebiger signierter Link (1 Stunde).
+  let fotoUrl: string | null = null;
+  if (avatarPfad) {
+    const { data: signed } = await supabase.storage
+      .from("avatare")
+      .createSignedUrl(avatarPfad, 3600);
+    fotoUrl = signed?.signedUrl ?? null;
+  }
 
   const aFull = await loadAnalytics();
   // Ziel-Box nur für Berater (Ber. 2): Motivation direkt nach dem Login.
