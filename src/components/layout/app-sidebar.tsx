@@ -20,6 +20,7 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { AvatarUpload } from "./avatar-upload";
 import { BrandMark } from "@/components/layout/brand-mark";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { BRANDING } from "@/config/branding";
@@ -219,28 +220,25 @@ function Footer({
   onNavigate,
   rail = false,
   fotoUrl = null,
+  hatBild = false,
 }: {
   name: string;
   rolle: string;
   onNavigate?: () => void;
   rail?: boolean;
   fotoUrl?: string | null;
+  /** Ist ein eigenes Bild hinterlegt? (steuert „Bild entfernen") */
+  hatBild?: boolean;
 }) {
   return (
     <div className="space-y-1 border-t border-border p-3">
       <div className="flex items-center gap-3 px-2 py-2">
-        {fotoUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={fotoUrl}
-            alt={name}
-            className="h-8 w-8 shrink-0 rounded-full bg-secondary object-cover object-top"
-          />
-        ) : (
-          <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-secondary text-xs font-semibold">
-            {initials(name)}
-          </div>
-        )}
+        <AvatarUpload
+          name={name}
+          fotoUrl={fotoUrl}
+          hatBild={hatBild}
+          rail={rail}
+        />
         <div className={cn("min-w-0", railText(rail))}>
           <p className="truncate text-sm font-medium">{name}</p>
           <p className="truncate text-xs text-muted-foreground">{rolle}</p>
@@ -282,6 +280,7 @@ export function DesktopSidebar({
   isBackoffice,
   bereiche,
   fotoUrl = null,
+  hatBild = false,
   unreadCount = 0,
 }: {
   name: string;
@@ -290,6 +289,7 @@ export function DesktopSidebar({
   isBackoffice: boolean;
   bereiche: string[];
   fotoUrl?: string | null;
+  hatBild?: boolean;
   unreadCount?: number;
 }) {
   return (
@@ -306,7 +306,13 @@ export function DesktopSidebar({
           rail
           unreadCount={unreadCount}
         />
-        <Footer name={name} rolle={rolle} rail fotoUrl={fotoUrl} />
+        <Footer
+          name={name}
+          rolle={rolle}
+          rail
+          fotoUrl={fotoUrl}
+          hatBild={hatBild}
+        />
       </div>
     </aside>
   );
@@ -319,6 +325,7 @@ export function MobileNav({
   isBackoffice,
   bereiche,
   fotoUrl = null,
+  hatBild = false,
   unreadCount = 0,
 }: {
   name: string;
@@ -327,6 +334,7 @@ export function MobileNav({
   isBackoffice: boolean;
   bereiche: string[];
   fotoUrl?: string | null;
+  hatBild?: boolean;
   unreadCount?: number;
 }) {
   const [open, setOpen] = useState(false);
@@ -380,6 +388,7 @@ export function MobileNav({
               rolle={rolle}
               onNavigate={close}
               fotoUrl={fotoUrl}
+              hatBild={hatBild}
             />
           </div>
         </div>

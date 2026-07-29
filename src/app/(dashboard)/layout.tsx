@@ -19,7 +19,7 @@ export default async function DashboardLayout({
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("vorname, nachname, rolle, bereich, aktiv")
+    .select("vorname, nachname, rolle, bereich, aktiv, avatar_url")
     .eq("id", user.id)
     .single();
 
@@ -47,19 +47,26 @@ export default async function DashboardLayout({
   const isGf = profile?.rolle === "geschaeftsfuehrung";
   // Backoffice (2.5): Admin ohne Provisionsrechte — sieht beide Sparten.
   const isBackoffice = profile?.rolle === "backoffice";
-  // Anzeige-Identität: Berater sehen ihr eigenes Profil; GF-Konten zeigen
-  // den Kontoinhaber Ioannis Orfanidis samt Porträt (Wunsch).
-  const name = isGf
-    ? "Ioannis Orfanidis"
-    : profile
-      ? `${profile.vorname} ${profile.nachname}`
-      : (user.email ?? "");
+  // Anzeige-Identität: immer das ECHTE Profil des Angemeldeten. Früher stand
+  // hier fest „Ioannis Orfanidis" für jedes GF-Konto — seit es zwei
+  // Geschäftsführer gibt, hätte sich Sebastian dort als Ioannis gesehen.
+  const name = `${profile.vorname} ${profile.nachname}`.trim() || (user.email ?? "");
   const rolle = isGf
     ? "Geschäftsführer"
     : isBackoffice
       ? "Backoffice"
       : "Berater";
-  const fotoUrl = isGf ? "/dashboard/profil-ioannis.png" : null;
+
+  // Profilbild: liegt im privaten Bucket, daher kurzlebiger signierter Link
+  // (1 Stunde, deckt eine übliche Sitzung ab). Ohne Bild bleibt der
+  // Platzhalter mit den Initialen.
+  let fotoUrl: string | null = null;
+  if (profile.avatar_url) {
+    const { data: signed } = await supabase.storage
+      .from("avatare")
+      .createSignedUrl(profile.avatar_url, 3600);
+    fotoUrl = signed?.signedUrl ?? null;
+  }
   // Sparten-Sichtbarkeit: GF & Backoffice sehen immer beide.
   const bereiche: string[] =
     isGf || isBackoffice
@@ -98,6 +105,7 @@ export default async function DashboardLayout({
           isBackoffice={isBackoffice}
           bereiche={bereiche}
           fotoUrl={fotoUrl}
+          hatBild={!!profile.avatar_url}
           unreadCount={unreadCount ?? 0}
         />
         <div className="lg:flex">
@@ -108,6 +116,7 @@ export default async function DashboardLayout({
             isBackoffice={isBackoffice}
             bereiche={bereiche}
             fotoUrl={fotoUrl}
+            hatBild={!!profile.avatar_url}
             unreadCount={unreadCount ?? 0}
           />
           <main className="min-w-0 flex-1">{children}</main>

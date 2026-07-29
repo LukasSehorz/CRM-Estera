@@ -14,13 +14,12 @@ import { cn } from "@/lib/utils";
 import { formatDate, formatEUR } from "@/lib/format";
 import { Pill } from "@/components/ui/pill";
 import { InfoHint } from "@/components/ui/info-hint";
-import { UmsatzSparkline } from "@/components/charts/umsatz-sparkline";
 import { bereichLabel } from "@/config/enums";
 import type { Werte } from "./provision-block";
 
 /* ──────────────────────────────────────────────────────────────────────
    Midnight-Dashboard-Karten (Redesign nach Referenz-Layout):
-   Overview-Graph · Total-Balance mit Umsatz-Sparkline · Blick-nach-vorn ·
+   Overview-Graph · Total-Balance mit 3D-Muster · Blick-nach-vorn ·
    Aktuelle-Deals-Tabelle. Reine Präsentation — alle Zahlen kommen 1:1
    aus lib/analytics.
    ────────────────────────────────────────────────────────────────────── */
@@ -52,7 +51,6 @@ export function BalanceCard({
   mom,
   gewonnen,
   umsatzGesamt,
-  serie = [],
   isGf,
   className,
   fromHref = "/dashboard",
@@ -61,16 +59,11 @@ export function BalanceCard({
   mom: number | null;
   gewonnen: number;
   umsatzGesamt: number;
-  /** Tagesreihe der letzten 30 Tage für die Sparkline (statt Deko-Grafik). */
-  serie?: { label: string; value: number }[];
   isGf: boolean;
   className?: string;
   /** Zurück-Ziel für Drill-downs (Feedback SJ): führt aufs Dashboard zurück. */
   fromHref?: string;
 }) {
-  // Leerzustand: keine Sparkline zeichnen, wenn in den letzten 30 Tagen
-  // nichts abgeschlossen wurde — eine flache Nulllinie wäre irreführend.
-  const hatUmsatz = serie.some((p) => p.value > 0);
   const from = `&from=${encodeURIComponent(fromHref)}`;
   return (
     <section
@@ -115,20 +108,22 @@ export function BalanceCard({
         {gewonnen} gewonnene Deals · {formatEUR(umsatzGesamt)} Gesamtumsatz
       </Link>
 
-      {/* Sparkline Umsatz (30 Tage) — randlose Fläche statt Deko-Grafik */}
-      <div className="mt-4 min-h-44 flex-1">
-        {hatUmsatz ? (
-          <UmsatzSparkline serie={serie} />
-        ) : (
-          <div className="flex h-full min-h-44 items-center justify-center text-center text-xs text-muted-foreground">
-            Noch keine Abschlüsse in den letzten 30 Tagen
-          </div>
-        )}
+      {/* 3D-Muster wie in der ursprünglichen Fassung (Wunsch 29.07.). Die
+          Sparkline lag hier zwischenzeitlich und ist bewusst wieder raus —
+          die Zahlen darüber sagen dasselbe, die Grafik trägt die Optik. */}
+      <div className="relative mt-4 min-h-44 flex-1 overflow-hidden rounded-xl border border-border">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/dashboard/balance-pattern.png"
+          alt=""
+          aria-hidden
+          className="absolute inset-0 h-full w-full object-cover object-right"
+        />
+        <div className="absolute inset-x-0 bottom-0 flex items-center gap-2 bg-gradient-to-t from-black/70 to-transparent px-4 pb-3 pt-8 text-xs text-muted-foreground">
+          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent-500 motion-reduce:animate-none" aria-hidden />
+          Estera Intelligence — Zahlen aktualisieren sich live
+        </div>
       </div>
-      <p className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
-        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent-500 motion-reduce:animate-none" aria-hidden />
-        Estera Intelligence — Zahlen aktualisieren sich live
-      </p>
     </section>
   );
 }

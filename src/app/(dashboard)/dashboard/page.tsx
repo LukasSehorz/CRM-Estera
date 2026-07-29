@@ -213,7 +213,6 @@ export default async function DashboardPage({
             mom={mom}
             gewonnen={gewonnen}
             umsatzGesamt={umsatz}
-            serie={daily30}
             isGf={a.isGf}
             className="xl:col-span-4"
             fromHref={dashHref}

@@ -106,6 +106,7 @@ export type Database = {
           vertriebler_stufe: number | null;
           immo_anteil_default: number | null;
           parent_berater_id: string | null;
+          avatar_url: string | null;
           karriere_fenster_start: string;
           created_at: string;
           updated_at: string;
@@ -120,6 +121,7 @@ export type Database = {
           vertriebler_stufe?: number | null;
           immo_anteil_default?: number | null;
           parent_berater_id?: string | null;
+          avatar_url?: string | null;
           karriere_fenster_start?: string;
           created_at?: string;
           updated_at?: string;
@@ -134,6 +136,7 @@ export type Database = {
           vertriebler_stufe?: number | null;
           immo_anteil_default?: number | null;
           parent_berater_id?: string | null;
+          avatar_url?: string | null;
           karriere_fenster_start?: string;
           created_at?: string;
           updated_at?: string;
@@ -789,6 +792,11 @@ export type Database = {
       };
       set_berater_aktiv: {
         Args: { p_target: string; p_aktiv: boolean };
+        Returns: undefined;
+      };
+      // Profilbild (Migration 0035) — aendert NUR avatar_url des Aufrufers.
+      set_mein_avatar: {
+        Args: { p_pfad: string | null };
         Returns: undefined;
       };
     };
