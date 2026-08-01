@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowLeft, ShieldCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { Toaster } from "@/components/ui/sonner";
 import { PasswortForm } from "./passwort-form";
 
 /**
@@ -58,6 +59,9 @@ export default async function KontoPage() {
           </p>
         </div>
       </div>
+      {/* Diese Seite liegt ausserhalb der (dashboard)-Gruppe und erbt deren
+          Toaster nicht — ohne ihn blieben alle Meldungen unsichtbar. */}
+      <Toaster />
     </div>
   );
 }

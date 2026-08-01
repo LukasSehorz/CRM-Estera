@@ -18,24 +18,32 @@ export function PasswortForm({ email }: { email: string }) {
   const leer = { aktuell: "", neu: "", wiederholung: "" };
   const [v, setV] = useState(leer);
   const [fertig, setFertig] = useState(false);
+  const [fehler, setFehler] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
   function set<K extends keyof typeof v>(key: K, value: string) {
     setV((prev) => ({ ...prev, [key]: value }));
   }
 
+  /** Meldung dauerhaft im Formular zeigen (ein Toast allein verschwindet). */
+  function melde(text: string) {
+    setFehler(text);
+    toast.error(text);
+  }
+
   function submit(e: React.FormEvent) {
     e.preventDefault();
+    setFehler(null);
     if (v.neu.length < 8) {
-      toast.error("Das neue Passwort braucht mindestens 8 Zeichen.");
+      melde("Das neue Passwort braucht mindestens 8 Zeichen.");
       return;
     }
     if (v.neu !== v.wiederholung) {
-      toast.error("Die beiden neuen Passwörter stimmen nicht überein.");
+      melde("Die beiden neuen Passwörter stimmen nicht überein.");
       return;
     }
     if (v.neu === v.aktuell) {
-      toast.error("Das neue Passwort muss sich vom alten unterscheiden.");
+      melde("Das neue Passwort muss sich vom alten unterscheiden.");
       return;
     }
 
@@ -47,13 +55,13 @@ export function PasswortForm({ email }: { email: string }) {
         password: v.aktuell,
       });
       if (loginFehler) {
-        toast.error("Das aktuelle Passwort ist nicht korrekt.");
+        melde("Das aktuelle Passwort ist nicht korrekt.");
         return;
       }
       // 2) Neues Passwort setzen.
       const { error } = await supabase.auth.updateUser({ password: v.neu });
       if (error) {
-        toast.error(
+        melde(
           error.message.includes("should be different")
             ? "Das neue Passwort muss sich vom alten unterscheiden."
             : "Passwort konnte nicht geändert werden. Bitte erneut versuchen.",
@@ -61,6 +69,7 @@ export function PasswortForm({ email }: { email: string }) {
         return;
       }
       setV(leer);
+      setFehler(null);
       setFertig(true);
       toast.success("Passwort geändert.");
     });
@@ -122,6 +131,14 @@ export function PasswortForm({ email }: { email: string }) {
           onChange={(e) => set("wiederholung", e.target.value)}
         />
       </div>
+      {fehler && (
+        <p
+          role="alert"
+          className="rounded-md border border-danger/40 bg-danger/10 px-3 py-2 text-xs text-danger"
+        >
+          {fehler}
+        </p>
+      )}
       <Button type="submit" disabled={pending} className="w-full">
         <KeyRound className="h-4 w-4" />
         {pending ? "Wird geändert …" : "Passwort ändern"}

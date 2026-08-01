@@ -65,3 +65,6 @@ prod.log
 
 # Lokale Screenshot-/Verifikationsskripte
 .shot-*.mjs
+
+# Lokale Testlauf-Skripte
+.pwtest-*.mjs
