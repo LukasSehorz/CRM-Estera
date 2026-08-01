@@ -21,13 +21,10 @@ type Bereich = "immobilien" | "vv";
 export function NeuerSubBeraterForm({
   meineBereiche,
   maxProvision = 10,
-  maxStufe = 100,
 }: {
   meineBereiche: Bereich[];
   /** Obergrenze für den vergebbaren Provisionsanteil = eigener Satz (Call SJ). */
   maxProvision?: number;
-  /** Obergrenze für die vergebbare VV-Stufe = eigene Stufe. */
-  maxStufe?: number;
 }) {
   const router = useRouter();
   const leer = {
@@ -35,7 +32,10 @@ export function NeuerSubBeraterForm({
     nachname: "",
     email: "",
     passwort: "",
-    stufe: String(Math.min(30, maxStufe)),
+    // Bewusst leer und ohne Obergrenze im Formular: eine Vorbelegung bzw. ein
+    // max-Attribut würde die eigene Stufe der Upline verraten. Die Grenze
+    // prüft createSubBerater serverseitig (Wunsch Mandant 30.07.).
+    stufe: "",
     immoAnteil: String(Math.min(5, maxProvision)),
   };
   const [v, setV] = useState(leer);
@@ -148,19 +148,22 @@ export function NeuerSubBeraterForm({
           />
         </div>
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="sb-stufe">Vertriebler-Stufe (%) — VV</Label>
+          <Label htmlFor="sb-stufe">Vertriebler-Stufe (%) — VV *</Label>
+          {/* Kein max-Attribut: der Browser würde sonst „Wert muss kleiner
+              oder gleich X sein" melden und damit die eigene Stufe verraten.
+              Die Obergrenze prüft createSubBerater serverseitig (Wunsch
+              Mandant 30.07.: die Stufe der Upline darf nicht ablesbar sein). */}
           <Input
             id="sb-stufe"
             type="number"
+            required
             min={0}
-            max={maxStufe}
             inputMode="decimal"
             value={v.stufe}
             onChange={(e) => set("stufe", e.target.value)}
           />
           <p className="text-xs text-muted-foreground">
-            Max. {maxStufe} % (deine eigene Stufe) · deine Differenz dazu ist dein
-            Overhead.
+            Deine Differenz dazu ist dein Overhead.
           </p>
         </div>
         {zeigeImmo &&

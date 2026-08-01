@@ -1,11 +1,40 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient as createSupabaseAdmin } from "@supabase/supabase-js";
+import {
+  createClient as createSupabaseAdmin,
+  type SupabaseClient,
+} from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
+import { createNotification } from "@/lib/notifications";
 import type { Database } from "@/types/database";
 
 type Bereich = Database["public"]["Enums"]["bereich_enum"];
+
+/**
+ * Begrüßung für einen frisch angelegten Zugang: weist auf das Startpasswort
+ * hin und führt per Button direkt zur Passwort-Änderung (Wunsch Mandant
+ * 30.07.). Schlägt das fehl, bleibt der Zugang trotzdem bestehen — der
+ * Hinweis ist Komfort, kein Teil des Anlegens.
+ */
+async function begruessungHinweis(
+  supabase: SupabaseClient<Database>,
+  neuerNutzerId: string,
+  erzeugtVon: string,
+): Promise<void> {
+  try {
+    await createNotification(supabase, {
+      empfaengerId: neuerNutzerId,
+      erzeugtVon,
+      typ: "info",
+      titel: "Willkommen — bitte ändere dein Passwort",
+      text: "Du hast ein Startpasswort erhalten. Vergib jetzt ein eigenes, das nur du kennst.",
+      link: "/konto",
+    });
+  } catch {
+    // bewusst still
+  }
+}
 
 export type StufeResult = { ok: true } | { error: string };
 
@@ -351,6 +380,7 @@ export async function createBerater(
     return { error: "Profil konnte nicht angelegt werden. Bitte erneut versuchen." };
   }
 
+  await begruessungHinweis(supabase, created.user.id, user.id);
   revalidatePath("/team");
   return { ok: true };
 }
@@ -453,7 +483,11 @@ export async function createSubBerater(
   if (input.passwort.length < 8)
     return { error: "Das Startpasswort braucht mindestens 8 Zeichen." };
   if (Number.isNaN(input.stufe) || input.stufe < 0 || input.stufe > maxStufe)
-    return { error: `Stufe muss zwischen 0 und ${maxStufe} % liegen.` };
+    // Bewusst OHNE die konkrete Obergrenze: die Meldung darf die eigene
+    // Stufe der Upline nicht verraten (Wunsch Mandant 30.07.).
+    return {
+      error: "Die Stufe darf deine eigene Stufe nicht überschreiten.",
+    };
   if (input.bereiche.length < 1)
     return { error: "Mindestens eine Sparte auswählen." };
   // Provisionsanteil nur relevant, wenn die Immobilien-Sparte gewählt ist.
@@ -515,6 +549,7 @@ export async function createSubBerater(
     return { error: "Profil konnte nicht angelegt werden. Bitte erneut versuchen." };
   }
 
+  await begruessungHinweis(supabase, created.user.id, user.id);
   revalidatePath("/partner");
   revalidatePath("/team");
   return { ok: true };

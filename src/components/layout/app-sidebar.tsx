@@ -10,6 +10,7 @@ import {
   FolderOpen,
   LayoutDashboard,
   ListChecks,
+  KeyRound,
   LogOut,
   Menu,
   Network,
@@ -258,6 +259,17 @@ function Footer({
       >
         <ThemeToggle />
       </div>
+      {/* Eigenes Passwort ändern (Wunsch Mandant 30.07.) — freiwillig,
+          erreichbar für jede Rolle. */}
+      <Link
+        href="/konto"
+        onClick={onNavigate}
+        title={rail ? "Passwort ändern" : undefined}
+        className="flex w-full items-center gap-3 rounded-md px-2 py-2 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+      >
+        <KeyRound className="h-[18px] w-[18px] shrink-0" />
+        <span className={railText(rail)}>Passwort ändern</span>
+      </Link>
       <form action={logout}>
         <button
           type="submit"

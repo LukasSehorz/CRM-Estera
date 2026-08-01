@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
+  ArrowRight,
   Bell,
   ChevronDown,
   ClipboardList,
@@ -12,6 +13,16 @@ import {
 import { cn } from "@/lib/utils";
 import { formatDate } from "@/lib/format";
 import { markAllNotificationsRead, deleteNotification } from "./actions";
+
+/** Beschriftung des Weiter-Buttons — passend zum Ziel der Benachrichtigung. */
+function aktionLabel(link: string): string {
+  if (link.startsWith("/konto")) return "Hier Passwort ändern";
+  if (link.startsWith("/aufgaben")) return "Zur Aufgabe";
+  if (link.startsWith("/dokumente") || link.startsWith("/finanzierer"))
+    return "Zu den Dokumenten";
+  if (link.startsWith("/kontakte")) return "Zum Kunden";
+  return "Öffnen";
+}
 
 export type NotificationItem = {
   id: string;
@@ -116,6 +127,18 @@ export function BenachrichtigungenListe({ items }: { items: NotificationItem[] }
                   <p className="mt-1 whitespace-pre-wrap rounded-md bg-surface-2/60 px-3 py-2 text-sm text-muted-foreground">
                     {beschreibung}
                   </p>
+                )}
+                {/* Sichtbarer Weiter-Button statt nur klickbarem Titel
+                    (Wunsch Mandant 30.07.: „gleich hinkommen"). */}
+                {n.link && (
+                  <button
+                    type="button"
+                    onClick={() => router.push(n.link as string)}
+                    className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-accent-500/15 px-3 py-1.5 text-xs font-semibold text-accent-500 transition-colors hover:bg-accent-500/25"
+                  >
+                    {aktionLabel(n.link)}
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </button>
                 )}
                 <p className="mt-1 text-xs tabular-nums text-muted-foreground">
                   {formatDate(n.created_at)}

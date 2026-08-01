@@ -38,8 +38,9 @@ export default async function TeamPage() {
   // („7 % → max. 7 %; 4 % → max. 4 %"). Ohne eigenen Satz (null) = 0.
   const maxProvision =
     me.immo_anteil_default != null ? Number(me.immo_anteil_default) : 0;
-  const maxStufe =
-    me.vertriebler_stufe != null ? Number(me.vertriebler_stufe) : 0;
+  // Die VV-Stufen-Obergrenze wird bewusst NICHT ans Formular gereicht — sie
+  // würde dort die eigene Stufe der Upline verraten. createSubBerater prüft
+  // sie serverseitig (Wunsch Mandant 30.07.).
 
   const [
     { data: profiles },
@@ -311,7 +312,6 @@ export default async function TeamPage() {
           <NeuerSubBeraterForm
             meineBereiche={meineBereiche}
             maxProvision={maxProvision}
-            maxStufe={maxStufe}
           />
         )}
         <div className="rounded-xl border border-border bg-surface p-5">
