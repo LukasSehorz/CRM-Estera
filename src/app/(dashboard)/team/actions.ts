@@ -557,15 +557,29 @@ export async function createSubBerater(
 
 /** Löscht einen Tippgeber (RLS: GF oder Besitzer). */
 /**
- * Löscht einen Berater-Zugang endgültig (nur GF) — gedacht für Test- und
- * Fehlanlagen. Bewusst mit Vorprüfung: an einem Profil hängen Kunden, Deals,
- * Aufgaben, Tippgeber und eine mögliche Downline. Die Datenbank würde ein
- * Löschen bei Kunden/Deals/Aufgaben zwar von sich aus blockieren (NO ACTION),
- * aber Tippgeber und Monatsziele würden kommentarlos mitgelöscht und die
- * Downline hinge anschließend an niemandem. Deshalb wird hier vorab geprüft
- * und im Zweifel abgelehnt — mit klarer Begründung statt DB-Fehler.
+ * Löscht einen Berater-Zugang endgültig (nur GF).
+ *
+ * Zweistufig: Hängen Kunden, Deals, Aufgaben oder Tippgeber am Profil, gibt
+ * der erste Aufruf `rueckfrage` zurück — die Oberfläche listet auf, was
+ * mitgelöscht würde, und ruft nach Bestätigung mit `force = true` erneut auf.
+ *
+ * Beim erzwungenen Löschen werden die EIGENEN Daten entfernt (Kunden samt
+ * Deals, Dokumenten, Notizen, Aufgaben und Storage-Dateien). Spuren auf
+ * Kunden ANDERER Berater — Notizen, hochgeladene Dokumente, Stage-Historie —
+ * bleiben dagegen erhalten; dort wird nur der Urheber-Verweis geleert. Sonst
+ * würde das Löschen eines Zugangs die Historie fremder Deals zerstören, auf
+ * der Deal-Time und Konversionsraten beruhen.
  */
-export async function deleteBerater(id: string): Promise<StufeResult> {
+export type DeleteBeraterResult =
+  | { ok: true }
+  | { error: string }
+  /** Es hängen Daten dran — die GF muss ausdrücklich bestätigen. */
+  | { rueckfrage: string };
+
+export async function deleteBerater(
+  id: string,
+  force = false,
+): Promise<DeleteBeraterResult> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -594,12 +608,23 @@ export async function deleteBerater(id: string): Promise<StufeResult> {
         "Geschäftsführungs-Zugänge können nicht gelöscht werden. Bitte stattdessen auf inaktiv setzen.",
     };
 
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!serviceKey || !url)
+    return { error: "Server nicht konfiguriert (Service-Role-Key fehlt)." };
+  const admin = createSupabaseAdmin<Database>(url, serviceKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+
   // Was am Profil hängt — jeweils nur zählen, nichts anfassen.
+  // BEWUSST über den Admin-Client: mit dem RLS-Client käme je nach Policy 0
+  // heraus, die Rückfrage bliebe aus und das harte Löschen liefe in einen
+  // Fremdschlüssel-Fehler. Dass nur die GF hier ankommt, ist oben geprüft.
   const zaehle = async (
     tabelle: "contacts" | "deals" | "tasks" | "tippgeber" | "profiles",
     spalte: string,
   ) => {
-    const { count } = await supabase
+    const { count } = await admin
       .from(tabelle)
       .select("id", { count: "exact", head: true })
       .eq(spalte, id);
@@ -613,38 +638,102 @@ export async function deleteBerater(id: string): Promise<StufeResult> {
     zaehle("profiles", "parent_berater_id"),
   ]);
 
-  const blocker: string[] = [];
-  if (kunden > 0) blocker.push(`${kunden} Kunde${kunden === 1 ? "" : "n"}`);
-  if (deals > 0) blocker.push(`${deals} Deal${deals === 1 ? "" : "s"}`);
+  const posten: string[] = [];
+  if (kunden > 0)
+    posten.push(`${kunden} Kunde${kunden === 1 ? "" : "n"} (mit allen Deals, Dokumenten, Notizen und Aufgaben dazu)`);
+  if (deals > 0) posten.push(`${deals} Deal${deals === 1 ? "" : "s"}`);
   if (aufgaben > 0)
-    blocker.push(`${aufgaben} Aufgabe${aufgaben === 1 ? "" : "n"}`);
-  if (tippgeber > 0)
-    blocker.push(`${tippgeber} Tippgeber`);
-  if (downline > 0)
-    blocker.push(
-      `${downline} untergeordnete${downline === 1 ? "r" : ""} Berater`,
-    );
-  if (blocker.length > 0) {
+    posten.push(`${aufgaben} Aufgabe${aufgaben === 1 ? "" : "n"}`);
+  if (tippgeber > 0) posten.push(`${tippgeber} Tippgeber`);
+
+  // Erster Klick bei vorhandenen Daten: nicht löschen, sondern zurückfragen.
+  if (posten.length > 0 && !force) {
+    const anhang =
+      downline > 0
+        ? downline === 1
+          ? "\n\n1 untergeordneter Berater bleibt bestehen und hängt danach direkt unter der Geschäftsführung."
+          : `\n\n${downline} untergeordnete Berater bleiben bestehen und hängen danach direkt unter der Geschäftsführung.`
+        : "";
     return {
-      error: `${ziel.vorname} ${ziel.nachname} hat noch ${blocker.join(", ")}. Zugänge mit Daten werden nicht gelöscht — bitte stattdessen auf inaktiv setzen oder die Daten zuerst umhängen.`,
+      rueckfrage:
+        `${ziel.vorname} ${ziel.nachname} hat noch:\n\n• ${posten.join("\n• ")}\n\n` +
+        `Diese Daten werden UNWIDERRUFLICH mitgelöscht.${anhang}\n\n` +
+        `Wirklich löschen?`,
     };
   }
 
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  if (!serviceKey || !url)
-    return { error: "Server nicht konfiguriert (Service-Role-Key fehlt)." };
-  const admin = createSupabaseAdmin<Database>(url, serviceKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
+  if (posten.length > 0) {
+    // --- Eigene Daten des Beraters entfernen -------------------------------
+    // Dateien im Storage zuerst: die DB-Zeilen verschwinden gleich per
+    // Cascade, danach waeren die Dateien nicht mehr auffindbar.
+    const { data: eigeneKunden } = await admin
+      .from("contacts")
+      .select("id")
+      .eq("berater_id", id);
+    const kundenIds = (eigeneKunden ?? []).map((k) => k.id);
+    if (kundenIds.length > 0) {
+      const { data: dateien } = await admin
+        .from("contact_documents")
+        .select("storage_path")
+        .in("contact_id", kundenIds);
+      const pfade = (dateien ?? [])
+        .map((d) => d.storage_path)
+        .filter((p): p is string => !!p);
+      for (let i = 0; i < pfade.length; i += 100) {
+        await admin.storage
+          .from("kundendokumente")
+          .remove(pfade.slice(i, i + 100));
+      }
+      // Kunden loeschen — Deals, Dokumente, Notizen, Aufgaben und der
+      // Checklisten-Status haengen per ON DELETE CASCADE daran.
+      for (let i = 0; i < kundenIds.length; i += 100) {
+        await admin
+          .from("contacts")
+          .delete()
+          .in("id", kundenIds.slice(i, i + 100));
+      }
+    }
+    // Deals auf fremden Kunden (Stage-Historie haengt per Cascade daran).
+    await admin.from("deals").delete().eq("berater_id", id);
+    // Aufgaben: owner_id ist NOT NULL -> loeschen. Zuweisungen an ihn
+    // dagegen nur loesen, die Aufgabe selbst gehoert jemand anderem.
+    await admin.from("tasks").delete().eq("owner_id", id);
+    await admin.from("tasks").update({ assigned_to: null }).eq("assigned_to", id);
+    await admin.from("tippgeber").delete().eq("owner_id", id);
 
-  // Der Auth-Nutzer ist die Wurzel: das Profil hängt per ON DELETE CASCADE
-  // daran und verschwindet mit.
+    // --- Spuren auf FREMDEN Daten nur entkoppeln, nicht loeschen -----------
+    // Notizen, Dokumente und Stage-Historie auf Kunden ANDERER Berater
+    // bleiben erhalten; nur der Urheber-Verweis wird geleert. Die
+    // Stage-Historie ist Grundlage fuer Deal-Time und Konversionsraten
+    // (Projektregel) — sie darf nicht verschwinden, nur weil jemand geht.
+    await admin
+      .from("contact_activities")
+      .update({ created_by: null })
+      .eq("created_by", id);
+    await admin
+      .from("contact_documents")
+      .update({ uploaded_by: null })
+      .eq("uploaded_by", id);
+    await admin
+      .from("deal_stage_history")
+      .update({ changed_by: null })
+      .eq("changed_by", id);
+    await admin
+      .from("portal_documents")
+      .update({ uploaded_by: null })
+      .eq("uploaded_by", id);
+  }
+
+  // Der Auth-Nutzer ist die Wurzel: das Profil haengt per ON DELETE CASCADE
+  // daran und verschwindet mit. Die Downline wird per SET NULL elternlos und
+  // erscheint dadurch direkt unter der Geschaeftsfuehrung.
   const { error } = await admin.auth.admin.deleteUser(id);
   if (error) return { error: "Löschen fehlgeschlagen. Bitte erneut versuchen." };
 
   revalidatePath("/team");
   revalidatePath("/dashboard");
+  revalidatePath("/kontakte");
+  revalidatePath("/partner");
   return { ok: true };
 }
 

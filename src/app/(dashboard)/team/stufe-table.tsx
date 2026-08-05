@@ -472,18 +472,33 @@ function StufeRow({
               size="sm"
               variant="outline"
               disabled={pending}
-              title="Zugang endgültig löschen — nur möglich, solange keine Kunden, Deals, Aufgaben, Tippgeber oder untergeordneten Berater daran hängen."
+              title="Zugang endgültig löschen. Hängen Kunden oder Deals daran, wird vorher nachgefragt."
               onClick={() => {
                 if (
                   !confirm(
-                    `Zugang von ${row.name} endgültig löschen?\n\nDas lässt sich nicht rückgängig machen. Möglich ist es nur, solange keine Kunden, Deals, Aufgaben, Tippgeber oder untergeordneten Berater daran hängen.`,
+                    `Zugang von ${row.name} endgültig löschen?\n\nDas lässt sich nicht rückgängig machen.`,
                   )
                 )
                   return;
                 start(async () => {
                   const res = await deleteBerater(row.id);
-                  if ("error" in res) toast.error(res.error);
-                  else toast.success(`Zugang von ${row.name} gelöscht`);
+                  if ("error" in res) {
+                    toast.error(res.error);
+                    return;
+                  }
+                  // Zweite Stufe: es hängen Daten dran — die Server-Action
+                  // listet auf, was mitginge, und wartet auf ein zweites Ja.
+                  if ("rueckfrage" in res) {
+                    if (!confirm(res.rueckfrage)) return;
+                    const zweit = await deleteBerater(row.id, true);
+                    if ("error" in zweit) toast.error(zweit.error);
+                    else
+                      toast.success(
+                        `Zugang von ${row.name} samt Daten gelöscht`,
+                      );
+                    return;
+                  }
+                  toast.success(`Zugang von ${row.name} gelöscht`);
                 });
               }}
               className="text-muted-foreground hover:text-destructive"
