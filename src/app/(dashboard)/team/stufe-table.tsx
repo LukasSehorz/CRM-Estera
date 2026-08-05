@@ -10,12 +10,14 @@ import {
   Handshake,
   Lock,
   LockOpen,
+  Trash2,
   User,
   UserPlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   createBerater,
+  deleteBerater,
   setBeraterAktiv,
   setBeraterAnbindung,
   setBeraterBereiche,
@@ -459,6 +461,34 @@ function StufeRow({
               ) : (
                 <LockOpen className="h-4 w-4" />
               )}
+            </Button>
+          )}
+          {/* Endgültig löschen — gedacht für Test-/Fehlanlagen. Nur GF, nie
+              für das eigene Konto. Zugänge mit Kunden, Deals, Aufgaben,
+              Tippgebern oder Downline lehnt die Server-Action ab; dann bleibt
+              das Sperren oben der richtige Weg. */}
+          {!readOnly && !istGf && (
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={pending}
+              title="Zugang endgültig löschen — nur möglich, solange keine Kunden, Deals, Aufgaben, Tippgeber oder untergeordneten Berater daran hängen."
+              onClick={() => {
+                if (
+                  !confirm(
+                    `Zugang von ${row.name} endgültig löschen?\n\nDas lässt sich nicht rückgängig machen. Möglich ist es nur, solange keine Kunden, Deals, Aufgaben, Tippgeber oder untergeordneten Berater daran hängen.`,
+                  )
+                )
+                  return;
+                start(async () => {
+                  const res = await deleteBerater(row.id);
+                  if ("error" in res) toast.error(res.error);
+                  else toast.success(`Zugang von ${row.name} gelöscht`);
+                });
+              }}
+              className="text-muted-foreground hover:text-destructive"
+            >
+              <Trash2 className="h-4 w-4" />
             </Button>
           )}
           {(!readOnly || zielEditable) && (

@@ -556,6 +556,98 @@ export async function createSubBerater(
 }
 
 /** Löscht einen Tippgeber (RLS: GF oder Besitzer). */
+/**
+ * Löscht einen Berater-Zugang endgültig (nur GF) — gedacht für Test- und
+ * Fehlanlagen. Bewusst mit Vorprüfung: an einem Profil hängen Kunden, Deals,
+ * Aufgaben, Tippgeber und eine mögliche Downline. Die Datenbank würde ein
+ * Löschen bei Kunden/Deals/Aufgaben zwar von sich aus blockieren (NO ACTION),
+ * aber Tippgeber und Monatsziele würden kommentarlos mitgelöscht und die
+ * Downline hinge anschließend an niemandem. Deshalb wird hier vorab geprüft
+ * und im Zweifel abgelehnt — mit klarer Begründung statt DB-Fehler.
+ */
+export async function deleteBerater(id: string): Promise<StufeResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Nicht angemeldet." };
+
+  const { data: me } = await supabase
+    .from("profiles")
+    .select("rolle")
+    .eq("id", user.id)
+    .single();
+  if (me?.rolle !== "geschaeftsfuehrung")
+    return { error: "Nur die Geschäftsführung darf Zugänge löschen." };
+  if (id === user.id)
+    return { error: "Du kannst deinen eigenen Zugang nicht löschen." };
+
+  const { data: ziel } = await supabase
+    .from("profiles")
+    .select("vorname, nachname, rolle")
+    .eq("id", id)
+    .single();
+  if (!ziel) return { error: "Zugang nicht gefunden." };
+  if (ziel.rolle === "geschaeftsfuehrung")
+    return {
+      error:
+        "Geschäftsführungs-Zugänge können nicht gelöscht werden. Bitte stattdessen auf inaktiv setzen.",
+    };
+
+  // Was am Profil hängt — jeweils nur zählen, nichts anfassen.
+  const zaehle = async (
+    tabelle: "contacts" | "deals" | "tasks" | "tippgeber" | "profiles",
+    spalte: string,
+  ) => {
+    const { count } = await supabase
+      .from(tabelle)
+      .select("id", { count: "exact", head: true })
+      .eq(spalte, id);
+    return count ?? 0;
+  };
+  const [kunden, deals, aufgaben, tippgeber, downline] = await Promise.all([
+    zaehle("contacts", "berater_id"),
+    zaehle("deals", "berater_id"),
+    zaehle("tasks", "owner_id"),
+    zaehle("tippgeber", "owner_id"),
+    zaehle("profiles", "parent_berater_id"),
+  ]);
+
+  const blocker: string[] = [];
+  if (kunden > 0) blocker.push(`${kunden} Kunde${kunden === 1 ? "" : "n"}`);
+  if (deals > 0) blocker.push(`${deals} Deal${deals === 1 ? "" : "s"}`);
+  if (aufgaben > 0)
+    blocker.push(`${aufgaben} Aufgabe${aufgaben === 1 ? "" : "n"}`);
+  if (tippgeber > 0)
+    blocker.push(`${tippgeber} Tippgeber`);
+  if (downline > 0)
+    blocker.push(
+      `${downline} untergeordnete${downline === 1 ? "r" : ""} Berater`,
+    );
+  if (blocker.length > 0) {
+    return {
+      error: `${ziel.vorname} ${ziel.nachname} hat noch ${blocker.join(", ")}. Zugänge mit Daten werden nicht gelöscht — bitte stattdessen auf inaktiv setzen oder die Daten zuerst umhängen.`,
+    };
+  }
+
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!serviceKey || !url)
+    return { error: "Server nicht konfiguriert (Service-Role-Key fehlt)." };
+  const admin = createSupabaseAdmin<Database>(url, serviceKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+
+  // Der Auth-Nutzer ist die Wurzel: das Profil hängt per ON DELETE CASCADE
+  // daran und verschwindet mit.
+  const { error } = await admin.auth.admin.deleteUser(id);
+  if (error) return { error: "Löschen fehlgeschlagen. Bitte erneut versuchen." };
+
+  revalidatePath("/team");
+  revalidatePath("/dashboard");
+  return { ok: true };
+}
+
 export async function deleteTippgeber(id: string): Promise<StufeResult> {
   const supabase = await createClient();
   const {

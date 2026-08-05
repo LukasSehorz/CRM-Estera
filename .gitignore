@@ -68,3 +68,5 @@ prod.log
 
 # Lokale Testlauf-Skripte
 .pwtest-*.mjs
+
+.deltest-*.mjs
