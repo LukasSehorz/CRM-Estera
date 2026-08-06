@@ -30,7 +30,7 @@ import {
   isLost,
   betragOf,
 } from "@/lib/analytics";
-import { dealBeraterProvision } from "@/lib/provision";
+import { dealBeraterProvision, dealEsteraGesamt } from "@/lib/provision";
 import { InfoHint } from "@/components/ui/info-hint";
 
 export default async function PerformanceDashboardPage({
@@ -269,11 +269,15 @@ export default async function PerformanceDashboardPage({
     let n = 0;
     const immoDeals: DealPunkt[] = [];
     const vvDeals: DealPunkt[] = [];
+    // Aufschlüsselung für die GF (Mandant 06.08.): Gesamtanspruch von Estera,
+    // davon der Berater-Anteil, Rest bleibt im Haus.
+    let gesamtProv = 0;
     for (const d of a.deals) {
       const am = a.realisiertAm(d);
       if (!am) continue;
       if (sinceMs != null && new Date(am).getTime() < sinceMs) continue;
       const amt = a.umsatzOf(d);
+      gesamtProv += dealEsteraGesamt(d, a.immoModus);
       if (d.bereich === "immobilien") {
         immo += amt;
         immoDeals.push({ name: d.dealname, betrag: amt });
@@ -287,6 +291,7 @@ export default async function PerformanceDashboardPage({
       immo,
       vv,
       n,
+      gesamtProv,
       immoDeals: immoDeals.sort(nachBetrag),
       vvDeals: vvDeals.sort(nachBetrag),
     };
@@ -295,6 +300,27 @@ export default async function PerformanceDashboardPage({
   const split30 = splitUmsatz(nowMs - 30 * 86_400_000);
   const splitGesamt = splitUmsatz(null);
   const umsatzDetails = (s: ReturnType<typeof splitUmsatz>) => [
+    // Nur die GF sieht den Hausanteil (Kap. 2.2) — für Berater bleibt die
+    // Kachel bei der reinen Sparten-Aufteilung.
+    ...(a.isGf
+      ? [
+          {
+            label: "Gesamtprovision Estera (70 % VV)",
+            value: formatEUR(s.gesamtProv),
+            tone: "muted" as const,
+          },
+          {
+            label: "davon an Berater",
+            value: `− ${formatEUR(s.gesamtProv - (s.immo + s.vv))}`,
+            tone: "muted" as const,
+          },
+          {
+            label: "bleibt bei Estera",
+            value: formatEUR(s.immo + s.vv),
+            tone: "accent" as const,
+          },
+        ]
+      : []),
     {
       label: "Immobilien",
       value: formatEUR(s.immo),

@@ -72,3 +72,5 @@ prod.log
 .deltest-*.mjs
 
 .vtest-*.mjs
+
+.ptest*.mjs

@@ -306,6 +306,14 @@ async function loadAnalyticsImpl(): Promise<AnalyticsData> {
   const stufeMap = new Map(
     profiles.map((p) => [p.id, Number(p.vertriebler_stufe ?? 0)]),
   );
+  // Deals der Geschäftsführung sind Haus-Deals: kein persönlicher Berater-
+  // Anteil, die vollen 70 % bleiben bei Estera (Mandant 06.08.2026).
+  const gfIds = new Set(
+    profiles
+      .filter((p) => p.rolle === "geschaeftsfuehrung")
+      .map((p) => p.id),
+  );
+  const istHausDeal = (d: Deal) => gfIds.has(d.berater_id);
   const immoDefaultMap = new Map(
     profiles.map((p) => [p.id, Number(p.immo_anteil_default ?? 0)]),
   );
@@ -347,8 +355,13 @@ async function loadAnalyticsImpl(): Promise<AnalyticsData> {
   // eigene Provision. Die GF rechnet auf den Estera-Umsatz.
   const umsatzOf = (d: Deal) =>
     isGf
-      ? dealEsteraUmsatz(d, stufeMap.get(d.berater_id), immoModus)
-      : dealBeraterProvision(d, stufeMap.get(d.berater_id), immoModus);
+      ? dealEsteraUmsatz(d, stufeMap.get(d.berater_id), immoModus, istHausDeal(d))
+      : dealBeraterProvision(
+          d,
+          stufeMap.get(d.berater_id),
+          immoModus,
+          istHausDeal(d),
+        );
 
   // Einbehalt (F1.4, Call SJ): 15 % des Auszahlungsanspruchs (Stufe −
   // Tippgeber) bei Factoring UND ohne Factoring — nur ratierlich hat keinen

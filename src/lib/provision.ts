@@ -9,7 +9,9 @@
 // Tippgeber (Vorgabe Lukas, 12.07.2026): der Tippgeber-Satz geht vom
 // BERATER-Anteil ab, nicht vom Hausanteil. Berater 40 %, Tippgeber 10 %
 // → Umsatz des Beraters = 40 % × Basis, „Gewinn" = 30 % × Basis.
-// Der Estera-/Hausanteil = Basis × (100 % − Stufe) bleibt unberührt.
+// Estera-Anteil (Mandant 06.08.2026): Estera erhält 70 % der Nettoprovision,
+// die übrigen 30 % gehen an den Pool. Der Hausanteil ist die Differenz
+// zwischen diesen 70 % und dem Berater-Anteil — NICHT 100 % − Stufe.
 //
 // Selbsttest (Beispiel aus dem Dokument: BWS 48.000 €, Consultant 40 %):
 //   Grundprovision 7,8 %             = 3.744,00 €
@@ -20,6 +22,13 @@
 
 export const PROVISIONSSATZ = 0.078; // 7,8 % (global fix)
 export const FACTORING_ANTEIL = 0.9; // 90 % (10 % Factoringgebühr)
+/**
+ * Anteil der Nettoprovision, den Estera überhaupt erhält (Mandant 06.08.2026:
+ * „4380 × 70 % — unsere prov"). Die übrigen 30 % gehen an den Pool und sind
+ * NIE Estera-Umsatz. Die Vertriebler-Stufen (10–55 %) sind Anteile derselben
+ * Netto-Basis; Estera bleibt die Differenz zu diesen 70 %.
+ */
+export const ESTERA_ANTEIL = 0.7; // 70 %
 export const EINBEHALT_SOFORT = 0.85; // 85 % sofort (Factoring & ohne Factoring)
 export const EINBEHALT_REST = 0.15; // 15 % einbehalten (Factoring & ohne Factoring)
 export const EINBEHALT_MONATE = 12; // Auszahlung 12 Monate nach Abschluss
@@ -76,7 +85,8 @@ export type ProvisionResult = {
   vertrieblerGesamt: number; // Basis × Stufe — der „Umsatz" des Beraters
   tippgeberAnteil: number; // Basis × Tippgeber-Satz — geht vom Berater-Anteil ab
   vertrieblerGewinn: number; // Gesamt − Tippgeber — Bemessung der Auszahlung
-  hausAnteil: number; // Basis × (100 % − Stufe) — Estera-Anteil des Deals
+  esteraGesamt: number; // Basis × 70 % — was Estera insgesamt zusteht
+  hausAnteil: number; // Estera gesamt − Berater-Anteil — was bei Estera bleibt
   einbehalt: boolean; // true NUR bei Zahlart „factoring"
   sofortAuszahlung: number | null; // Fall 1: 85 % des Gewinns · Fall 2: voll
   einbehaltBetrag: number | null; // Fall 1: 15 % des Gewinns · sonst null
@@ -106,7 +116,10 @@ export function computeProvision(input: ProvisionInput): ProvisionResult {
   const vertrieblerGesamt = nettoProvision * vStufe;
   const tippgeberAnteil = nettoProvision * tSatz;
   const vertrieblerGewinn = vertrieblerGesamt - tippgeberAnteil;
-  const hausAnteil = nettoProvision - vertrieblerGesamt;
+  // Estera erhält 70 % der Nettoprovision (die übrigen 30 % gehen an den
+  // Pool); der Berater-Anteil geht davon ab (Mandant 06.08.2026).
+  const esteraGesamt = nettoProvision * ESTERA_ANTEIL;
+  const hausAnteil = Math.max(0, esteraGesamt - vertrieblerGesamt);
 
   // Einbehalt 85/15 bei Factoring UND ohne Factoring; nur ratierlich ohne
   // Einbehalt (Call SJ F1.4). Der Unterschied liegt allein in nettoProvision
@@ -126,6 +139,7 @@ export function computeProvision(input: ProvisionInput): ProvisionResult {
     vertrieblerGesamt,
     tippgeberAnteil,
     vertrieblerGewinn,
+    esteraGesamt,
     hausAnteil,
     einbehalt,
     sofortAuszahlung,
@@ -203,6 +217,8 @@ export function dealEsteraUmsatz(
   d: DealFinanz,
   vertrieblerStufe: number | null | undefined,
   modus: ImmoProvisionModus = IMMO_PROVISION_MODUS,
+  /** Deal-Berater ist die Geschäftsführung → kein persönlicher Anteil. */
+  istHausDeal = false,
 ): number {
   // Kanonische Umsatz-Definition (Kap. 1.1): Umsatz = Estera-NETTO, also der
   // Hausanteil NACH Abzug des Berater-Anteils. Immobilien liefert daher den
@@ -214,19 +230,42 @@ export function dealEsteraUmsatz(
     return computeImmoProvision(d.kaufpreis, d.provisionssatz, d.berater_anteil, modus)
       .hausAnteil;
   }
-  // Auch bei VV nie negativ (falls eine Stufe > 100 % gesetzt würde).
-  return Math.max(0, vvBasis(d) * (1 - (vertrieblerStufe ?? 0) / 100));
+  // VV: Estera erhält 70 % der Nettoprovision; davon geht der Anteil des
+  // Beraters ab. Schreibt die Geschäftsführung den Deal selbst, bleiben die
+  // vollen 70 % im Haus (Mandant 06.08.: „dann fließen die 70 % in Estera").
+  const anteilBerater = istHausDeal ? 0 : (vertrieblerStufe ?? 0) / 100;
+  return Math.max(0, vvBasis(d) * (ESTERA_ANTEIL - anteilBerater));
+}
+
+/**
+ * Gesamtanspruch von Estera an einem Deal — VOR Abzug des Berater-Anteils.
+ * VV: Nettoprovision × 70 %. Immobilien: die volle Estera-Provision
+ * (dort gilt die 70-%-Decke nicht, Mandant 06.08.: „Immo erstmal so lassen").
+ * Dient der Aufschlüsselung „Gesamt → an Berater → bleibt bei Estera".
+ */
+export function dealEsteraGesamt(
+  d: DealFinanz,
+  modus: ImmoProvisionModus = IMMO_PROVISION_MODUS,
+): number {
+  if (d.bereich === "immobilien") {
+    return computeImmoProvision(d.kaufpreis, d.provisionssatz, d.berater_anteil, modus)
+      .esteraProvision;
+  }
+  return vvBasis(d) * ESTERA_ANTEIL;
 }
 
 export function dealBeraterProvision(
   d: DealFinanz,
   vertrieblerStufe: number | null | undefined,
   modus: ImmoProvisionModus = IMMO_PROVISION_MODUS,
+  /** Deal-Berater ist die Geschäftsführung → alles bleibt bei Estera. */
+  istHausDeal = false,
 ): number {
   if (d.bereich === "immobilien") {
     return computeImmoProvision(d.kaufpreis, d.provisionssatz, d.berater_anteil, modus)
       .beraterProvision;
   }
+  if (istHausDeal) return 0;
   return vvBasis(d) * ((vertrieblerStufe ?? 0) / 100);
 }
 
