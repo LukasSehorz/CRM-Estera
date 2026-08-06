@@ -76,3 +76,5 @@ prod.log
 .ptest*.mjs
 
 .atest*.mjs
+
+.ttest*.mjs
