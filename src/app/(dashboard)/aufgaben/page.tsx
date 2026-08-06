@@ -24,8 +24,13 @@ export default async function AufgabenPage({
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const [{ data: tasks }, { data: contacts }, { data: deals }, { data: profiles }] =
-    await Promise.all([
+  const [
+    { data: tasks },
+    { data: contacts },
+    { data: deals },
+    { data: profiles },
+    { data: personen },
+  ] = await Promise.all([
       supabase
         .from("tasks")
         .select(
@@ -44,15 +49,27 @@ export default async function AufgabenPage({
         .from("profiles")
         .select("id, vorname, nachname, rolle, aktiv")
         .order("vorname"),
+      // Zuweisbare Personen kommen NICHT aus profiles: deren RLS zeigt einem
+      // Berater nur sich und seine Downline. Die Funktion gibt alle aktiven
+      // Personen heraus — aber nur Id/Name/Rolle, nie Stufe oder Anteil
+      // (Mandant 06.08.: jeder darf jedem zuweisen).
+      supabase.rpc("zuweisbare_personen"),
     ]);
 
   const contactMap = new Map(
     (contacts ?? []).map((c) => [c.id, `${c.vorname} ${c.nachname}`]),
   );
   const dealMap = new Map((deals ?? []).map((d) => [d.id, d.dealname]));
-  const nameMap = new Map(
-    (profiles ?? []).map((p) => [p.id, `${p.vorname} ${p.nachname}`]),
-  );
+  type Person = { id: string; name: string; rolle: string };
+  const personenListe = (personen ?? []) as Person[];
+  // Namen aus beiden Quellen: profiles (eigene Downline) + die zuweisbaren
+  // Personen, damit auch „an die Geschäftsführung" einen Namen bekommt.
+  const nameMap = new Map<string, string>([
+    ...(profiles ?? []).map(
+      (p) => [p.id, `${p.vorname} ${p.nachname}`] as [string, string],
+    ),
+    ...personenListe.map((p) => [p.id, p.name] as [string, string]),
+  ]);
 
   const rows: AufgabeRow[] = (tasks ?? []).map((t) => ({
     id: t.id,
@@ -72,9 +89,15 @@ export default async function AufgabenPage({
 
   // Zuweisbare Personen: sichtbare aktive Profile außer man selbst. Für einen
   // Berater sind das (per RLS) genau seine Downline, für die GF alle.
-  const beraterOptionen = (profiles ?? [])
-    .filter((p) => p.aktiv && p.id !== user.id && p.rolle !== "geschaeftsfuehrung")
-    .map((p) => ({ id: p.id, name: `${p.vorname} ${p.nachname}` }));
+  const beraterOptionen = personenListe.map((p) => ({
+    id: p.id,
+    name:
+      p.rolle === "geschaeftsfuehrung"
+        ? `${p.name} (Geschäftsführung)`
+        : p.rolle === "finanzierer"
+          ? `${p.name} (Finanzierer)`
+          : p.name,
+  }));
 
   return (
     <>

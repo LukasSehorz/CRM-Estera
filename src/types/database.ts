@@ -799,6 +799,12 @@ export type Database = {
         Args: { p_pfad: string | null };
         Returns: undefined;
       };
+      // Zuweisbare Personen (Migration 0036) — alle aktiven Nutzer ausser
+      // einem selbst, bewusst nur Id/Name/Rolle (nie Stufe/Anteil).
+      zuweisbare_personen: {
+        Args: Record<string, never>;
+        Returns: { id: string; name: string; rolle: string }[];
+      };
     };
     Enums: {
       rolle_enum: "berater" | "geschaeftsfuehrung" | "backoffice" | "finanzierer";
