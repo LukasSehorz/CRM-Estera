@@ -316,6 +316,8 @@ export default async function PerformanceDashboardPage({
     immo: 0,
     vv: 0,
     n: 0,
+    /** Summe × Wahrscheinlichkeit — nur zur Berechnung der Quote. */
+    gew: 0,
     immoDeals: [] as DealPunkt[],
     vvDeals: [] as DealPunkt[],
   });
@@ -323,7 +325,9 @@ export default async function PerformanceDashboardPage({
   for (const d of a.deals) {
     if (!isOpen(d, a.sMap)) continue;
     const prob = (a.sMap.get(d.stage_id)?.wahrscheinlichkeit ?? 0) / 100;
-    const g = a.umsatzOf(d) * prob;
+    // Voller Betrag je Deal; die Wahrscheinlichkeit steht daneben und fließt
+    // nur in die Quote ein (Wunsch Mandant 01.08.).
+    const g = a.umsatzOf(d);
     const eintrag: DealPunkt = {
       name: d.dealname,
       betrag: g,
@@ -331,6 +335,7 @@ export default async function PerformanceDashboardPage({
     };
     const zuFenster = (w: ReturnType<typeof mkFb>) => {
       w.n += 1;
+      w.gew += g * prob;
       if (d.bereich === "immobilien") {
         w.immo += g;
         w.immoDeals.push(eintrag);
@@ -362,6 +367,13 @@ export default async function PerformanceDashboardPage({
       deals: dealsToStat(s.vvDeals),
     },
     { label: "offene Deals im Fenster", value: String(s.n) },
+    {
+      label: "Ø Eintrittswahrscheinlichkeit",
+      value:
+        s.immo + s.vv > 0
+          ? `${Math.round((s.gew / (s.immo + s.vv)) * 100)} %`
+          : "—",
+    },
   ];
   const deltaText = (v: number | null, suffix: string) =>
     v == null
@@ -454,17 +466,18 @@ export default async function PerformanceDashboardPage({
             frühere separate Board darunter ist hier integriert. */}
         <PerformanceView rows={rows} isGf={aFull.isGf} />
 
-        {/* Forecast (Kap. 6): gewichtete Provision, nicht Volumen —
+        {/* Forecast (Kap. 6): volle Provision je Zeitfenster, nicht Volumen —
             inkl. Wochenforecast (5.6). */}
         <section>
           <div className="mb-3">
             <h2 className="flex items-center gap-1.5 text-base font-semibold">
               Forecast
-              <InfoHint text="Jeder offene Deal wird mit der Wahrscheinlichkeit seiner Pipeline-Phase gewichtet und je nach Reife einem Zeitfenster zugeordnet: sehr späte Phasen (≥ 90 %) in den nächsten 7 Tagen, ≥ 80 % in 30, ≥ 40 % in 60, der Rest in 90 Tagen (kumulativ). So entsteht ein realistischer Erwartungswert statt reiner Volumensumme." />
+              <InfoHint text="Jeder offene Deal zählt mit seinem VOLLEN Betrag. Die Wahrscheinlichkeit seiner Pipeline-Phase entscheidet nur, in welches Zeitfenster er fällt: sehr späte Phasen (≥ 90 %) in die nächsten 7 Tage, ≥ 80 % in 30, ≥ 40 % in 60, der Rest in 90 Tage (kumulativ). Wie wahrscheinlich die jeweilige Summe eintritt, steht aufgeklappt als „Ø Eintrittswahrscheinlichkeit“ — der nach Betrag gewichtete Durchschnitt der Phasen." />
             </h2>
             <p className="text-xs text-muted-foreground">
-              Gewichtete {a.isGf ? "Estera-Provision" : "eigene Provision"} der
-              offenen Pipeline — Näherung über die Phasen-Wahrscheinlichkeit.
+              Volle {a.isGf ? "Estera-Provision" : "eigene Provision"} der
+              offenen Pipeline je Zeitfenster — aufklappen zeigt die Deals und
+              die Eintrittswahrscheinlichkeit.
             </p>
           </div>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

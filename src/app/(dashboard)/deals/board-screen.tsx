@@ -41,7 +41,7 @@ export async function BoardScreen({
   subtitle: string;
 }) {
   await guardBereich(bereich);
-  const { stages, deals, beraterMap, error } = await loadBoard(bereich);
+  const { stages, deals, beraterMap, isGf, error } = await loadBoard(bereich);
 
   return (
     <>
@@ -68,6 +68,7 @@ export async function BoardScreen({
             stages={stages}
             deals={deals}
             beraterMap={beraterMap}
+            isGf={isGf}
           />
         )}
       </div>

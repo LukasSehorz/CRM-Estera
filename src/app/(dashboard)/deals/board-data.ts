@@ -12,10 +12,20 @@ export async function loadBoard(bereich: Bereich): Promise<{
   stages: BoardStage[];
   deals: BoardDeal[];
   beraterMap: Record<string, string>;
+  /** Steuert, ob auf den Karten die Provision steht (nur GF, Wunsch 01.08.). */
+  isGf: boolean;
   error: boolean;
 }> {
   const supabase = await createClient();
   const now = new Date();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { data: me } = user
+    ? await supabase.from("profiles").select("rolle").eq("id", user.id).single()
+    : { data: null };
+  const isGf = me?.rolle === "geschaeftsfuehrung";
 
   const { data: stages, error: stagesErr } = await supabase
     .from("pipeline_stages")
@@ -171,6 +181,7 @@ export async function loadBoard(bereich: Bereich): Promise<{
     stages: (stages ?? []) as BoardStage[],
     deals: boardDeals,
     beraterMap,
+    isGf,
     error: Boolean(stagesErr || dealsErr),
   };
 }

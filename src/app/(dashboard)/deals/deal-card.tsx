@@ -47,9 +47,12 @@ export type BoardStage = {
 export function DealCardContent({
   deal,
   beraterName,
+  isGf,
 }: {
   deal: BoardDeal;
   beraterName: string;
+  /** Nur die GF sieht die Vermittlungsgebühr auf der Karte (Wunsch 01.08.). */
+  isGf: boolean;
 }) {
   return (
     <div className="space-y-2">
@@ -111,7 +114,11 @@ export function DealCardContent({
               </span>
             </div>
           )}
-          {deal.bws != null && (
+          {/* Vermittlungsgebühr NUR für die GF: Für Berater ist es die
+              Gesamtgebühr, nicht der eigene Verdienst — auf der Karte ohne
+              Kontext hat das für Verwirrung gesorgt (Wunsch Mandant 01.08.).
+              In der Deal-Berechnung beim Anlegen bleibt sie sichtbar. */}
+          {isGf && deal.bws != null && (
             <div className="text-xs tabular-nums text-muted-foreground">
               Provision{" "}
               {formatEURCents(

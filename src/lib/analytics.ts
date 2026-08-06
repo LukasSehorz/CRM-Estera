@@ -187,11 +187,14 @@ export function forecastGewichtet(a: AnalyticsData) {
   for (const d of a.deals) {
     if (!isOpen(d, a.sMap)) continue;
     const prob = (a.sMap.get(d.stage_id)?.wahrscheinlichkeit ?? 0) / 100;
-    const gewichtet = a.umsatzOf(d) * prob;
-    t90 += gewichtet;
-    if (prob >= 0.4) t60 += gewichtet;
-    if (prob >= 0.8) t30 += gewichtet;
-    if (prob >= 0.9) t7 += gewichtet;
+    // VOLLER Betrag, nicht heruntergerechnet (Wunsch Mandant 01.08.): die
+    // Phasen-Wahrscheinlichkeit steuert nur noch, in welches Zeitfenster ein
+    // Deal fällt — sie wird nicht mehr in den Betrag hineingerechnet.
+    const voll = a.umsatzOf(d);
+    t90 += voll;
+    if (prob >= 0.4) t60 += voll;
+    if (prob >= 0.8) t30 += voll;
+    if (prob >= 0.9) t7 += voll;
   }
   return { t7, t30, t60, t90 };
 }

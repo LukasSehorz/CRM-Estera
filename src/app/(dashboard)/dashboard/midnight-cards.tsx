@@ -150,12 +150,9 @@ export function ForecastCard({
       value: formatEUR(werte.volumen),
       href: `/listen/deals?preset=offen${from}`,
     },
-    {
-      icon: HandCoins,
-      label: isGf ? "Erwartete Provision (Estera)" : "Erwartete Provision",
-      value: formatEUR(werte.erwartet),
-      href: `/listen/deals?preset=offen${from}`,
-    },
+    // „Erwartete Provision" stand hier früher als eigene Zeile — seit der
+    // Forecast oben die volle (nicht mehr heruntergerechnete) Provision
+    // zeigt, wäre es exakt dieselbe Zahl zweimal.
     {
       icon: Hourglass,
       label: "Offene Einbehalte (VV)",
@@ -184,19 +181,23 @@ export function ForecastCard({
         Was in der offenen Pipeline steckt
       </p>
 
-      {/* Hero: gewichtete Provision — ruhiger Akzent-Rahmen, kein Signalton
-          (Forecast ist kein Fehler, daher kein Danger/Pink mehr). */}
+      {/* Hero: die VOLLE mögliche Provision — bewusst NICHT heruntergerechnet
+          (Wunsch Mandant 01.08.): ein 240.000-€-Deal in „Neuer Lead" steht
+          hier mit 240.000 €, nicht mit 24.000 €. Die Wahrscheinlichkeit ist
+          aus der Zahl herausgezogen und steht als eigene Quote darunter. */}
       <div className="mt-4 rounded-xl border border-accent-500/25 bg-gradient-to-br from-accent-500/12 via-surface-2 to-surface p-4">
         <p className="flex items-center gap-1.5 text-xs font-medium text-accent-400">
           <Scale className="h-3.5 w-3.5" aria-hidden />
           Forecast
-          <InfoHint text="Jeder offene Deal zählt mit der Wahrscheinlichkeit seiner Phase: 500.000 € in einer 60-%-Phase fließen mit 300.000 € ein. Die Summe ist der realistische Forecast." />
+          <InfoHint text="Die volle Provision, die in der offenen Pipeline steckt — jeder Deal mit seinem ganzen Betrag. Darunter steht, wie wahrscheinlich diese Summe insgesamt eintritt: der Durchschnitt der Phasen-Wahrscheinlichkeiten, nach Betrag gewichtet (große Deals wiegen schwerer)." />
         </p>
         <p className="mt-2 bg-cyan-pink-gradient bg-clip-text text-3xl font-bold tabular-nums tracking-tight text-transparent">
-          {formatEUR(werte.gewichtet)}
+          {formatEUR(werte.erwartet)}
         </p>
         <p className="mt-1 text-[10px] text-muted-foreground">
-          nach Phasen-Wahrscheinlichkeit
+          {werte.erwartet > 0
+            ? `Ø ${Math.round((werte.gewichtet / werte.erwartet) * 100)} % Eintrittswahrscheinlichkeit`
+            : "noch keine offenen Deals"}
         </p>
       </div>
 

@@ -29,9 +29,11 @@ import {
 function DraggableCard({
   deal,
   beraterName,
+  isGf,
 }: {
   deal: BoardDeal;
   beraterName: string;
+  isGf: boolean;
 }) {
   const router = useRouter();
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
@@ -75,7 +77,7 @@ function DraggableCard({
         isDragging && "opacity-30",
       )}
     >
-      <DealCardContent deal={deal} beraterName={beraterName} />
+      <DealCardContent deal={deal} beraterName={beraterName} isGf={isGf} />
       <span
         aria-hidden
         className="pointer-events-none absolute right-1.5 top-1.5 text-muted-foreground/40 transition-colors group-hover:text-muted-foreground/70"
@@ -90,10 +92,12 @@ function Column({
   stage,
   deals,
   beraterMap,
+  isGf,
 }: {
   stage: BoardStage;
   deals: BoardDeal[];
   beraterMap: Record<string, string>;
+  isGf: boolean;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: stage.id });
   const topBorder = stage.is_won
@@ -139,6 +143,7 @@ function Column({
               key={d.id}
               deal={d}
               beraterName={beraterMap[d.berater_id] ?? "—"}
+              isGf={isGf}
             />
           ))
         )}
@@ -151,10 +156,12 @@ export function PipelineBoard({
   stages,
   deals: initialDeals,
   beraterMap,
+  isGf,
 }: {
   stages: BoardStage[];
   deals: BoardDeal[];
   beraterMap: Record<string, string>;
+  isGf: boolean;
 }) {
   const router = useRouter();
   const [deals, setDeals] = useState<BoardDeal[]>(initialDeals);
@@ -223,6 +230,7 @@ export function PipelineBoard({
             stage={stage}
             deals={deals.filter((d) => d.stage_id === stage.id)}
             beraterMap={beraterMap}
+            isGf={isGf}
           />
         ))}
       </div>
@@ -233,6 +241,7 @@ export function PipelineBoard({
             <DealCardContent
               deal={activeDeal}
               beraterName={beraterMap[activeDeal.berater_id] ?? "—"}
+              isGf={isGf}
             />
           </div>
         ) : null}
