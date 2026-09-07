@@ -17,8 +17,8 @@ export type SegmentDaten = {
  *
  * „Kunde seit" = frühester Abschluss eines gewonnenen Deals; ein manuell
  * erfasstes Altbestands-Datum hat Vorrang, weil es der echte historische
- * Abschluss ist. Fällt closed_at aus (Altdaten vor Migration 0038), greift
- * das Anlagedatum des Deals als Näherung.
+ * Abschluss ist. Deals ohne closed_at liefern bewusst kein Datum — sie
+ * erscheinen als „ohne Datum" und werden nachgetragen.
  */
 export async function ladeSegmentDaten(
   supabase: SupabaseClient<Database>,
@@ -39,7 +39,6 @@ export async function ladeSegmentDaten(
   type DealZeile = {
     contact_id: string;
     closed_at: string | null;
-    created_at: string;
     pipeline_stages: unknown;
   };
   const deals: DealZeile[] = [];
@@ -47,7 +46,7 @@ export async function ladeSegmentDaten(
     const { data, error } = await supabase
       .from("deals")
       .select(
-        "contact_id, closed_at, created_at, pipeline_stages!inner(is_won, is_lost)",
+        "contact_id, closed_at, pipeline_stages!inner(is_won, is_lost)",
       )
       .in("contact_id", ids.slice(i, i + BLOCK));
     if (error) throw new Error(`Segment-Daten konnten nicht geladen werden.`);
@@ -67,9 +66,11 @@ export async function ladeSegmentDaten(
       segmentMap[d.contact_id] = "pipeline";
     else if (!cur) segmentMap[d.contact_id] = "interessent";
 
-    const tag = st?.is_won
-      ? (alsTag(d.closed_at) ?? alsTag(d.created_at))
-      : null;
+    // Bewusst KEIN Rueckfall auf created_at: das ist der Zeitpunkt der
+    // Erfassung im CRM, nicht der Abschluss. Lieber „ohne Datum" anzeigen
+    // (sortiert ans Ende) als ein falsches Datum, das in der Liste echt
+    // aussieht. Das echte Datum kommt ueber das Formularfeld.
+    const tag = st?.is_won ? alsTag(d.closed_at) : null;
     if (tag) {
       const bisher = bestandSeitMap[d.contact_id];
       if (!bisher || tag < bisher) bestandSeitMap[d.contact_id] = tag;

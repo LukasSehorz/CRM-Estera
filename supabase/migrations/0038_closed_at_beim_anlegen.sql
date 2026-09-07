@@ -5,10 +5,14 @@
 -- das Importdatum. Folge: kein oder ein falsches Abschlussdatum — also
 -- weiterhin „alles durcheinander" in Liste, Board und Auswertung.
 --
--- HINWEIS an den Betrieb: Das Backfill unten macht bereits gewonnene Deals
--- erstmals fuer Umsatz-/Zielauswertungen sichtbar (sie waren wegen
--- closed_at is null bisher ausgeschlossen). Monatszahlen der Vergangenheit
--- koennen sich dadurch aendern.
+-- BEWUSST OHNE BACKFILL: Fuer die bereits gewonnenen Deals ohne closed_at
+-- existiert in der DB kein echtes Abschlussdatum. Historie und created_at
+-- zeigen nur den Zeitpunkt der Erfassung im CRM (Stand 07.09.2026: alle 49
+-- betroffenen Deals waeren auf denselben Monat gefallen, ~3,95 Mio EUR
+-- Scheinumsatz in einem Monat, inkl. Zielerreichung und Provisions-
+-- Einbehalt). Ein erfundenes Datum ist schlechter als gar keins: Die Liste
+-- zeigt diese Deals als "ohne Datum", und das echte Abschlussdatum wird ueber
+-- das neue Formularfeld nachgetragen.
 
 -- 1) closed_at beim INSERT setzen — ein mitgegebenes Datum hat Vorrang.
 create or replace function public.set_closed_at_on_insert()
@@ -73,26 +77,6 @@ $$ language plpgsql;
 
 alter function public.track_deal_stage()
   security definer set search_path = public, pg_temp;
-
--- 3) Bestandsdaten nachziehen: gewonnene Deals ohne closed_at bekommen den
---    Eintritt in die aktuelle (offene) Phase, ersatzweise das Anlagedatum.
---    Bewusst der OFFENE Historieneintrag (left_at is null) — bei einem Deal,
---    der zurueckgeholt und erneut gewonnen wurde, zaehlt der letzte Gewinn.
-update deals d
-set closed_at = coalesce(
-  (select h.entered_at
-     from deal_stage_history h
-    where h.deal_id = d.id
-      and h.stage_id = d.stage_id
-      and h.left_at is null
-    order by h.entered_at desc
-    limit 1),
-  d.created_at
-)
-from pipeline_stages s
-where s.id = d.stage_id
-  and s.is_won
-  and d.closed_at is null;
 
 comment on function public.set_closed_at_on_insert() is
   'Setzt closed_at, wenn ein Deal direkt in einer Gewinn-Phase angelegt wird.';
