@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { alsTag } from "@/lib/zeitraum";
 import { Topbar } from "@/components/layout/topbar";
 import { bereichLabel } from "@/config/enums";
 import { getImmoModus } from "@/lib/einstellungen";
@@ -35,7 +36,11 @@ export default async function DealDetailPage({
     .eq("bereich", bereich)
     .order("position");
   const stageList = stages ?? [];
-  const stageOpts = stageList.map((s) => ({ id: s.id, name: s.name }));
+  const stageOpts = stageList.map((s) => ({
+    id: s.id,
+    name: s.name,
+    is_won: s.is_won,
+  }));
   const stageMap = Object.fromEntries(stageList.map((s) => [s.id, s]));
 
   const { data: contact } = await supabase
@@ -104,6 +109,7 @@ export default async function DealDetailPage({
     objekt_adresse: d.objekt_adresse ?? "",
     objekt_status: d.objekt_status ?? "",
     notartermin: d.notartermin ?? "",
+    abschluss_datum: alsTag(d.closed_at) ?? "",
     provisionssatz: d.provisionssatz?.toString() ?? "",
     berater_anteil: d.berater_anteil?.toString() ?? "",
     bws: d.bws?.toString() ?? "",

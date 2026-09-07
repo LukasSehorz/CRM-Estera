@@ -146,6 +146,7 @@ export default async function KontaktDetailPage({
     ist_selbststaendig: c.ist_selbststaendig ?? false,
     ist_immobilienbesitzer: c.ist_immobilienbesitzer ?? false,
     ist_bestandskunde: c.ist_bestandskunde ?? false,
+    bestandskunde_seit: c.bestandskunde_seit ?? "",
   };
 
   // Manueller „vorhanden"-Haken je Typ (auch ohne Datei setzbar).

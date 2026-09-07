@@ -62,6 +62,10 @@ prod.log
 # erzeugt (dort liegt die gepflegte Quelle). Binaerdateien gehoeren nicht
 # in die Historie.
 /Unterlagen für Go Live/
+# macOS legt Umlaute in NFD ab ("u+Umlautpunkte"), die Regel oben steht in NFC
+# und greift dann NICHT. Zusatzregel, damit Mandanten-Unterlagen sicher
+# draussen bleiben:
+Unterlagen*Go Live/
 
 # Lokale Screenshot-/Verifikationsskripte
 .shot-*.mjs

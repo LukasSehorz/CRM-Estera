@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { computeDealHealth, tageSeit } from "@/lib/health";
+import { alsTag } from "@/lib/zeitraum";
 import type { BoardDeal, BoardStage, Bereich } from "./deal-card";
 
 /**
@@ -36,7 +37,7 @@ export async function loadBoard(bereich: Bereich): Promise<{
   const { data: deals, error: dealsErr } = await supabase
     .from("deals")
     .select(
-      "id, dealname, berater_id, contact_id, stage_id, bereich, kaufpreis, objekt_adresse, objekt_status, bws, factoring, vv_zahlart, ratierlich, tippgeber_satz, tippgeber, naechster_termin, updated_at",
+      "id, dealname, berater_id, contact_id, stage_id, bereich, kaufpreis, objekt_adresse, objekt_status, bws, factoring, vv_zahlart, ratierlich, tippgeber_satz, tippgeber, naechster_termin, updated_at, closed_at",
     )
     .eq("bereich", bereich)
     .order("created_at", { ascending: false });
@@ -100,13 +101,19 @@ export async function loadBoard(bereich: Bereich): Promise<{
       : Promise.resolve({
           data: [] as { contact_id: string; document_type_id: string; vorhanden: boolean }[],
         }),
-    bereich === "immobilien" && contactIds.length
+    contactIds.length
       ? supabase
           .from("contacts")
-          .select("id, ist_selbststaendig, ist_immobilienbesitzer")
+          .select("id, vorname, nachname, ist_selbststaendig, ist_immobilienbesitzer")
           .in("id", contactIds)
       : Promise.resolve({
-          data: [] as { id: string; ist_selbststaendig: boolean; ist_immobilienbesitzer: boolean }[],
+          data: [] as {
+            id: string;
+            vorname: string;
+            nachname: string;
+            ist_selbststaendig: boolean;
+            ist_immobilienbesitzer: boolean;
+          }[],
         }),
   ]);
 
@@ -152,6 +159,12 @@ export async function loadBoard(bereich: Bereich): Promise<{
     }
   }
 
+  // Kundenname je Kontakt — das Board wird sonst ab ~50 Deals unbrauchbar,
+  // weil man nur über den Dealnamen suchen könnte (Feedback Mandant 07.09.).
+  const kundeMap = new Map(
+    (contacts ?? []).map((c) => [c.id, `${c.vorname} ${c.nachname}`.trim()]),
+  );
+
   const stageMap = new Map((stages ?? []).map((s) => [s.id, s]));
   const boardDeals: BoardDeal[] = (deals ?? []).map((d) => {
     const st = stageMap.get(d.stage_id);
@@ -174,7 +187,23 @@ export async function loadBoard(bereich: Bereich): Promise<{
           taskDeals.has(d.id) || taskKontakte.has(d.contact_id),
       });
     }
-    return { ...d, doks, health };
+    // Abschlussdatum: bei gewonnenen Deals setzt der Trigger closed_at; bei
+    // Verlust gibt es keins — dort ist der Eintritt in die Verlustphase
+    // (offener Historien-Eintrag) das fachlich richtige Datum.
+    const abschluss_datum =
+      st && (st.is_won || st.is_lost)
+        ? (alsTag(d.closed_at) ??
+          alsTag(enteredMap.get(d.id)) ??
+          alsTag(d.updated_at))
+        : null;
+
+    return {
+      ...d,
+      kunde: kundeMap.get(d.contact_id) ?? "",
+      abschluss_datum,
+      doks,
+      health,
+    };
   });
 
   return {

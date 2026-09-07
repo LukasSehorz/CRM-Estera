@@ -39,10 +39,14 @@ export default async function NeuerDealPage({
 
   const { data: stages } = await supabase
     .from("pipeline_stages")
-    .select("id, name, position")
+    .select("id, name, position, is_won")
     .eq("bereich", bereich)
     .order("position");
-  const stageOpts = (stages ?? []).map((s) => ({ id: s.id, name: s.name }));
+  const stageOpts = (stages ?? []).map((s) => ({
+    id: s.id,
+    name: s.name,
+    is_won: s.is_won,
+  }));
 
   // Kontakte mit Interesse am Bereich (RLS: Berater nur eigene, GF alle).
   const { data: contacts } = await supabase
@@ -84,6 +88,7 @@ export default async function NeuerDealPage({
     objekt_adresse: "",
     objekt_status: "",
     notartermin: "",
+    abschluss_datum: "",
     provisionssatz: "",
     berater_anteil: "",
     bws: "",

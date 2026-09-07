@@ -59,6 +59,7 @@ export default async function NeuerKontaktPage() {
     ist_selbststaendig: false,
     ist_immobilienbesitzer: false,
     ist_bestandskunde: false,
+    bestandskunde_seit: "",
   };
 
   return (

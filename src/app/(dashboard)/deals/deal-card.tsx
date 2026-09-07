@@ -1,6 +1,6 @@
 import { FileCheck2, User } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { formatEUR, formatEURCents } from "@/lib/format";
+import { formatEUR, formatEURCents, formatDate } from "@/lib/format";
 import { computeProvision, zahlartOf } from "@/lib/provision";
 import type { HealthResult } from "@/lib/health";
 import { Pill, objektStatusTone } from "@/components/ui/pill";
@@ -25,6 +25,13 @@ export type BoardDeal = {
   tippgeber: string | null;
   naechster_termin: string | null;
   updated_at: string;
+  /** Kundenname — Suchfeld im Board (Feedback Mandant 07.09.). */
+  kunde: string;
+  /**
+   * Datum, an dem der Deal in seiner jetzigen Abschluss-/Verlustphase
+   * gelandet ist (JJJJ-MM-TT). Null, solange der Deal offen läuft.
+   */
+  abschluss_datum: string | null;
   /** Dokumenten-Fortschritt des Kontakts (nur Immobilien, 3.1). */
   doks: { vorhanden: number; gesamt: number } | null;
   /** Health-Ampel (4.5); null bei Abschluss-/Verlustphasen. */
@@ -69,8 +76,17 @@ export function DealCardContent({
             )}
           />
         )}
-        <div className="line-clamp-2 text-sm font-medium leading-snug text-foreground">
-          {deal.dealname}
+        <div className="min-w-0">
+          <div className="line-clamp-2 text-sm font-medium leading-snug text-foreground">
+            {deal.dealname}
+          </div>
+          {/* Kunde sichtbar machen — sonst ist nicht nachvollziehbar, warum
+              die Board-Suche eine Karte trifft (Feedback Mandant 07.09.). */}
+          {deal.kunde && (
+            <div className="line-clamp-1 text-xs text-muted-foreground">
+              {deal.kunde}
+            </div>
+          )}
         </div>
       </div>
 
@@ -154,6 +170,13 @@ export function DealCardContent({
       <div className="flex items-center gap-1 pt-0.5 text-xs text-muted-foreground">
         <User className="h-3 w-3 shrink-0" />
         <span className="truncate">{beraterName}</span>
+        {/* Nur in Abschluss-/Verlustphasen gesetzt — macht den
+            Zeitraum-Filter des Boards nachvollziehbar. */}
+        {deal.abschluss_datum && (
+          <span className="ml-auto shrink-0 tabular-nums">
+            {formatDate(deal.abschluss_datum)}
+          </span>
+        )}
       </div>
     </div>
   );

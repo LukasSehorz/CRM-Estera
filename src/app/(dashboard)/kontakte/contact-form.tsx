@@ -33,6 +33,7 @@ import { CollapsibleSection } from "@/components/collapsible-section";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CurrencyInput } from "@/components/ui/currency-input";
+import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -78,6 +79,7 @@ export type FormState = {
   ist_selbststaendig: boolean;
   ist_immobilienbesitzer: boolean;
   ist_bestandskunde: boolean;
+  bestandskunde_seit: string;
 };
 
 function num(s: string): number | null {
@@ -227,6 +229,7 @@ export function ContactForm({
       ist_selbststaendig: v.ist_selbststaendig,
       ist_immobilienbesitzer: v.ist_immobilienbesitzer,
       ist_bestandskunde: v.ist_bestandskunde,
+      bestandskunde_seit: txt(v.bestandskunde_seit),
     };
   }
 
@@ -431,9 +434,26 @@ export function ContactForm({
               />
               Bestandskunde (Altbestand — Abschlüsse liegen vor dem CRM)
             </label>
+            {/* „Kunde seit" (Feedback Mandant 07.09.): ohne Datum lässt sich
+                der Altbestand in der Kundenliste nicht sortieren/filtern. */}
+            {v.ist_bestandskunde && (
+              <div className="mt-2 max-w-xs space-y-1">
+                <Label htmlFor="bestand-seit">Kunde seit</Label>
+                <DateInput
+                  id="bestand-seit"
+                  value={v.bestandskunde_seit}
+                  onChange={(e) => set("bestandskunde_seit", e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Datum des Abschlusses. Ohne Datum steht der Kunde in der
+                  Liste unter „ohne Datum“.
+                </p>
+              </div>
+            )}
             <p className="text-xs text-muted-foreground">
               Sonst automatisch: ohne Deal „Interessent“, mit offenem Deal
-              „In Pipeline“, mit gewonnenem Deal „Bestandskunde“.
+              „In Pipeline“, mit gewonnenem Deal „Bestandskunde“ — dann zählt
+              das Abschlussdatum des gewonnenen Deals.
             </p>
           </Field>
         </div>

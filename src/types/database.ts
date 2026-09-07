@@ -206,6 +206,7 @@ export type Database = {
           ist_selbststaendig: boolean;
           ist_immobilienbesitzer: boolean;
           ist_bestandskunde: boolean;
+          bestandskunde_seit: string | null;
           einschaetzung: string;
           belegt_deal_id: string | null;
           created_at: string;
@@ -237,6 +238,7 @@ export type Database = {
           ist_selbststaendig?: boolean;
           ist_immobilienbesitzer?: boolean;
           ist_bestandskunde?: boolean;
+          bestandskunde_seit?: string | null;
           einschaetzung?: string;
           belegt_deal_id?: string | null;
           created_at?: string;
@@ -268,6 +270,7 @@ export type Database = {
           ist_selbststaendig?: boolean;
           ist_immobilienbesitzer?: boolean;
           ist_bestandskunde?: boolean;
+          bestandskunde_seit?: string | null;
           einschaetzung?: string;
           belegt_deal_id?: string | null;
           created_at?: string;

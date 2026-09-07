@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { GripVertical } from "lucide-react";
@@ -18,6 +18,13 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { cn } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
+import {
+  ZeitraumFilter,
+  ZEITRAUM_ALLE,
+  type ZeitraumAuswahl,
+} from "@/components/ui/zeitraum-filter";
+import { imZeitraum, zeitraumGrenzen, zeitraumLabel } from "@/lib/zeitraum";
 import { moveDeal } from "./actions";
 import { celebrateWin } from "./win-celebration";
 import {
@@ -91,11 +98,14 @@ function DraggableCard({
 function Column({
   stage,
   deals,
+  ausgeblendet,
   beraterMap,
   isGf,
 }: {
   stage: BoardStage;
   deals: BoardDeal[];
+  /** Wie viele Karten dieser Phase Suche/Zeitraum gerade wegfiltern. */
+  ausgeblendet: number;
   beraterMap: Record<string, string>;
   isGf: boolean;
 }) {
@@ -122,6 +132,9 @@ function Column({
         </div>
         <span className="text-[11px] text-muted-foreground">
           {stage.wahrscheinlichkeit}% Wahrscheinlichkeit
+          {ausgeblendet > 0 && (
+            <span className="text-warning"> · {ausgeblendet} ausgeblendet</span>
+          )}
         </span>
       </div>
       <div
@@ -135,7 +148,7 @@ function Column({
       >
         {deals.length === 0 ? (
           <p className="px-1 py-6 text-center text-xs text-muted-foreground">
-            Keine Deals
+            {ausgeblendet > 0 ? "Keine Treffer im Filter" : "Keine Deals"}
           </p>
         ) : (
           deals.map((d) => (
@@ -167,10 +180,31 @@ export function PipelineBoard({
   const [deals, setDeals] = useState<BoardDeal[]>(initialDeals);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
+  // Board-Filter (Feedback Mandant 07.09.): Suche über alle Phasen, Zeitraum
+  // NUR über die Abschluss-/Verlustphasen — offene Deals haben kein
+  // Abschlussdatum und dürfen nie durch den Zeitraum verschwinden.
+  const [q, setQ] = useState("");
+  const [zeitraum, setZeitraum] = useState<ZeitraumAuswahl>({
+    wert: "jahr",
+    von: "",
+    bis: "",
+  });
+  // Ein gerade verschobener Deal bleibt sichtbar, auch wenn sein frisches
+  // Abschlussdatum außerhalb des Zeitraums liegt — sonst verschwindet die
+  // Karte unmittelbar nach dem Ablegen spurlos.
+  const [zuletztVerschoben, setZuletztVerschoben] = useState<string | null>(null);
 
   // Nach revalidate/refresh den lokalen (optimistischen) Stand mit der
   // Server-Wahrheit überschreiben.
   useEffect(() => setDeals(initialDeals), [initialDeals]);
+
+  // Die Ausnahme für die zuletzt verschobene Karte läuft ab — sonst bliebe
+  // sie bis zum Seitenwechsel entgegen dem Filter stehen.
+  useEffect(() => {
+    if (!zuletztVerschoben) return;
+    const t = setTimeout(() => setZuletztVerschoben(null), 30_000);
+    return () => clearTimeout(t);
+  }, [zuletztVerschoben]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -181,6 +215,52 @@ export function PipelineBoard({
   );
 
   const activeDeal = deals.find((d) => d.id === activeId) ?? null;
+
+  const grenzen = useMemo(
+    () => zeitraumGrenzen(zeitraum.wert, { von: zeitraum.von, bis: zeitraum.bis }),
+    [zeitraum],
+  );
+
+  const sichtbar = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    const treffer = (d: BoardDeal) => {
+      if (d.id === zuletztVerschoben) return true;
+      if (needle) {
+        const hay =
+          `${d.dealname} ${d.kunde} ${d.objekt_adresse ?? ""} ${d.tippgeber ?? ""} ${beraterMap[d.berater_id] ?? ""}`.toLowerCase();
+        if (!hay.includes(needle)) return false;
+      }
+      // abschluss_datum ist nur in Abschluss-/Verlustphasen gesetzt.
+      if (d.abschluss_datum && !imZeitraum(d.abschluss_datum, grenzen))
+        return false;
+      return true;
+    };
+    const map = new Map<string, { deals: BoardDeal[]; ausgeblendet: number }>();
+    for (const st of stages) map.set(st.id, { deals: [], ausgeblendet: 0 });
+    for (const d of deals) {
+      const eintrag = map.get(d.stage_id);
+      if (!eintrag) continue; // Phase eines anderen Bereichs — nicht anzeigen
+      if (treffer(d)) eintrag.deals.push(d);
+      else eintrag.ausgeblendet += 1;
+    }
+    return map;
+  }, [deals, stages, q, grenzen, zuletztVerschoben, beraterMap]);
+
+  // „Eigener Zeitraum" ohne Datumsangaben filtert nichts — dann auch keinen
+  // Zurücksetzen-Knopf anbieten.
+  const gefiltert =
+    q.trim() !== "" || Boolean(grenzen.von || grenzen.bis);
+  const sichtbarGesamt = [...sichtbar.values()].reduce(
+    (n, e) => n + e.deals.length,
+    0,
+  );
+  const ausgeblendetGesamt = deals.length - sichtbarGesamt;
+
+  function filterZuruecksetzen() {
+    setQ("");
+    setZeitraum(ZEITRAUM_ALLE);
+    setZuletztVerschoben(null);
+  }
 
   function onDragEnd(e: DragEndEvent) {
     setActiveId(null);
@@ -197,6 +277,7 @@ export function PipelineBoard({
     const wirdGewonnen = !!zielStage?.is_won && !vorherStage?.is_won;
 
     const prev = deals;
+    setZuletztVerschoben(dealId);
     // Optimistisch verschieben
     setDeals((ds) =>
       ds.map((d) => (d.id === dealId ? { ...d, stage_id: targetStageId } : d)),
@@ -205,9 +286,19 @@ export function PipelineBoard({
       const res = await moveDeal(dealId, targetStageId);
       if ("error" in res) {
         setDeals(prev); // Rollback bei Fehler
+        setZuletztVerschoben(null);
         toast.error(res.error);
       } else {
         if (wirdGewonnen) celebrateWin(deal.dealname);
+        // Ehrlich bleiben: Der Deal liegt jetzt außerhalb des Zeitraums.
+        if (
+          zielStage &&
+          (zielStage.is_won || zielStage.is_lost) &&
+          !imZeitraum(new Date(), grenzen)
+        )
+          toast.info(
+            `„${deal.dealname}“ liegt außerhalb des gewählten Abschluss-Zeitraums.`,
+          );
         // Server-Wahrheit holen (closed_at, Historie etc.)
         router.refresh();
       }
@@ -215,6 +306,74 @@ export function PipelineBoard({
   }
 
   return (
+    <>
+      {/* Board-Toolbar: Suche + Abschluss-Zeitraum */}
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+        <Input
+          placeholder="Nach Kunde, Deal oder Adresse suchen …"
+          aria-label="Deals durchsuchen"
+          value={q}
+          onChange={(e) => {
+            setQ(e.target.value);
+            setZuletztVerschoben(null);
+          }}
+          className="sm:max-w-xs"
+        />
+        <ZeitraumFilter
+          label="Abschluss"
+          value={zeitraum}
+          onChange={(z) => {
+            setZeitraum(z);
+            setZuletztVerschoben(null);
+          }}
+          className="sm:w-60"
+        />
+        {gefiltert && (
+          <button
+            type="button"
+            onClick={filterZuruecksetzen}
+            className="w-fit rounded-md border border-border px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Filter zurücksetzen
+          </button>
+        )}
+        <span className="text-sm text-muted-foreground sm:ml-auto">
+          {sichtbarGesamt} von {deals.length}{" "}
+          {deals.length === 1 ? "Deal" : "Deals"}
+        </span>
+      </div>
+
+      {/* Ausgeblendetes deutlich sichtbar machen: Das Board startet bewusst
+          auf „Dieses Jahr", damit die Abschlussphase nicht überläuft — aber
+          niemand soll rätseln, wo ein alter Deal geblieben ist. */}
+      {ausgeblendetGesamt > 0 && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-sm"
+        >
+          <span className="font-medium">
+            {ausgeblendetGesamt}{" "}
+            {ausgeblendetGesamt === 1 ? "Deal ist" : "Deals sind"} ausgeblendet
+          </span>
+          <span className="text-muted-foreground">
+            — Abschluss: {zeitraumLabel(zeitraum.wert)}
+            {q.trim() !== "" && ` · Suche „${q.trim()}“`}
+          </span>
+          <button
+            type="button"
+            onClick={filterZuruecksetzen}
+            className="ml-auto shrink-0 font-medium underline underline-offset-2"
+          >
+            Alle anzeigen
+          </button>
+        </div>
+      )}
+      <p className="mb-3 text-xs text-muted-foreground">
+        Der Zeitraum filtert nur die Abschluss- und Verlustphasen — laufende
+        Deals bleiben immer sichtbar.
+      </p>
+
     <DndContext
       id="pipeline-board"
       sensors={sensors}
@@ -228,7 +387,8 @@ export function PipelineBoard({
           <Column
             key={stage.id}
             stage={stage}
-            deals={deals.filter((d) => d.stage_id === stage.id)}
+            deals={sichtbar.get(stage.id)?.deals ?? []}
+            ausgeblendet={sichtbar.get(stage.id)?.ausgeblendet ?? 0}
             beraterMap={beraterMap}
             isGf={isGf}
           />
@@ -247,5 +407,6 @@ export function PipelineBoard({
         ) : null}
       </DragOverlay>
     </DndContext>
+    </>
   );
 }

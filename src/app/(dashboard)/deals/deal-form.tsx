@@ -54,6 +54,7 @@ export type DealFormState = {
   objekt_adresse: string;
   objekt_status: string;
   notartermin: string;
+  abschluss_datum: string;
   provisionssatz: string;
   berater_anteil: string;
   // Vermögensverwaltung
@@ -127,7 +128,7 @@ export function DealForm({
   dealId?: string;
   bereich: Bereich;
   initial: DealFormState;
-  stages: { id: string; name: string }[];
+  stages: { id: string; name: string; is_won?: boolean }[];
   contactOptions: { id: string; name: string }[];
   contactName?: string;
   vertrieblerStufe?: number;
@@ -217,6 +218,7 @@ export function DealForm({
       objekt_adresse: txt(v.objekt_adresse),
       objekt_status: (v.objekt_status || null) as DealInput["objekt_status"],
       notartermin: txt(v.notartermin),
+      abschluss_datum: txt(v.abschluss_datum),
       provisionssatz: num(v.provisionssatz),
       berater_anteil: num(v.berater_anteil),
       bws: num(v.bws),
@@ -341,6 +343,29 @@ export function DealForm({
               </SelectContent>
             </Select>
           </Field>
+
+          {/* Abschlussdatum nur in Gewinn-Phasen: Ohne dieses Feld bekäme
+              jedes importierte Altbestands-Projekt das Importdatum
+              (Feedback Mandant 07.09.). */}
+          {stages.find((s) => s.id === v.stage_id)?.is_won && (
+            <Field label="Abschlussdatum" htmlFor="abschluss">
+              <DateInput
+                id="abschluss"
+                value={v.abschluss_datum}
+                onChange={(e) => set("abschluss_datum", e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Für Altbestand das echte Datum eintragen. Leer = Abschluss
+                heute (nur beim ersten Speichern).
+              </p>
+              <p className="text-xs text-warning">
+                Achtung: Ein gewonnener Deal zählt in Provision und
+                Zielerreichung des eingetragenen Monats. Reinen Altbestand
+                ohne Provisionswirkung besser am Kunden als „Bestandskunde“
+                mit „Kunde seit“ erfassen.
+              </p>
+            </Field>
+          )}
 
           <Field label="Nächster Termin" htmlFor="naechster">
             <DateInput

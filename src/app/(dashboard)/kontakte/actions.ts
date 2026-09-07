@@ -32,6 +32,8 @@ export type ContactInput = {
   ist_immobilienbesitzer: boolean;
   /** Altbestand (Feedback SJ): als Bestandskunde behandeln, ohne CRM-Deal. */
   ist_bestandskunde: boolean;
+  /** „Kunde seit" beim Altbestand (JJJJ-MM-TT) — ordnet die Kundenliste. */
+  bestandskunde_seit: string | null;
 };
 
 export type ActionResult = { ok: true; id?: string } | { error: string };
@@ -88,6 +90,9 @@ function toRow(v: ContactInput) {
     ist_selbststaendig: v.ist_selbststaendig,
     ist_immobilienbesitzer: v.ist_immobilienbesitzer,
     ist_bestandskunde: v.ist_bestandskunde,
+    // Datum nur zusammen mit dem Altbestand-Haken; sonst leeren, damit kein
+    // verwaistes „Kunde seit" an einem Interessenten hängen bleibt.
+    bestandskunde_seit: v.ist_bestandskunde ? v.bestandskunde_seit : null,
   };
 }
 

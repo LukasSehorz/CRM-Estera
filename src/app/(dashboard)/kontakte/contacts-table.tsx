@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowDown, ArrowUp } from "lucide-react";
-import { formatEUR } from "@/lib/format";
+import { formatEUR, formatDate } from "@/lib/format";
 import {
   Pill,
   kontaktStatusTone,
@@ -17,6 +17,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  ZeitraumFilter,
+  ZEITRAUM_ALLE,
+  type ZeitraumAuswahl,
+} from "@/components/ui/zeitraum-filter";
+import { imZeitraum, zeitraumGrenzen } from "@/lib/zeitraum";
 import {
   BEREICH,
   KONTAKT_STATUS,
@@ -54,7 +60,7 @@ export type ContactRow = {
 };
 
 const ALL = "__all";
-type SortKey = "name" | "status" | "created_at" | "volumen";
+type SortKey = "name" | "status" | "created_at" | "volumen" | "seit";
 
 export function ContactsTable({
   contacts,
@@ -62,6 +68,7 @@ export function ContactsTable({
   isGf,
   showVolumen = false,
   segmentMap,
+  bestandSeitMap,
 }: {
   contacts: ContactRow[];
   beraterMap: Record<string, string>;
@@ -69,6 +76,12 @@ export function ContactsTable({
   showVolumen?: boolean;
   /** Segment je Kunde (4.2, berechnet aus Deals) — ohne Map keine Spalte. */
   segmentMap?: Record<string, KundenSegment>;
+  /**
+   * „Kunde seit" je Bestandskunde (JJJJ-MM-TT): manuell erfasstes
+   * Altbestands-Datum oder das Abschlussdatum des ersten gewonnenen Deals.
+   * Ohne Map keine Spalte und kein Zeitraum-Filter.
+   */
+  bestandSeitMap?: Record<string, string | null>;
 }) {
   const router = useRouter();
   const [q, setQ] = useState("");
@@ -76,6 +89,7 @@ export function ContactsTable({
   const [interesse, setInteresse] = useState(ALL);
   const [segment, setSegment] = useState(ALL);
   const [nurQualifiziert, setNurQualifiziert] = useState(false);
+  const [zeitraum, setZeitraum] = useState<ZeitraumAuswahl>(ZEITRAUM_ALLE);
   const [sortKey, setSortKey] = useState<SortKey>(
     showVolumen ? "volumen" : "created_at",
   );
@@ -89,8 +103,18 @@ export function ContactsTable({
     }
   }
 
-  const rows = useMemo(() => {
+  const grenzen = useMemo(
+    () => zeitraumGrenzen(zeitraum.wert, { von: zeitraum.von, bis: zeitraum.bis }),
+    [zeitraum],
+  );
+
+  const zeitraumAktiv = Boolean(grenzen.von || grenzen.bis);
+
+  const { rows, ohneDatum } = useMemo(() => {
     const needle = q.trim().toLowerCase();
+    // Kunden, die der Zeitraum mangels „Kunde seit" ausblendet — wird unter
+    // der Toolbar ausgewiesen, damit niemand still verschwindet.
+    let ohneDatum = 0;
     let list = contacts.filter((c) => {
       if (status !== ALL && c.status !== status) return false;
       if (interesse !== ALL && !c.interesse.includes(interesse)) return false;
@@ -109,6 +133,17 @@ export function ContactsTable({
           `${c.vorname} ${c.nachname} ${c.email ?? ""} ${c.telefon ?? ""}`.toLowerCase();
         if (!hay.includes(needle)) return false;
       }
+      // Zeitraum „Kunde seit" (Feedback Mandant 07.09.) BEWUSST als letzte
+      // Bedingung: So zählt `ohneDatum` nur Kunden, die allein am Zeitraum
+      // scheitern — sonst wäre der Hinweis unter der Toolbar irreführend.
+      if (bestandSeitMap && zeitraumAktiv) {
+        const seit = bestandSeitMap[c.id];
+        if (!seit) {
+          ohneDatum += 1;
+          return false;
+        }
+        if (!imZeitraum(seit, grenzen)) return false;
+      }
       return true;
     });
     list = [...list].sort((a, b) => {
@@ -121,11 +156,34 @@ export function ContactsTable({
       else if (sortKey === "status") cmp = a.status.localeCompare(b.status, "de");
       else if (sortKey === "volumen")
         cmp = (a.eingeschaetzter_betrag ?? 0) - (b.eingeschaetzter_betrag ?? 0);
+      else if (sortKey === "seit") {
+        // Kunden ohne Datum immer ans Ende — egal in welche Richtung
+        // sortiert wird (sonst blockieren sie die Spitze der Liste).
+        const av = bestandSeitMap?.[a.id] ?? "";
+        const bv = bestandSeitMap?.[b.id] ?? "";
+        if (!av && !bv) cmp = 0;
+        else if (!av) return 1;
+        else if (!bv) return -1;
+        else cmp = av.localeCompare(bv);
+      }
       else cmp = a.created_at.localeCompare(b.created_at);
       return sortAsc ? cmp : -cmp;
     });
-    return list;
-  }, [contacts, q, status, interesse, segment, segmentMap, nurQualifiziert, sortKey, sortAsc]);
+    return { rows: list, ohneDatum };
+  }, [
+    contacts,
+    q,
+    status,
+    interesse,
+    segment,
+    segmentMap,
+    bestandSeitMap,
+    grenzen,
+    zeitraumAktiv,
+    nurQualifiziert,
+    sortKey,
+    sortAsc,
+  ]);
 
   const SortIcon = ({ k }: { k: SortKey }) =>
     sortKey === k ? (
@@ -139,7 +197,7 @@ export function ContactsTable({
   return (
     <div className="space-y-4">
       {/* Toolbar */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         <Input
           placeholder="Nach Name, E-Mail oder Telefon suchen …"
           value={q}
@@ -188,6 +246,15 @@ export function ContactsTable({
             </SelectContent>
           </Select>
         )}
+        {/* Zeitraum „Kunde seit" (Feedback Mandant 07.09.) */}
+        {bestandSeitMap && (
+          <ZeitraumFilter
+            label="Kunde seit"
+            value={zeitraum}
+            onChange={setZeitraum}
+            className="sm:w-56"
+          />
+        )}
         {/* Qualifiziert-Filter (15.2): automatisch aus Netto + Eigenkapital */}
         <button
           type="button"
@@ -205,6 +272,22 @@ export function ContactsTable({
           {rows.length} {rows.length === 1 ? "Kunde" : "Kunden"}
         </span>
       </div>
+
+      {/* Zeitraum blendet aus — sichtbar machen statt still schlucken */}
+      {zeitraumAktiv && ohneDatum > 0 && (
+        <p role="status" aria-live="polite" className="-mt-1 text-xs text-muted-foreground">
+          Der Zeitraum zeigt nur Bestandskunden mit Datum — {ohneDatum} weitere{" "}
+          {ohneDatum === 1 ? "Kunde ist" : "Kunden sind"} ausgeblendet
+          (Interessenten und laufende Deals haben noch kein „Kunde seit“).{" "}
+          <button
+            type="button"
+            onClick={() => setZeitraum(ZEITRAUM_ALLE)}
+            className="underline underline-offset-2 hover:text-foreground"
+          >
+            Zeitraum zurücksetzen
+          </button>
+        </p>
+      )}
 
       {/* Tabelle */}
       <div className="overflow-x-auto rounded-xl border border-border bg-surface">
@@ -232,6 +315,17 @@ export function ContactsTable({
               {segmentMap && (
                 <th className="px-4 py-3 font-medium">Segment</th>
               )}
+              {bestandSeitMap && (
+                <th className="px-4 py-3 font-medium">
+                  <button
+                    type="button"
+                    onClick={() => toggleSort("seit")}
+                    className="inline-flex items-center gap-1 hover:text-foreground"
+                  >
+                    Kunde seit <SortIcon k="seit" />
+                  </button>
+                </th>
+              )}
               <th className="px-4 py-3 font-medium">Termin</th>
               <th className="px-4 py-3 font-medium">Interesse</th>
               <th className="px-4 py-3 font-medium">Leadquelle</th>
@@ -254,7 +348,12 @@ export function ContactsTable({
             {rows.length === 0 ? (
               <tr>
                 <td
-                  colSpan={(isGf ? 7 : 6) + (showVolumen ? 1 : 0) + (segmentMap ? 1 : 0)}
+                  colSpan={
+                    (isGf ? 7 : 6) +
+                    (showVolumen ? 1 : 0) +
+                    (segmentMap ? 1 : 0) +
+                    (bestandSeitMap ? 1 : 0)
+                  }
                   className="px-4 py-10 text-center text-muted-foreground"
                 >
                   Keine Treffer. Passe Suche oder Filter an.
@@ -287,6 +386,13 @@ export function ContactsTable({
                       >
                         {kundenSegmentLabel(segmentMap[c.id] ?? "interessent")}
                       </Pill>
+                    </td>
+                  )}
+                  {bestandSeitMap && (
+                    <td className="px-4 py-3 tabular-nums text-muted-foreground">
+                      {bestandSeitMap[c.id]
+                        ? formatDate(bestandSeitMap[c.id])
+                        : "—"}
                     </td>
                   )}
                   <td className="px-4 py-3">

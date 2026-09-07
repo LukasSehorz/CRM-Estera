@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Topbar } from "@/components/layout/topbar";
 import { istQualifiziert } from "@/config/enums";
 import { ContactsTable, type ContactRow } from "../../kontakte/contacts-table";
+import { ladeSegmentDaten } from "../../kontakte/kunden-segment";
 
 const META: Record<string, { title: string; subtitle: string }> = {
   alle: { title: "Alle Kunden", subtitle: "Immobilien + Vermögensverwaltung" },
@@ -49,7 +50,7 @@ export default async function KontaktListenPage({
   const { data: contacts } = await supabase
     .from("contacts")
     .select(
-      "id, vorname, nachname, email, telefon, status, termin_status, leadquelle, interesse, nettoverdienst_monatlich, eigenkapital, einschaetzung, eingeschaetzter_betrag, berater_id, created_at",
+      "id, vorname, nachname, email, telefon, status, termin_status, leadquelle, interesse, nettoverdienst_monatlich, eigenkapital, einschaetzung, eingeschaetzter_betrag, berater_id, created_at, ist_bestandskunde, bestandskunde_seit",
     )
     .order("created_at", { ascending: false });
 
@@ -111,6 +112,10 @@ export default async function KontaktListenPage({
 
   const rows = list as unknown as ContactRow[];
 
+  // Segment + „Kunde seit" auch hier — der Mandant sucht zuerst unter
+  // „Alle Kunden" (Feedback 07.09.).
+  const { bestandSeitMap } = await ladeSegmentDaten(supabase, list);
+
   return (
     <>
       <Topbar title={meta.title} subtitle={meta.subtitle} backHref="/listen" />
@@ -120,6 +125,7 @@ export default async function KontaktListenPage({
           beraterMap={beraterMap}
           isGf={isGf}
           showVolumen={preset === "eingeschaetzt"}
+          bestandSeitMap={bestandSeitMap}
         />
       </div>
     </>

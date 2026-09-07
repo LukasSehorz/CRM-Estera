@@ -134,6 +134,12 @@ export type DealInput = {
   stage_id: string;
   naechster_termin: string | null;
   bemerkungen: string | null;
+  /**
+   * Abschlussdatum (JJJJ-MM-TT), nur in Gewinn-Phasen. Für den Altbestand
+   * unverzichtbar: sonst bekämen alle importierten Projekte das Importdatum
+   * (Feedback Mandant 07.09.2026).
+   */
+  abschluss_datum: string | null;
   next_step: string | null;
   next_step_faellig: string | null;
   // Immobilien
@@ -271,7 +277,7 @@ export async function createDeal(values: DealInput): Promise<ActionResult> {
   // Phase muss zum Bereich des Deals gehören (Diskriminator absichern).
   const { data: stage } = await supabase
     .from("pipeline_stages")
-    .select("bereich")
+    .select("bereich, is_won")
     .eq("id", values.stage_id)
     .maybeSingle();
   if (!stage || stage.bereich !== values.bereich)
@@ -287,6 +293,10 @@ export async function createDeal(values: DealInput): Promise<ActionResult> {
       stage_id: values.stage_id,
       naechster_termin: values.naechster_termin,
       bemerkungen: values.bemerkungen,
+      // Nur in Gewinn-Phasen; sonst übernimmt der Trigger (0038).
+      ...(stage.is_won && values.abschluss_datum
+        ? { closed_at: values.abschluss_datum }
+        : {}),
       ...bereichFields(values),
       ...(await beraterAnteilFor(supabase, user.id, values)),
     })
@@ -333,7 +343,7 @@ export async function updateDeal(
   // Zielphase muss zum (unveränderlichen) Bereich des Deals gehören.
   const { data: stage } = await supabase
     .from("pipeline_stages")
-    .select("bereich")
+    .select("bereich, is_won")
     .eq("id", values.stage_id)
     .maybeSingle();
   if (!stage || stage.bereich !== existing.bereich)
@@ -347,6 +357,10 @@ export async function updateDeal(
       stage_id: v.stage_id,
       naechster_termin: v.naechster_termin,
       bemerkungen: v.bemerkungen,
+      // Ein hier mitgegebenes Datum schlägt den now()-Stempel des Triggers.
+      ...(stage.is_won && v.abschluss_datum
+        ? { closed_at: v.abschluss_datum }
+        : {}),
       ...bereichFields(v),
       ...(await beraterAnteilFor(supabase, user.id, v)),
     })

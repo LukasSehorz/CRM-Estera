@@ -3,7 +3,7 @@ import { Plus, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Topbar } from "@/components/layout/topbar";
 import { Button } from "@/components/ui/button";
-import { type KundenSegment } from "@/config/enums";
+import { ladeSegmentDaten } from "./kunden-segment";
 import { ContactsTable, type ContactRow } from "./contacts-table";
 
 function EmptyState() {
@@ -58,7 +58,7 @@ export default async function KontaktePage() {
   const { data: contacts, error } = await supabase
     .from("contacts")
     .select(
-      "id, vorname, nachname, email, telefon, status, termin_status, leadquelle, interesse, nettoverdienst_monatlich, eigenkapital, einschaetzung, berater_id, created_at, ist_bestandskunde",
+      "id, vorname, nachname, email, telefon, status, termin_status, leadquelle, interesse, nettoverdienst_monatlich, eigenkapital, einschaetzung, berater_id, created_at, ist_bestandskunde, bestandskunde_seit",
     )
     .order("created_at", { ascending: false });
 
@@ -69,27 +69,12 @@ export default async function KontaktePage() {
     (profiles ?? []).map((p) => [p.id, `${p.vorname} ${p.nachname}`]),
   );
 
-  // Segment je Kunde (4.2, berechnet): Bestandskunde (≥1 gewonnener Deal) >
-  // In Pipeline (≥1 offener Deal) > Interessent (kein Deal).
-  const { data: dealsForSegment } = await supabase
-    .from("deals")
-    .select("contact_id, pipeline_stages!inner(is_won, is_lost)");
-  const segmentMap: Record<string, KundenSegment> = {};
-  for (const d of dealsForSegment ?? []) {
-    const st = (
-      Array.isArray(d.pipeline_stages) ? d.pipeline_stages[0] : d.pipeline_stages
-    ) as { is_won: boolean; is_lost: boolean } | null;
-    const cur = segmentMap[d.contact_id];
-    if (st?.is_won) segmentMap[d.contact_id] = "bestand";
-    else if (!st?.is_lost && cur !== "bestand")
-      segmentMap[d.contact_id] = "pipeline";
-    else if (!cur) segmentMap[d.contact_id] = "interessent";
-  }
-  // Altbestand-Override (0021): manuell markierte Bestandskunden zählen als
-  // „Bestandskunde", auch ohne gewonnenen Deal im CRM.
-  for (const c of contacts ?? []) {
-    if (c.ist_bestandskunde) segmentMap[c.id] = "bestand";
-  }
+  // Segment + „Kunde seit" (4.2 / Feedback Mandant 07.09.) — gemeinsame
+  // Ableitung, siehe kunden-segment.ts.
+  const { segmentMap, bestandSeitMap } = await ladeSegmentDaten(
+    supabase,
+    contacts ?? [],
+  );
 
   return (
     <>
@@ -114,6 +99,7 @@ export default async function KontaktePage() {
             contacts={contacts as ContactRow[]}
             beraterMap={beraterMap}
             segmentMap={segmentMap}
+            bestandSeitMap={bestandSeitMap}
             isGf={isGf}
           />
         )}
