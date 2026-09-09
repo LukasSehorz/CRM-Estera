@@ -67,6 +67,10 @@ prod.log
 # draussen bleiben:
 Unterlagen*Go Live/
 
+# Mandanten-Rohdaten (Namen, Umsaetze) gehoeren nicht ins Repo
+*.numbers
+estera-abschlussmonate*
+
 # Lokale Screenshot-/Verifikationsskripte
 .shot-*.mjs
 
