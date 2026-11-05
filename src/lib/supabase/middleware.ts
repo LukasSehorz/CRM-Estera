@@ -42,7 +42,11 @@ export async function updateSession(request: NextRequest) {
   const isAuthRoute = path === "/login" || path.startsWith("/auth");
   // Design-Preview: statische Token-/Farbschau mit Dummy-Daten, ohne Login
   // erreichbar (keine echten Daten — Sicherheit liegt in der RLS).
-  const isPublicRoute = path === "/design-preview";
+  // Meta-Lead-Empfang: wird von Meta bzw. dem Netlify-Zeitplan aufgerufen,
+  // nie von einem angemeldeten Nutzer. Eigener Schutz in den Routen
+  // (Signatur mit App-Secret bzw. Bearer-Geheimnis).
+  const isPublicRoute =
+    path === "/design-preview" || path.startsWith("/api/meta/");
 
   // Redirect-Antwort, die die (ggf. aufgefrischten) Auth-Cookies mitnimmt.
   const redirectTo = (pathname: string) => {

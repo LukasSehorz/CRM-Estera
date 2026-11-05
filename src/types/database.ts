@@ -209,6 +209,10 @@ export type Database = {
           bestandskunde_seit: string | null;
           einschaetzung: string;
           belegt_deal_id: string | null;
+          meta_lead_id: string | null;
+          meta_kampagne: string | null;
+          meta_anzeige: string | null;
+          meta_formular: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -241,6 +245,10 @@ export type Database = {
           bestandskunde_seit?: string | null;
           einschaetzung?: string;
           belegt_deal_id?: string | null;
+          meta_lead_id?: string | null;
+          meta_kampagne?: string | null;
+          meta_anzeige?: string | null;
+          meta_formular?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -273,6 +281,10 @@ export type Database = {
           bestandskunde_seit?: string | null;
           einschaetzung?: string;
           belegt_deal_id?: string | null;
+          meta_lead_id?: string | null;
+          meta_kampagne?: string | null;
+          meta_anzeige?: string | null;
+          meta_formular?: string | null;
           created_at?: string;
           updated_at?: string;
         };

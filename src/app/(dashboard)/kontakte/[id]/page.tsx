@@ -261,6 +261,29 @@ export default async function KontaktDetailPage({
               email={c.email}
               name={`${c.vorname} ${c.nachname}`}
             />
+            {/* Herkunft aus Meta-Anzeige (nur bei automatisch importierten
+                Leads): welche Kampagne/Anzeige hat den Lead gebracht? */}
+            {c.meta_lead_id && (
+              <div className="rounded-xl border border-border bg-surface p-5">
+                <h2 className="text-base font-semibold">Herkunft: Meta-Anzeige</h2>
+                <dl className="mt-3 space-y-2 text-sm">
+                  {(
+                    [
+                      ["Kampagne", c.meta_kampagne],
+                      ["Anzeige", c.meta_anzeige],
+                      ["Formular", c.meta_formular],
+                    ] as const
+                  ).map(([k, v]) => (
+                    <div key={k} className="flex justify-between gap-3">
+                      <dt className="text-muted-foreground">{k}</dt>
+                      <dd className="min-w-0 truncate text-right font-medium" title={v ?? undefined}>
+                        {v ?? "—"}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+            )}
             <div className="rounded-xl border border-border bg-surface p-5">
               <h2 className="text-base font-semibold">Deals des Kunden</h2>
               {(contactDeals ?? []).length === 0 ? (

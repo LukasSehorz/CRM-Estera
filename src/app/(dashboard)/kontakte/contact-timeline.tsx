@@ -125,7 +125,7 @@ export function ContactTimeline({
                   <Icon className="h-3.5 w-3.5" />
                 </span>
                 <div className="min-w-0 pt-0.5">
-                  <p className="text-sm text-foreground">{a.text}</p>
+                  <p className="whitespace-pre-line text-sm text-foreground">{a.text}</p>
                   <p className="text-xs text-muted-foreground">
                     {formatDateTime(a.created_at)}
                     {a.created_by_name ? ` · ${a.created_by_name}` : ""}
