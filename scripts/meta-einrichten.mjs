@@ -54,9 +54,12 @@ function netlifySet(key, value) {
 }
 function netlifyGet(key) {
   try {
-    return execFileSync("netlify", ["env:get", key, "--site", SITE, "--context", "production"], {
+    const out = execFileSync("netlify", ["env:get", key, "--site", SITE, "--context", "production"], {
       stdio: ["ignore", "pipe", "ignore"],
     }).toString().trim();
+    // Netlify gibt bei fehlendem Wert eine Hinweis-Meldung aus (Exit 0).
+    // Echte Werte hier sind Hex-Zeichenketten ohne Leerzeichen.
+    return /^[A-Za-z0-9_-]{16,64}$/.test(out) ? out : "";
   } catch {
     return "";
   }
