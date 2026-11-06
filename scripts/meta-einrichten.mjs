@@ -16,9 +16,10 @@
 //  6. meldet den Webhook bei Meta an (Meta prüft dabei die Live-Adresse —
 //     geht erst, wenn der Code live ist; sonst später mit --nur-webhook)
 //
-// Optionen: --berater=<profil-id>   (Standard: Sebastian Meilbeck)
+// Optionen: --lokal               (nur .env.development.local, Live unberührt)
+//           --berater=<profil-id>   (Standard: Sebastian Meilbeck)
 //           --nur-webhook           (nur Schritt 6, Werte aus Netlify)
-import { readFileSync, unlinkSync } from "node:fs";
+import { readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
 
@@ -99,8 +100,8 @@ try {
     const vt = netlifyGet("META_VERIFY_TOKEN");
     if (!vt) fail("META_VERIFY_TOKEN ist in Netlify noch nicht gesetzt — erst den vollen Lauf machen.");
     await webhookAnmelden(APP_ID, APP_SECRET, vt);
-    unlinkSync(datei);
-    console.log(`\n✓ Fertig. ${datei} gelöscht.`);
+    if (!datei.endsWith(".env.development.local")) unlinkSync(datei);
+    console.log("\n✓ Fertig.");
     process.exit(0);
   }
 
@@ -171,6 +172,27 @@ try {
   await g(`${seite.id}/subscribed_apps`, { subscribed_fields: "leadgen", access_token: seite.access_token }, "POST");
   console.log("  ✓ angemeldet");
 
+  if (flag("lokal")) {
+    // Nur auf diesem Mac: echte Meta-Werte in .env.development.local, die
+    // Attrappe fliegt raus. Live-Server bleibt unberührt. Die drei Rohwerte
+    // wandern mit, damit der spätere Live-Lauf ohne meta.txt geht:
+    //   node scripts/meta-einrichten.mjs .env.development.local "ADVIS"
+    const pfad = new URL("../.env.development.local", import.meta.url);
+    const alt = readFileSync(pfad, "utf8")
+      .split("\n")
+      .filter((l) => !/^(META_GRAPH_BASE|META_PAGE_ID|META_PAGE_ACCESS_TOKEN|META_APP_SECRET|APP_ID|APP_SECRET|USER_TOKEN)=/.test(l))
+      .join("\n");
+    writeFileSync(
+      pfad,
+      `${alt.trimEnd()}\n\n# Echte Meta-Werte (lokal, ${new Date().toLocaleDateString("de-DE")})\n` +
+        `META_PAGE_ID=${seite.id}\nMETA_PAGE_ACCESS_TOKEN=${seite.access_token}\nMETA_APP_SECRET=${APP_SECRET}\n` +
+        `APP_ID=${APP_ID}\nAPP_SECRET=${APP_SECRET}\nUSER_TOKEN=${USER_TOKEN}\n`,
+    );
+    unlinkSync(datei);
+    console.log(`\n✓ Lokal eingetragen, ${datei} gelöscht. Dev-Server neu starten, dann /api/meta/sync aufrufen.`);
+    process.exit(0);
+  }
+
   console.log("5) Werte in Netlify eintragen …");
   const verify = netlifyGet("META_VERIFY_TOKEN") || randomBytes(18).toString("hex");
   const sync = netlifyGet("META_SYNC_SECRET") || randomBytes(24).toString("hex");
@@ -190,8 +212,8 @@ try {
     process.exit(0);
   }
 
-  unlinkSync(datei);
-  console.log(`\n✓ Fertig. ${datei} gelöscht. Neu deployen, damit Netlify die Werte übernimmt.`);
+  if (!datei.endsWith(".env.development.local")) unlinkSync(datei);
+  console.log(`\n✓ Fertig. Neu deployen, damit Netlify die Werte übernimmt.`);
 } catch (e) {
   fail(`Meta meldet: ${e.message}`);
 }

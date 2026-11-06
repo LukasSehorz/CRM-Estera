@@ -107,6 +107,22 @@ if (anz[0].n === 0) {
     );
   }
   console.log("  ✓ 4 erfundene Kontakte");
+
+  // Ein paar erfundene VV-Deals, damit „Allgemeine Leads“ im Board nicht leer ist.
+  const { rows: st } = await client.query(
+    "select id from pipeline_stages where bereich='vv' order by position limit 3",
+  );
+  const { rows: ks } = await client.query(
+    "select id, vorname, nachname, berater_id from contacts where 'vv' = any(interesse)",
+  );
+  for (const [i, k] of ks.entries()) {
+    await client.query(
+      `insert into deals (dealname, berater_id, contact_id, bereich, stage_id, bws)
+       values ($1,$2,$3,'vv',$4,$5)`,
+      [`${k.vorname} ${k.nachname}`, k.berater_id, k.id, st[i % st.length].id, 50000 + i * 25000],
+    );
+  }
+  console.log(`  ✓ ${ks.length} erfundene VV-Deals`);
 }
 await client.end();
 

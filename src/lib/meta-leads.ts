@@ -162,11 +162,13 @@ export function parseFieldData(fields: MetaLead["field_data"]): Geparst {
   return { vorname, nachname, email, telefon, antworten };
 }
 
+/** Meta-Leads laufen in die VV-Pipeline (Lukas, 06.11.); per Env änderbar. */
 function interesseAusEnv(): Bereich[] {
-  return (process.env.META_LEAD_INTERESSE ?? "")
+  const liste = (process.env.META_LEAD_INTERESSE ?? "vv")
     .split(",")
     .map((s) => s.trim())
     .filter((s): s is Bereich => s === "vv" || s === "immobilien");
+  return liste.length ? liste : ["vv"];
 }
 
 // ---------------------------------------------------------------------
@@ -235,6 +237,28 @@ export async function importLead(
       ? ["", "Antworten im Formular:", ...p.antworten.map((a) => `• ${a.frage} ${a.antwort}`)]
       : []),
   ].filter((z): z is string => z !== null);
+
+  // Deal in der ersten Phase („Neuer Lead“) des ersten Bereichs, damit der
+  // Lead in der Pipeline steht (Umschalter „Leads Meta-Ads“). Schlägt das
+  // fehl, bleibt der Kontakt trotzdem — der Deal lässt sich von Hand anlegen.
+  const bereich = interesseAusEnv()[0];
+  const { data: ersteStufe } = await admin
+    .from("pipeline_stages")
+    .select("id")
+    .eq("bereich", bereich)
+    .order("position")
+    .limit(1)
+    .maybeSingle();
+  if (ersteStufe) {
+    const { error: dErr } = await admin.from("deals").insert({
+      dealname: `${p.vorname} ${p.nachname}`.trim(),
+      berater_id: beraterId,
+      contact_id: neu.id,
+      bereich,
+      stage_id: ersteStufe.id,
+    });
+    if (dErr) console.error("[meta-leads] Deal anlegen fehlgeschlagen:", dErr.message);
+  }
 
   await admin.from("contact_activities").insert({
     contact_id: neu.id,

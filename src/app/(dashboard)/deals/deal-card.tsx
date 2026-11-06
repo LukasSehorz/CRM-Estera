@@ -27,6 +27,8 @@ export type BoardDeal = {
   updated_at: string;
   /** Kundenname — Suchfeld im Board (Feedback Mandant 07.09.). */
   kunde: string;
+  /** Kontakt kam über eine Meta-Anzeige (Umschalter im VV-Board, 06.11.). */
+  meta: boolean;
   /**
    * Datum, an dem der Deal in seiner jetzigen Abschluss-/Verlustphase
    * gelandet ist (JJJJ-MM-TT). Null, solange der Deal offen läuft.

@@ -170,11 +170,14 @@ export function PipelineBoard({
   deals: initialDeals,
   beraterMap,
   isGf,
+  quellenUmschalter = false,
 }: {
   stages: BoardStage[];
   deals: BoardDeal[];
   beraterMap: Record<string, string>;
   isGf: boolean;
+  /** VV-Board: Umschalter „Allgemeine Leads“ / „Leads Meta-Ads“ (06.11.). */
+  quellenUmschalter?: boolean;
 }) {
   const router = useRouter();
   const [deals, setDeals] = useState<BoardDeal[]>(initialDeals);
@@ -193,6 +196,22 @@ export function PipelineBoard({
   // Abschlussdatum außerhalb des Zeitraums liegt — sonst verschwindet die
   // Karte unmittelbar nach dem Ablegen spurlos.
   const [zuletztVerschoben, setZuletztVerschoben] = useState<string | null>(null);
+  // Herkunft: Meta-Leads getrennt vom Rest (Wunsch Lukas 06.11.). Bleibt in
+  // der Adresse (?quelle=meta), damit Neuladen und Zurück die Ansicht halten.
+  const [quelle, setQuelle] = useState<"allgemein" | "meta">("allgemein");
+  useEffect(() => {
+    if (!quellenUmschalter) return;
+    if (new URLSearchParams(window.location.search).get("quelle") === "meta")
+      setQuelle("meta");
+  }, [quellenUmschalter]);
+  function quelleWechseln(q: "allgemein" | "meta") {
+    setQuelle(q);
+    setZuletztVerschoben(null);
+    const url = new URL(window.location.href);
+    if (q === "meta") url.searchParams.set("quelle", "meta");
+    else url.searchParams.delete("quelle");
+    window.history.replaceState(null, "", url);
+  }
 
   // Nach revalidate/refresh den lokalen (optimistischen) Stand mit der
   // Server-Wahrheit überschreiben.
@@ -216,6 +235,17 @@ export function PipelineBoard({
 
   const activeDeal = deals.find((d) => d.id === activeId) ?? null;
 
+  // Nur die Deals der gewählten Herkunft — die andere Gruppe zählt nicht als
+  // „ausgeblendet“, sie ist schlicht eine andere Ansicht.
+  const quellDeals = useMemo(
+    () =>
+      quellenUmschalter
+        ? deals.filter((d) => (quelle === "meta" ? d.meta : !d.meta))
+        : deals,
+    [deals, quelle, quellenUmschalter],
+  );
+  const anzahlMeta = useMemo(() => deals.filter((d) => d.meta).length, [deals]);
+
   const grenzen = useMemo(
     () => zeitraumGrenzen(zeitraum.wert, { von: zeitraum.von, bis: zeitraum.bis }),
     [zeitraum],
@@ -237,14 +267,14 @@ export function PipelineBoard({
     };
     const map = new Map<string, { deals: BoardDeal[]; ausgeblendet: number }>();
     for (const st of stages) map.set(st.id, { deals: [], ausgeblendet: 0 });
-    for (const d of deals) {
+    for (const d of quellDeals) {
       const eintrag = map.get(d.stage_id);
       if (!eintrag) continue; // Phase eines anderen Bereichs — nicht anzeigen
       if (treffer(d)) eintrag.deals.push(d);
       else eintrag.ausgeblendet += 1;
     }
     return map;
-  }, [deals, stages, q, grenzen, zuletztVerschoben, beraterMap]);
+  }, [quellDeals, stages, q, grenzen, zuletztVerschoben, beraterMap]);
 
   // „Eigener Zeitraum" ohne Datumsangaben filtert nichts — dann auch keinen
   // Zurücksetzen-Knopf anbieten.
@@ -254,7 +284,7 @@ export function PipelineBoard({
     (n, e) => n + e.deals.length,
     0,
   );
-  const ausgeblendetGesamt = deals.length - sichtbarGesamt;
+  const ausgeblendetGesamt = quellDeals.length - sichtbarGesamt;
 
   function filterZuruecksetzen() {
     setQ("");
@@ -337,9 +367,45 @@ export function PipelineBoard({
             Filter zurücksetzen
           </button>
         )}
-        <span className="text-sm text-muted-foreground sm:ml-auto">
-          {sichtbarGesamt} von {deals.length}{" "}
-          {deals.length === 1 ? "Deal" : "Deals"}
+        {quellenUmschalter && (
+          <div
+            role="tablist"
+            aria-label="Herkunft der Leads"
+            className="inline-flex w-fit items-center gap-1 rounded-lg border border-border bg-surface p-1 sm:ml-auto"
+          >
+            {(
+              [
+                ["allgemein", "Allgemeine Leads", deals.length - anzahlMeta],
+                ["meta", "Leads Meta-Ads", anzahlMeta],
+              ] as const
+            ).map(([wert, label, anzahl]) => (
+              <button
+                key={wert}
+                type="button"
+                role="tab"
+                aria-selected={quelle === wert}
+                onClick={() => quelleWechseln(wert)}
+                className={cn(
+                  "rounded-md px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  quelle === wert
+                    ? "bg-primary-soft/15 text-primary-soft"
+                    : "text-muted-foreground hover:bg-secondary hover:text-foreground",
+                )}
+              >
+                {label}
+                <span className="ml-1.5 tabular-nums opacity-70">{anzahl}</span>
+              </button>
+            ))}
+          </div>
+        )}
+        <span
+          className={cn(
+            "text-sm text-muted-foreground",
+            !quellenUmschalter && "sm:ml-auto",
+          )}
+        >
+          {sichtbarGesamt} von {quellDeals.length}{" "}
+          {quellDeals.length === 1 ? "Deal" : "Deals"}
         </span>
       </div>
 

@@ -69,6 +69,7 @@ export async function BoardScreen({
             deals={deals}
             beraterMap={beraterMap}
             isGf={isGf}
+            quellenUmschalter={bereich === "vv"}
           />
         )}
       </div>

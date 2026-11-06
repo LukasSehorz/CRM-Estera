@@ -104,7 +104,7 @@ export async function loadBoard(bereich: Bereich): Promise<{
     contactIds.length
       ? supabase
           .from("contacts")
-          .select("id, vorname, nachname, ist_selbststaendig, ist_immobilienbesitzer")
+          .select("id, vorname, nachname, ist_selbststaendig, ist_immobilienbesitzer, meta_lead_id")
           .in("id", contactIds)
       : Promise.resolve({
           data: [] as {
@@ -113,6 +113,7 @@ export async function loadBoard(bereich: Bereich): Promise<{
             nachname: string;
             ist_selbststaendig: boolean;
             ist_immobilienbesitzer: boolean;
+            meta_lead_id: string | null;
           }[],
         }),
   ]);
@@ -164,6 +165,10 @@ export async function loadBoard(bereich: Bereich): Promise<{
   const kundeMap = new Map(
     (contacts ?? []).map((c) => [c.id, `${c.vorname} ${c.nachname}`.trim()]),
   );
+  // Herkunft Meta-Anzeige je Kontakt (Umschalter im VV-Board, 06.11.).
+  const metaKontakte = new Set(
+    (contacts ?? []).filter((c) => c.meta_lead_id).map((c) => c.id),
+  );
 
   const stageMap = new Map((stages ?? []).map((s) => [s.id, s]));
   const boardDeals: BoardDeal[] = (deals ?? []).map((d) => {
@@ -200,6 +205,7 @@ export async function loadBoard(bereich: Bereich): Promise<{
     return {
       ...d,
       kunde: kundeMap.get(d.contact_id) ?? "",
+      meta: metaKontakte.has(d.contact_id),
       abschluss_datum,
       doks,
       health,
