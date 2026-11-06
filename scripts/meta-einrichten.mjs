@@ -108,13 +108,21 @@ try {
   if (!seitenName) fail("Seitenname fehlt (zweites Argument).");
 
   console.log("1) Token verlängern …");
-  const lang = await g("oauth/access_token", {
-    grant_type: "fb_exchange_token",
-    client_id: APP_ID,
-    client_secret: APP_SECRET,
-    fb_exchange_token: USER_TOKEN,
-  });
-  console.log("  ✓ langlebiger Nutzer-Token erhalten");
+  // Token eines Systemnutzers (Business-Portfolio) läuft nie ab und lässt
+  // sich nicht tauschen → dann direkt verwenden.
+  let lang = { access_token: USER_TOKEN };
+  const info = await g("debug_token", { input_token: USER_TOKEN, access_token: `${APP_ID}|${APP_SECRET}` });
+  if (info.data?.type === "SYSTEM_USER" || info.data?.expires_at === 0) {
+    console.log("  ✓ dauerhafter Systemnutzer-Token, kein Tausch nötig");
+  } else {
+    lang = await g("oauth/access_token", {
+      grant_type: "fb_exchange_token",
+      client_id: APP_ID,
+      client_secret: APP_SECRET,
+      fb_exchange_token: USER_TOKEN,
+    });
+    console.log("  ✓ langlebiger Nutzer-Token erhalten");
+  }
 
   console.log("2) Seite suchen …");
   const seiten = [];

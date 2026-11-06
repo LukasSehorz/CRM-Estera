@@ -46,7 +46,10 @@ export async function updateSession(request: NextRequest) {
   // nie von einem angemeldeten Nutzer. Eigener Schutz in den Routen
   // (Signatur mit App-Secret bzw. Bearer-Geheimnis).
   const isPublicRoute =
-    path === "/design-preview" || path.startsWith("/api/meta/");
+    path === "/design-preview" ||
+    path.startsWith("/api/meta/") ||
+    // Nur lokal wirksam, die Route selbst antwortet sonst mit 404.
+    path === "/dev-login";
 
   // Redirect-Antwort, die die (ggf. aufgefrischten) Auth-Cookies mitnimmt.
   const redirectTo = (pathname: string) => {

@@ -150,10 +150,13 @@ export function parseFieldData(fields: MetaLead["field_data"]): Geparst {
 
   const antworten = (fields ?? [])
     .filter((f) => !STANDARD.has(f.name))
-    .map((f) => ({
-      frage: f.name.replace(/_/g, " ").replace(/\?$/, "").trim() + "?",
-      antwort: (f.values ?? []).join(", ").replace(/_/g, " ").trim(),
-    }))
+    .map((f) => {
+      const t = f.name.replace(/_/g, " ").replace(/\?$/, "").trim();
+      return {
+        frage: t.charAt(0).toUpperCase() + t.slice(1) + "?",
+        antwort: (f.values ?? []).join(", ").replace(/_/g, " ").trim(),
+      };
+    })
     .filter((a) => a.antwort);
 
   return { vorname, nachname, email, telefon, antworten };
