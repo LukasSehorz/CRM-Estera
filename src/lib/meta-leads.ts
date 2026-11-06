@@ -28,7 +28,7 @@ type Admin = SupabaseClient<Database>;
 type Bereich = Database["public"]["Enums"]["bereich_enum"];
 
 // META_GRAPH_BASE nur für lokale Tests gegen eine Attrappe.
-const GRAPH = `${process.env.META_GRAPH_BASE || "https://graph.facebook.com"}/${process.env.META_GRAPH_VERSION || "v23.0"}`;
+const GRAPH = `${process.env.META_GRAPH_BASE || "https://graph.facebook.com"}/${process.env.META_GRAPH_VERSION || "v27.0"}`;
 
 // ---------------------------------------------------------------------
 // Graph-API

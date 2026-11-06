@@ -25,7 +25,7 @@ import { randomBytes } from "node:crypto";
 
 const SITE = "cd5b83ef-de69-42e2-972d-56206f08ac28"; // estera-crm (Netlify)
 const CRM_URL = "https://estera-crm.netlify.app";
-const GRAPH = "https://graph.facebook.com/v23.0";
+const GRAPH = "https://graph.facebook.com/v27.0";
 const SEBASTIAN = "3aad9f2a-ce83-4eba-87ad-7d709059d25b";
 
 const args = process.argv.slice(2);
