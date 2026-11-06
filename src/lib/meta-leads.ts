@@ -99,17 +99,44 @@ export function fetchLead(leadId: string): Promise<MetaLead> {
   return graphLeadFields<MetaLead>(encodeURIComponent(leadId), {});
 }
 
-const formularNamen = new Map<string, string | null>();
-async function formularName(formId: string | undefined): Promise<string | null> {
-  if (!formId) return null;
-  if (formularNamen.has(formId)) return formularNamen.get(formId)!;
+/**
+ * Formular-Infos je Formular-ID (einmal je Lauf): Name plus Fragen-Wortlaut
+ * und Auswahl-Antworten. Meta liefert in den Leads nur die internen Kürzel
+ * (Feld „wie_viel_…“, Antwort „b“) — übersetzt wird hier.
+ */
+export type FormularInfo = {
+  name: string | null;
+  fragen: Map<string, { label: string; optionen: Map<string, string> }>;
+};
+type MetaFrage = { key?: string; label?: string; options?: { key?: string; value?: string }[] };
+
+const formulare = new Map<string, FormularInfo>();
+async function formularInfo(formId: string | undefined): Promise<FormularInfo> {
+  const leer: FormularInfo = { name: null, fragen: new Map() };
+  if (!formId) return leer;
+  if (formulare.has(formId)) return formulare.get(formId)!;
   try {
-    const f = await graph<{ name?: string }>(encodeURIComponent(formId), { fields: "name" });
-    formularNamen.set(formId, f.name ?? null);
+    const f = await graph<{ name?: string; questions?: MetaFrage[] }>(
+      encodeURIComponent(formId),
+      { fields: "name,questions" },
+    );
+    const fragen: FormularInfo["fragen"] = new Map();
+    for (const q of f.questions ?? []) {
+      if (!q.key) continue;
+      fragen.set(q.key, {
+        label: q.label ?? "",
+        optionen: new Map(
+          (q.options ?? [])
+            .filter((o) => o.key && o.value)
+            .map((o) => [o.key!, o.value!]),
+        ),
+      });
+    }
+    formulare.set(formId, { name: f.name ?? null, fragen });
   } catch {
-    formularNamen.set(formId, null);
+    formulare.set(formId, leer);
   }
-  return formularNamen.get(formId)!;
+  return formulare.get(formId)!;
 }
 
 // ---------------------------------------------------------------------
@@ -129,7 +156,10 @@ export type Geparst = {
   antworten: { frage: string; antwort: string }[];
 };
 
-export function parseFieldData(fields: MetaLead["field_data"]): Geparst {
+export function parseFieldData(
+  fields: MetaLead["field_data"],
+  form?: FormularInfo,
+): Geparst {
   const get = (n: string) =>
     fields?.find((f) => f.name === n)?.values?.filter(Boolean).join(", ").trim() || "";
 
@@ -151,11 +181,14 @@ export function parseFieldData(fields: MetaLead["field_data"]): Geparst {
   const antworten = (fields ?? [])
     .filter((f) => !STANDARD.has(f.name))
     .map((f) => {
+      const info = form?.fragen.get(f.name);
       const t = f.name.replace(/_/g, " ").replace(/\?$/, "").trim();
-      return {
-        frage: t.charAt(0).toUpperCase() + t.slice(1) + "?",
-        antwort: (f.values ?? []).join(", ").replace(/_/g, " ").trim(),
-      };
+      const frage = info?.label?.trim() || t.charAt(0).toUpperCase() + t.slice(1) + "?";
+      const antwort = (f.values ?? [])
+        .map((v) => info?.optionen.get(v) ?? v.replace(/_/g, " "))
+        .join(", ")
+        .trim();
+      return { frage, antwort };
     })
     .filter((a) => a.antwort);
 
@@ -194,8 +227,9 @@ export async function importLead(
     .maybeSingle();
   if (vorhanden) return { status: "schon_da" };
 
-  const p = parseFieldData(lead.field_data);
-  const formular = await formularName(lead.form_id);
+  const form = await formularInfo(lead.form_id);
+  const p = parseFieldData(lead.field_data, form);
+  const formular = form.name;
 
   const { data: neu, error } = await admin
     .from("contacts")
@@ -384,7 +418,6 @@ export async function syncRecent(stunden = 48) {
     formAfter = page.paging?.next ? page.paging.cursors?.after : undefined;
   } while (formAfter);
   ergebnis.formulare = formIds.length;
-  for (const f of formIds) if (f.name) formularNamen.set(f.id, f.name);
 
   const filter = JSON.stringify([
     { field: "time_created", operator: "GREATER_THAN", value: seit },
