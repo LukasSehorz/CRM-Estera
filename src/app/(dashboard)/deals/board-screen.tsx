@@ -69,7 +69,8 @@ export async function BoardScreen({
             deals={deals}
             beraterMap={beraterMap}
             isGf={isGf}
-            quellenUmschalter={bereich === "vv"}
+            // Meta-Umschalter vorerst nur für die Geschäftsführung (Lukas 06.11.).
+            quellenUmschalter={bereich === "vv" && isGf}
           />
         )}
       </div>
