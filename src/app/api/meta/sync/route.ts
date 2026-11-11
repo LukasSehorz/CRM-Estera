@@ -1,6 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
-import { syncRecent } from "@/lib/meta-leads";
+import { leadSmsNachfassen, syncRecent } from "@/lib/meta-leads";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -29,7 +29,15 @@ export async function POST(req: NextRequest) {
   try {
     const r = await syncRecent(stunden);
     if (r.angelegt || r.fehler.length) console.log("[meta-sync]", JSON.stringify(r));
-    return NextResponse.json(r);
+    // Zustellung der Lead-SMS prüfen, bei Fehlschlag neu senden. Darf den Abgleich nie stören.
+    let sms: Awaited<ReturnType<typeof leadSmsNachfassen>> | null = null;
+    try {
+      sms = await leadSmsNachfassen();
+      if (sms.geprueft) console.log("[lead-sms]", JSON.stringify(sms));
+    } catch (e) {
+      console.error("[lead-sms] Nachfassen fehlgeschlagen:", (e as Error).message);
+    }
+    return NextResponse.json({ ...r, sms });
   } catch (e) {
     console.error("[meta-sync] Abgleich fehlgeschlagen:", (e as Error).message);
     return NextResponse.json({ fehler: (e as Error).message }, { status: 500 });

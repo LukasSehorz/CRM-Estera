@@ -20,12 +20,14 @@
  *  RESEND_API_KEY          optional: ohne Schlüssel nur In-App-Benachrichtigung
  *  META_LEAD_MAIL_FROM     optional: Absender (Standard crm@estera.immobilien)
  *  SEVEN_API_KEY           optional: SMS über seven.io; ohne Schlüssel keine SMS
+ *                          (Rechte „sms“ und „status“, siehe src/lib/lead-sms.ts)
  *  META_LEAD_SMS_TO        optional: Handynummer(n) für die SMS, mit Komma getrennt
  *  META_LEAD_SMS_FROM      optional: Absendername der SMS (max. 11 Zeichen, Standard ADVIS)
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sendeLeadSms, smsNachfassen, supabaseSpeicher } from "@/lib/lead-sms";
 
 type Admin = SupabaseClient<Database>;
 type Bereich = Database["public"]["Enums"]["bereich_enum"];
@@ -353,7 +355,13 @@ async function benachrichtigen(
   if (nErr) console.error("[meta-leads] In-App-Benachrichtigung fehlgeschlagen:", nErr.message);
 
   // SMS und Mail laufen unabhängig: fällt eines aus, geht das andere trotzdem raus.
-  await smsSenden(p, lead, formular);
+  // Die SMS wird mit ihrer ID bei seven.io gemerkt; der Abgleich prüft die Zustellung
+  // und sendet bei Fehlschlag neu (src/lib/lead-sms.ts).
+  try {
+    await sendeLeadSms(supabaseSpeicher(admin), smsText(p), { contactId, metaLeadId: lead.id });
+  } catch (e) {
+    console.error("[meta-leads] SMS fehlgeschlagen:", (e as Error).message);
+  }
 
   const resendKey = process.env.RESEND_API_KEY;
   if (!resendKey) return;
@@ -401,8 +409,11 @@ async function benachrichtigen(
   }
 }
 
-/** Höchstens zwei SMS lang (2 × 153 Zeichen), damit die Kosten je Lead begrenzt bleiben. */
-const SMS_MAX = 306;
+/**
+ * Höchstens zwei SMS lang (2 × 153 Zeichen), damit die Kosten je Lead begrenzt bleiben.
+ * 4 Zeichen bleiben frei für den Zusatz „ (2)“ einer Wiederholung.
+ */
+const SMS_MAX = 302;
 
 /**
  * SMS-Text: Name, Telefon, dann die Antworten aus dem Formular, nur einfache Zeichen.
@@ -437,40 +448,6 @@ export function smsText(p: Geparst): string {
     text += stueck;
   }
   return (text + ende).slice(0, SMS_MAX);
-}
-
-export async function smsSenden(p: Geparst, lead: MetaLead, formular: string | null) {
-  const key = process.env.SEVEN_API_KEY;
-  const an = (process.env.META_LEAD_SMS_TO ?? "")
-    .split(",")
-    .map((n) => n.replace(/[^\d+]/g, ""))
-    .filter(Boolean);
-  if (!key || an.length === 0) return;
-
-  try {
-    const res = await fetch(`${process.env.SEVEN_API_BASE || "https://gateway.seven.io"}/api/sms`, {
-      method: "POST",
-      headers: { "X-Api-Key": key, "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify({
-        to: an.join(","),
-        text: smsText(p),
-        from: (process.env.META_LEAD_SMS_FROM || "ADVIS").slice(0, 11),
-      }),
-    });
-    const json = (await res.json().catch(() => ({}))) as { success?: string | number };
-    // seven.io meldet Erfolg mit dem Code 100 im Feld „success“.
-    if (!res.ok || String(json.success) !== "100") {
-      console.error(
-        "[meta-leads] SMS fehlgeschlagen:",
-        res.status,
-        `Code ${json.success ?? "?"}`,
-        `Lead ${lead.id}`,
-        formular ?? "",
-      );
-    }
-  } catch (e) {
-    console.error("[meta-leads] SMS fehlgeschlagen:", (e as Error).message);
-  }
 }
 
 // ---------------------------------------------------------------------
@@ -524,4 +501,9 @@ export async function syncRecent(stunden = 48) {
     } while (after);
   }
   return ergebnis;
+}
+
+/** Zustellung der Lead-SMS prüfen und bei Fehlschlag neu senden (siehe lead-sms.ts). */
+export async function leadSmsNachfassen() {
+  return smsNachfassen(supabaseSpeicher(createAdminClient()));
 }
