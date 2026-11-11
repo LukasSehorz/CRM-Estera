@@ -156,7 +156,8 @@ export type Geparst = {
   nachname: string;
   email: string | null;
   telefon: string | null;
-  antworten: { frage: string; antwort: string }[];
+  /** feld = Metas Feldname der Frage (z. B. „betrag“), dient der SMS als Kurzwort. */
+  antworten: { frage: string; antwort: string; feld?: string }[];
 };
 
 export function parseFieldData(
@@ -191,7 +192,7 @@ export function parseFieldData(
         .map((v) => info?.optionen.get(v) ?? v.replace(/_/g, " "))
         .join(", ")
         .trim();
-      return { frage, antwort };
+      return { frage, antwort, feld: f.name };
     })
     .filter((a) => a.antwort);
 
@@ -400,22 +401,42 @@ async function benachrichtigen(
   }
 }
 
-/** Kurzer SMS-Text, höchstens eine SMS lang (160 Zeichen, nur einfache Zeichen). */
+/** Höchstens zwei SMS lang (2 × 153 Zeichen), damit die Kosten je Lead begrenzt bleiben. */
+const SMS_MAX = 306;
+
+/**
+ * SMS-Text: Name, Telefon, dann die Antworten aus dem Formular, nur einfache Zeichen.
+ * Passt nicht alles in zwei SMS, fallen Antworten von hinten weg; Name und Telefon bleiben.
+ */
 export function smsText(p: Geparst): string {
   const einfach = (t: string) =>
     t
       .replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue")
       .replace(/Ä/g, "Ae").replace(/Ö/g, "Oe").replace(/Ü/g, "Ue").replace(/ß/g, "ss")
+      .replace(/€/g, "EUR").replace(/[–—]/g, "-")
       // Übrige Akzente abstreifen (é → e, Ç → C), Rest wie Emojis entfernen.
       .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
       .replace(/[^\x20-\x7E]/g, "")
       .replace(/\s+/g, " ")
       .trim();
-  const tel = p.telefon ? ` Tel ${p.telefon}.` : "";
+  const tel = p.telefon ? `, Tel ${p.telefon}` : "";
   const ende = " Bitte gleich anrufen.";
-  const platz = 160 - "Neuer Lead: ".length - tel.length - ende.length - 1;
+  const platz = 160 - "Neuer Lead: ".length - tel.length - 1 - ende.length;
   const name = einfach(`${p.vorname} ${p.nachname}`.trim()).slice(0, Math.max(10, platz));
-  return `Neuer Lead: ${name}.${tel}${ende}`.slice(0, 160);
+  let text = `Neuer Lead: ${name}${tel}.`;
+
+  for (const a of p.antworten) {
+    const antwort = einfach(a.antwort).replace(/[.!?]+$/, "");
+    if (!antwort) continue;
+    // Kurze Feldnamen wie „betrag“ taugen als Kurzwort, lange Meta-Namen nicht.
+    const feld = a.feld && /^[a-z][a-z_]{1,13}$/.test(a.feld) ? a.feld.replace(/_/g, " ") : "";
+    const stueck = feld
+      ? ` ${feld.charAt(0).toUpperCase()}${feld.slice(1)}: ${antwort}.`
+      : ` ${antwort}.`;
+    if (text.length + stueck.length + ende.length > SMS_MAX) break;
+    text += stueck;
+  }
+  return (text + ende).slice(0, SMS_MAX);
 }
 
 export async function smsSenden(p: Geparst, lead: MetaLead, formular: string | null) {
