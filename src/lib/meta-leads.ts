@@ -19,6 +19,9 @@
  *  META_LEAD_MAIL_TO       optional: Empfänger der Mail (sonst Login-Mail des Beraters)
  *  RESEND_API_KEY          optional: ohne Schlüssel nur In-App-Benachrichtigung
  *  META_LEAD_MAIL_FROM     optional: Absender (Standard crm@estera.immobilien)
+ *  SEVEN_API_KEY           optional: SMS über seven.io; ohne Schlüssel keine SMS
+ *  META_LEAD_SMS_TO        optional: Handynummer(n) für die SMS, mit Komma getrennt
+ *  META_LEAD_SMS_FROM      optional: Absendername der SMS (max. 11 Zeichen, Standard ADVIS)
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
@@ -348,6 +351,9 @@ async function benachrichtigen(
   });
   if (nErr) console.error("[meta-leads] In-App-Benachrichtigung fehlgeschlagen:", nErr.message);
 
+  // SMS und Mail laufen unabhängig: fällt eines aus, geht das andere trotzdem raus.
+  await smsSenden(p, lead, formular);
+
   const resendKey = process.env.RESEND_API_KEY;
   if (!resendKey) return;
 
@@ -391,6 +397,58 @@ async function benachrichtigen(
     }
   } catch (e) {
     console.error("[meta-leads] Mail fehlgeschlagen:", (e as Error).message);
+  }
+}
+
+/** Kurzer SMS-Text, höchstens eine SMS lang (160 Zeichen, nur einfache Zeichen). */
+export function smsText(p: Geparst): string {
+  const einfach = (t: string) =>
+    t
+      .replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue")
+      .replace(/Ä/g, "Ae").replace(/Ö/g, "Oe").replace(/Ü/g, "Ue").replace(/ß/g, "ss")
+      // Übrige Akzente abstreifen (é → e, Ç → C), Rest wie Emojis entfernen.
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^\x20-\x7E]/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+  const tel = p.telefon ? ` Tel ${p.telefon}.` : "";
+  const ende = " Bitte gleich anrufen.";
+  const platz = 160 - "Neuer Lead: ".length - tel.length - ende.length - 1;
+  const name = einfach(`${p.vorname} ${p.nachname}`.trim()).slice(0, Math.max(10, platz));
+  return `Neuer Lead: ${name}.${tel}${ende}`.slice(0, 160);
+}
+
+export async function smsSenden(p: Geparst, lead: MetaLead, formular: string | null) {
+  const key = process.env.SEVEN_API_KEY;
+  const an = (process.env.META_LEAD_SMS_TO ?? "")
+    .split(",")
+    .map((n) => n.replace(/[^\d+]/g, ""))
+    .filter(Boolean);
+  if (!key || an.length === 0) return;
+
+  try {
+    const res = await fetch(`${process.env.SEVEN_API_BASE || "https://gateway.seven.io"}/api/sms`, {
+      method: "POST",
+      headers: { "X-Api-Key": key, "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({
+        to: an.join(","),
+        text: smsText(p),
+        from: (process.env.META_LEAD_SMS_FROM || "ADVIS").slice(0, 11),
+      }),
+    });
+    const json = (await res.json().catch(() => ({}))) as { success?: string | number };
+    // seven.io meldet Erfolg mit dem Code 100 im Feld „success“.
+    if (!res.ok || String(json.success) !== "100") {
+      console.error(
+        "[meta-leads] SMS fehlgeschlagen:",
+        res.status,
+        `Code ${json.success ?? "?"}`,
+        `Lead ${lead.id}`,
+        formular ?? "",
+      );
+    }
+  } catch (e) {
+    console.error("[meta-leads] SMS fehlgeschlagen:", (e as Error).message);
   }
 }
 
